@@ -25,19 +25,30 @@ begin
 end;
 $$;
 
-insert into public.unit_assignments
-  (group_id, unit_id, unit_version_id, opens_at, closes_at, status, visible)
-select i.group_id, i.espanol_unit_id, v.id,
-       now() - interval '1 hour', now() + interval '1 day', 'active', true
-from _smoke_ids i
-join public.unit_versions v on v.unit_id = i.espanol_unit_id and v.version = 1;
+-- Captura solo las asignaciones creadas por esta prueba.
+create temporary table _smoke_assignments on commit drop as
+with esp as (
+  insert into public.unit_assignments
+    (group_id, unit_id, unit_version_id, opens_at, closes_at, status, visible)
+  select i.group_id, i.espanol_unit_id, v.id,
+         now() - interval '1 hour', now() + interval '1 day', 'active', true
+  from _smoke_ids i
+  join public.unit_versions v on v.unit_id = i.espanol_unit_id and v.version = 1
+  returning id
+), mat as (
+  insert into public.unit_assignments
+    (group_id, unit_id, unit_version_id, opens_at, closes_at, status, visible)
+  select i.group_id, i.mat_unit_id, v.id,
+         now() - interval '1 hour', now() + interval '1 day', 'active', true
+  from _smoke_ids i
+  join public.unit_versions v on v.unit_id = i.mat_unit_id and v.version = 1
+  returning id
+)
+select id, 'espanol' as tag from esp
+union all
+select id, 'mat' from mat;
 
-insert into public.unit_assignments
-  (group_id, unit_id, unit_version_id, opens_at, closes_at, status, visible)
-select i.group_id, i.mat_unit_id, v.id,
-       now() - interval '1 hour', now() + interval '1 day', 'active', true
-from _smoke_ids i
-join public.unit_versions v on v.unit_id = i.mat_unit_id and v.version = 1;
+grant select on _smoke_assignments to authenticated;
 
 select set_config(
   'request.jwt.claims',
@@ -57,14 +68,12 @@ declare
   v_quiz_count int;
 begin
   select a.id into v_espanol_assignment
-    from public.unit_assignments a, _smoke_ids i
-   where a.group_id = i.group_id and a.unit_id = i.espanol_unit_id
-     and a.status = 'active' limit 1;
+    from _smoke_assignments a
+   where a.tag = 'espanol' limit 1;
 
   select a.id into v_mat_assignment
-    from public.unit_assignments a, _smoke_ids i
-   where a.group_id = i.group_id and a.unit_id = i.mat_unit_id
-     and a.status = 'active' limit 1;
+    from _smoke_assignments a
+   where a.tag = 'mat' limit 1;
 
   -- 1. El alumno inicia la unidad real.
   v_result := public.app_start_unit(v_espanol_assignment);
@@ -121,7 +130,8 @@ begin
 
   select count(*) into v_attempt_count
     from public.exercise_attempts a, _smoke_ids i
-   where a.student_id = i.student_id;
+   where a.student_id = i.student_id
+     and a.assignment_id in (v_espanol_assignment, v_mat_assignment);
 
   if v_attempt_count <> 2 then
     raise exception 'Se esperaban 2 intentos de ejercicio y hay %', v_attempt_count;
@@ -129,7 +139,8 @@ begin
 
   select count(*) into v_quiz_count
     from public.quiz_attempts a, _smoke_ids i
-   where a.student_id = i.student_id;
+   where a.student_id = i.student_id
+     and a.assignment_id in (v_espanol_assignment, v_mat_assignment);
 
   if v_quiz_count <> 2 then
     raise exception 'Se esperaban 2 intentos de quiz y hay %', v_quiz_count;
@@ -153,9 +164,8 @@ declare
   v_assignment uuid;
 begin
   select a.id into v_assignment
-    from public.unit_assignments a, _smoke_ids i
-   where a.group_id = i.group_id and a.unit_id = i.espanol_unit_id
-     and a.status = 'active' limit 1;
+    from _smoke_assignments a
+   where a.tag = 'espanol' limit 1;
 
   begin
     perform public.app_start_unit(v_assignment);
