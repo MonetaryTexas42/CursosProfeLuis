@@ -2,6 +2,23 @@
 
 Base local de Fase 1. Proyecto Supabase: `ioikcrdxneuydylyhvwi` (staging por crear).
 
+## Producción
+
+- **App (GitHub Pages):** https://monetarytexas42.github.io/CursosProfeLuis/
+- El repo es público (requisito de Pages en plan gratuito). Sin secretos versionados.
+
+### Republicar el frontend
+
+```bash
+cd app/frontend
+npm run build -- --base=/CursosProfeLuis/
+cd dist
+git init -b gh-pages
+git add -A
+git commit -m "Build de la plataforma"
+git push -f https://github.com/MonetaryTexas42/CursosProfeLuis.git gh-pages
+```
+
 ## Estructura
 
 ```text
@@ -35,8 +52,9 @@ app/
 - [x] Prueba UI en Chrome headless con la unidad real (`scripts/ui-smoke.mjs`).
 - [x] Edge Functions `admin-create-student` y `admin-reset-student-password`.
 - [x] Edge Functions `invite-guardian` y `guardian-consent` (código listo).
+- [x] Frontend publicado en GitHub Pages y verificado contra la URL pública.
 - [ ] Despliegue de Edge Functions (falta `SUPABASE_ACCESS_TOKEN`).
-- [ ] Proyecto staging y despliegue del frontend.
+- [ ] Proyecto staging separado.
 - [ ] Correo transaccional (SMTP) para invitaciones.
 - [ ] Consentimiento probado con un tutor real.
 
