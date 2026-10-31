@@ -33,6 +33,9 @@ const assignmentStatusLabels = {
   closed: 'Cerrada'
 };
 
+// Debe coincidir con settings.privacy_document_version de la base.
+const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
+
 const state = {
   mode: 'student',
   session: null,
@@ -577,28 +580,44 @@ async function fetchGuardianDashboard() {
   const students = studentsRes.data || [];
   const profileIds = [...new Set(students.map((student) => student.profile_id))];
   const groupIds = [...new Set(students.map((student) => student.group_id))];
+  const studentIds = students.map((student) => student.id);
 
-  const [profilesRes, groupsRes] = await Promise.all([
+  const [profilesRes, groupsRes, consentsRes] = await Promise.all([
     profileIds.length
       ? supabase.from('profiles').select('id,full_name').in('id', profileIds)
       : Promise.resolve({ data: [], error: null }),
     groupIds.length
       ? supabase.from('groups').select('id,name').in('id', groupIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('privacy_consents')
+          .select('student_id,document_version,accepted_at,revoked_at')
+          .in('student_id', studentIds)
       : Promise.resolve({ data: [], error: null })
   ]);
 
   assertNoError(profilesRes.error);
   assertNoError(groupsRes.error);
+  assertNoError(consentsRes.error);
 
   const names = new Map((profilesRes.data || []).map((profile) => [profile.id, profile.full_name]));
   const groupNames = new Map((groupsRes.data || []).map((group) => [group.id, group.name]));
+
+  const consentsByStudent = new Map();
+  for (const consent of consentsRes.data || []) {
+    if (consent.document_version === PRIVACY_DOCUMENT_VERSION && !consent.revoked_at) {
+      consentsByStudent.set(consent.student_id, consent);
+    }
+  }
 
   return {
     kind: 'guardian',
     children: students.map((student) => ({
       ...student,
       full_name: names.get(student.profile_id) || 'Alumno sin nombre',
-      group_name: groupNames.get(student.group_id) || 'Sin grupo'
+      group_name: groupNames.get(student.group_id) || 'Sin grupo',
+      consent_accepted: consentsByStudent.has(student.id)
     }))
   };
 }
@@ -836,9 +855,15 @@ function guardianDashboardMarkup(data) {
                 <strong>${escapeHtml(child.full_name)}</strong>
                 <small>${escapeHtml(child.student_code)} · ${escapeHtml(child.group_name)}</small>
               </div>
+              ${child.consent_accepted ? `
+                <span class="pill success">Consentimiento registrado</span>
+              ` : `
+                <button class="btn primary" data-consent-student="${escapeHtml(child.id)}">Aceptar aviso de privacidad</button>
+              `}
             </li>
           `).join('')}
         </ul>
+        <p class="muted"><small>Aviso de privacidad versión ${escapeHtml(PRIVACY_DOCUMENT_VERSION)}. Al aceptar, autorizas el tratamiento de los datos del alumno con fines educativos. Puedes revocarlo cuando quieras.</small></p>
       ` : '<p class="empty-state">Cuando la institución vincule a tus hijos, aparecerán aquí.</p>'}
     </article>
   `;
@@ -1486,6 +1511,41 @@ function renderDashboard() {
   appRoot.querySelectorAll('[data-activate-group]').forEach((form) => {
     form.addEventListener('submit', activateUnit);
   });
+
+  appRoot.querySelectorAll('[data-consent-student]').forEach((button) => {
+    button.addEventListener('click', () => acceptConsent(button.dataset.consentStudent, button));
+  });
+}
+
+async function acceptConsent(studentId, button) {
+  if (!studentId || button.disabled) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Enviando…';
+
+  try {
+    const { data, error } = await supabase.functions.invoke('guardian-consent', {
+      body: {
+        student_id: studentId,
+        document_version: PRIVACY_DOCUMENT_VERSION,
+        accepted: true
+      }
+    });
+
+    if (error) throw error;
+    if (data?.status !== 'accepted') {
+      throw new Error(data?.error || 'No se pudo registrar el consentimiento');
+    }
+
+    state.notice = 'Consentimiento registrado. Gracias por confiar en nosotros.';
+    await loadDashboard(state.profile);
+  } catch {
+    setError('No se pudo registrar el consentimiento. Revisa la conexión e intenta de nuevo.');
+    button.disabled = false;
+    button.textContent = 'Aceptar aviso de privacidad';
+  }
 }
 
 async function signOut() {

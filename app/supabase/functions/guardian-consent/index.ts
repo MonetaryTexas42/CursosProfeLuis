@@ -30,6 +30,20 @@ Deno.serve(async (req) => {
       throw new HttpError(400, "Indica accepted o revoke, no ambos");
     }
 
+    // La versión debe ser la vigente según settings (si está configurada).
+    const { data: versionSetting } = await admin
+      .from("settings")
+      .select("value")
+      .eq("key", "privacy_document_version")
+      .maybeSingle();
+
+    const currentVersion = versionSetting?.value?.privacy_document_version ??
+      (typeof versionSetting?.value === "string" ? versionSetting.value : null);
+
+    if (currentVersion && documentVersion !== currentVersion) {
+      throw new HttpError(409, `La versión vigente del aviso es ${currentVersion}`);
+    }
+
     const { data: guardian } = await admin
       .from("guardians")
       .select("id")

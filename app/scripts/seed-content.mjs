@@ -108,6 +108,14 @@ try {
 
   await client.query("commit");
 
+  // Versión del aviso de privacidad vigente (la usa el flujo de consentimiento).
+  await client.query(
+    `insert into public.settings (key, value, updated_by)
+     values ('privacy_document_version', '"v1-2026"'::jsonb, $1)
+     on conflict (key) do nothing`,
+    [adminId],
+  );
+
   const counts = await client.query(`
     select
       (select count(*) from public.subjects) as subjects,
