@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fase 0 · Plataforma ECOEMS</title>
+<style>
+  :root {
+    --bg: #0a0f1f;
+    --panel: #111a30;
+    --panel2: #17213c;
+    --line: #283457;
+    --text: #e9eefb;
+    --muted: #9aa7c7;
+    --brand: #5b8cff;
+    --brand2: #8b5cf6;
+    --good: #34d399;
+    --warn: #fbbf24;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(91,140,255,.18), transparent 60%),
+      radial-gradient(700px 400px at 0% 10%, rgba(139,92,246,.12), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  a { color: #a9c2ff; }
+  .wrap { width: min(1150px, calc(100% - 32px)); margin: 0 auto; }
+  header { padding: 48px 0 24px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--line); background: rgba(91,140,255,.08);
+    padding: 7px 11px; border-radius: 999px;
+    color: #cfe0ff; font-size: 12px; font-weight: 800;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  h1 { margin: 16px 0 8px; font-size: clamp(34px, 6vw, 64px); line-height: 1.02; letter-spacing: -.05em; }
+  h1 span { color: var(--brand); }
+  .lead { max-width: 760px; color: var(--muted); font-size: clamp(15px, 2vw, 18px); margin: 0; }
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-radius: 10px; padding: 11px 16px;
+    font: inherit; font-size: 14px; font-weight: 750; text-decoration: none;
+    background: linear-gradient(135deg, var(--brand), var(--brand2)); color: white;
+  }
+  .btn.ghost { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 28px 0 0; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .stat p { margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .stat b { display: block; margin-top: 4px; font-size: 26px; letter-spacing: -.03em; }
+  .stat small { color: var(--muted); font-weight: 600; font-size: 12px; }
+  section { padding: 28px 0; }
+  h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.02em; }
+  .section-sub { margin: 0 0 18px; color: var(--muted); }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .docs { display: grid; gap: 8px; }
+  .doc {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 11px;
+    background: var(--panel2); border: 1px solid #222e50;
+    text-decoration: none; color: var(--text);
+  }
+  .doc:hover { border-color: #3b4c7d; background: #1b2746; }
+  .num {
+    width: 30px; height: 30px; flex: 0 0 30px;
+    display: grid; place-items: center;
+    border-radius: 9px; background: #22305a; color: #cfe0ff;
+    font-size: 12px; font-weight: 800;
+  }
+  .doc .grow { flex: 1; min-width: 0; }
+  .doc b { display: block; font-size: 14px; }
+  .doc small { color: var(--muted); font-size: 12px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; white-space: nowrap;
+    background: #22305a; color: #cfe0ff;
+  }
+  .pill.good { background: rgba(52,211,153,.12); color: var(--good); }
+  .pill.warn { background: rgba(251,191,36,.12); color: var(--warn); }
+  .pill.bad { background: rgba(251,113,133,.12); color: #fb7185; }
+  .checklist { display: grid; gap: 8px; }
+  .check {
+    display: flex; align-items: flex-start; gap: 11px;
+    padding: 12px 14px; border-radius: 11px;
+    background: var(--panel2); border: 1px solid #222e50;
+    cursor: pointer;
+  }
+  .check input { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--brand); }
+  .check span { font-size: 14px; }
+  .check.done span { color: var(--muted); text-decoration: line-through; }
+  .progress { height: 10px; background: #0b1226; border: 1px solid #222e50; border-radius: 999px; overflow: hidden; margin: 14px 0 0; }
+  .progress > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand2)); transition: width .25s ease; }
+  .progress-label { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+  .kv { display: grid; gap: 8px; margin-top: 12px; }
+  .kv div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #222e50; padding-bottom: 8px; font-size: 13px; }
+  .kv div:last-child { border-bottom: 0; padding-bottom: 0; }
+  .kv span:first-child { color: var(--muted); }
+  .callout {
+    border-left: 3px solid var(--brand);
+    background: rgba(91,140,255,.08);
+    padding: 14px 16px; border-radius: 0 12px 12px 0;
+    color: #d5e2ff; font-size: 14px;
+  }
+  .callout b { color: white; }
+  .status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #222e50; font-size: 14px; }
+  .status-row:last-child { border-bottom: 0; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 14px; }
+  footer { padding: 36px 0 56px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
+  .links { display: flex; gap: 14px; flex-wrap: wrap; }
+  @media (max-width: 860px) {
+    .stats, .g2, .g3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .stats, .g2, .g3 { grid-template-columns: 1fr; }
+    header { padding-top: 28px; }
+  }
+  @media print {
+    body { background: white; color: #111; }
+    .hero-actions, .progress, .legend { display: none; }
+    .card, .stat, .doc, .check { box-shadow: none; border-color: #ccc; background: white; }
+    .doc small, .card p, .lead, .section-sub, .kv span:first-child, .progress-label { color: #444; }
+    .pill { border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Fase 0 · Especificación</div>
+    <h1>Plataforma <span>ECOEMS</span></h1>
+    <p class="lead">Plano completo antes de construir: datos, permisos, autenticación, contenido, privacidad, criterios y plan del piloto. Sin tocar el curso que ya funciona.</p>
+    <div class="hero-actions">
+      <a class="btn" href="WIREFRAMES.html">Ver wireframes</a>
+      <a class="btn ghost" href="README.md">Abrir README</a>
+      <a class="btn ghost" href="../../PLAN-PLATAFORMA.html">Volver al plan general</a>
+      <a class="btn ghost" href="#" onclick="window.print();return false;">Imprimir / PDF</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><p>Documentos</p><b>11</b><small>Fase 0</small></div>
+      <div class="stat"><p>Tablas propuestas</p><b>34</b><small>SQL draft</small></div>
+      <div class="stat"><p>Roles</p><b>4</b><small>Admin, profe, alumno, tutor</small></div>
+      <div class="stat"><p>Piloto</p><b>&lt;20</b><small>alumnos, 1 grupo</small></div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Decisiones cerradas</h2>
+    <p class="section-sub">Lo que ya se definió y no se vuelve a discutir salvo que cambie el alcance.</p>
+    <div class="grid g3">
+      <div class="card"><h3>Supabase</h3><p>Postgres, Auth, RLS, Storage y Edge Functions. Una sola base en la nube.</p></div>
+      <div class="card"><h3>Alumnos sin correo</h3><p>Entran con usuario y contraseña. El correo sintético solo es identificador interno.</p></div>
+      <div class="card"><h3>Publicar no es activar</h3><p>El profesor controla qué unidad ve cada grupo y cada alumno.</p></div>
+      <div class="card"><h3>Padres informados</h3><p>Portal con enlace mágico, correo y PDF. Solo ven lo marcado como familiar.</p></div>
+      <div class="card"><h3>Ranking acotado</h3><p>Personal y de grupo. El profesor puede ocultarlo. No se expone el detalle de otros.</p></div>
+      <div class="card"><h3>Sin pagos ni entregas</h3><p>El MVP no cobra ni recibe archivos. El trabajo físico se registra como estado.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Documentos de la fase</h2>
+    <p class="section-sub">Cada archivo resuelve una decisión. Los enlaces abren el contenido en el navegador.</p>
+    <div class="grid g2">
+      <div class="docs">
+        <a class="doc" href="README.md"><span class="num">00</span><span class="grow"><b>README</b><small>Índice, decisiones y criterio de salida</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="01-erd-y-diccionario.md"><span class="num">01</span><span class="grow"><b>ERD y diccionario</b><small>Entidades, campos y reglas</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="02-permisos-rls.md"><span class="num">02</span><span class="grow"><b>Permisos RLS</b><small>Quién ve y escribe qué</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="03-autenticacion.md"><span class="num">03</span><span class="grow"><b>Autenticación</b><small>Login, cuentas, invitaciones y resets</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="04-contenido-y-versionado.md"><span class="num">04</span><span class="grow"><b>Contenido y versionado</b><small>JSON, claves, activación y migración</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="05-privacidad-y-consentimiento.md"><span class="num">05</span><span class="grow"><b>Privacidad</b><small>Aviso, carta y retención</small></span><span class="pill warn">Revisión legal</span></a>
+      </div>
+      <div class="docs">
+        <a class="doc" href="06-criterios-de-aceptacion.md"><span class="num">06</span><span class="grow"><b>Criterios de aceptación</b><small>Definition of Done por fase</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="07-ambientes-y-respaldos.md"><span class="num">07</span><span class="grow"><b>Ambientes y respaldos</b><small>Local, staging, producción y RTO</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="08-backlog-fase-1.md"><span class="num">08</span><span class="grow"><b>Backlog Fase 1</b><small>Tareas, orden y estimación</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="WIREFRAMES.html"><span class="num">09</span><span class="grow"><b>Wireframes</b><small>Alumno, profesor, tutor y admin</small></span><span class="pill good">Listo</span></a>
+        <a class="doc" href="sql/001_schema.sql"><span class="num">10</span><span class="grow"><b>Esquema SQL</b><small>Borrador de tablas, enums e índices</small></span><span class="pill warn">No ejecutado</span></a>
+        <a class="doc" href="plantillas/piloto.csv"><span class="num">11</span><span class="grow"><b>Plantilla del piloto</b><small>CSV de alumnos y tutores</small></span><span class="pill good">Listo</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Checklist de salida</h2>
+    <p class="section-sub">Marca lo aprobado. El avance se guarda en este navegador.</p>
+    <div class="card">
+      <div class="checklist" id="checklist">
+        <label class="check"><input type="checkbox" data-key="erd"><span>ERD y diccionario aprobados por el profesor.</span></label>
+        <label class="check"><input type="checkbox" data-key="rls"><span>Matriz de permisos revisada y con pruebas definidas.</span></label>
+        <label class="check"><input type="checkbox" data-key="auth"><span>Flujos de login, resets e invitaciones aprobados.</span></label>
+        <label class="check"><input type="checkbox" data-key="contenido"><span>Esquema de contenido y reglas de activación aprobados.</span></label>
+        <label class="check"><input type="checkbox" data-key="privacidad"><span>Aviso y carta de consentimiento enviados a revisión legal.</span></label>
+        <label class="check"><input type="checkbox" data-key="csv"><span>Plantilla del piloto validada con datos ficticios.</span></label>
+        <label class="check"><input type="checkbox" data-key="criterios"><span>Criterios de aceptación aprobados.</span></label>
+        <label class="check"><input type="checkbox" data-key="ambientes"><span>Plan de ambientes, dominio y respaldos aprobado.</span></label>
+        <label class="check"><input type="checkbox" data-key="backlog"><span>Backlog de Fase 1 priorizado.</span></label>
+        <label class="check"><input type="checkbox" data-key="wireframes"><span>Wireframes revisados por el profesor.</span></label>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="progress-label"><span id="count">0 de 10</span><span>Fase 0</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Supuestos confirmados y pendientes</h2>
+    <p class="section-sub">Los supuestos base ya están aprobados. Quedan pendientes operativos antes de cargar datos reales.</p>
+    <div class="grid g2">
+      <div class="card">
+        <div class="status-row"><span>Escala de calificación</span><span class="pill good">0–10, mínimo 6</span></div>
+        <div class="status-row"><span>Periodos</span><span class="pill good">Tres trimestres</span></div>
+        <div class="status-row"><span>Dominio de la app</span><span class="pill good">app.ecoems.mx</span></div>
+        <div class="status-row"><span>Correo de alumnos</span><span class="pill good">alumnos.ecoems.mx</span></div>
+      </div>
+      <div class="card">
+        <div class="status-row"><span>Aviso de privacidad</span><span class="pill warn">Revisión legal</span></div>
+        <div class="status-row"><span>Correos de tutores</span><span class="pill warn">Pendiente</span></div>
+        <div class="status-row"><span>Fecha del piloto</span><span class="pill warn">Pendiente</span></div>
+        <div class="status-row"><span>Contenido inicial</span><span class="pill good">4 materias</span></div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:14px;"><b>Regla:</b> no se cargan datos reales hasta que el aviso esté aprobado, el grupo esté confirmado y exista respaldo probado.</div>
+  </section>
+
+  <section>
+    <h2>Ruta crítica</h2>
+    <p class="section-sub">Qué sigue después de aprobar esta fase.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Fase 1 · Base técnica</h3>
+        <p>Repositorio, Supabase staging, esquema, RLS, login por rol, despliegue y respaldo. Dos semanas.</p>
+      </div>
+      <div class="card">
+        <h3>Fase 2 · Contenido y activación</h3>
+        <p>Migrar las 4 materias listas, validar 60 unidades y 540 ejercicios, y probar publicación vs. activación.</p>
+      </div>
+      <div class="card">
+        <h3>Fase 3 · Juegos y métricas</h3>
+        <p>Conectar lectura y matemáticas, XP, insignias y ranking personal/grupo.</p>
+      </div>
+      <div class="card">
+        <h3>Fases 4–7</h3>
+        <p>Panel del profesor, expediente y padres, diagnóstico con alertas, y piloto con menos de 20 alumnos.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Riesgos principales</h2>
+    <div class="grid g3">
+      <div class="card"><h3>RLS mal probado</h3><p>Un alumno podría ver datos de otro. Se prueba con cada rol antes de avanzar.</p></div>
+      <div class="card"><h3>Contenido roto al migrar</h3><p>Se validan conteos y claves estables; las versiones publicadas no se editan.</p></div>
+      <div class="card"><h3>Correo en spam</h3><p>SPF, DKIM y DMARC; pruebas con Gmail y Outlook antes de invitar tutores.</p></div>
+      <div class="card"><h3>Datos reales en staging</h3><p>Semilla ficticia y checklist de privacidad. El CSV real no entra al repositorio.</p></div>
+      <div class="card"><h3>Contraseñas temporales</h3><p>Se generan aleatorias, se muestran una vez y se fuerza cambio en el primer ingreso.</p></div>
+      <div class="card"><h3>Alcance creciente</h3><p>Pagos, foros, app nativa y entregas quedan fuera del MVP.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="links" style="margin-bottom:12px;">
+      <a href="WIREFRAMES.html">Wireframes</a>
+      <a href="../../PLAN-PLATAFORMA.html">Plan general</a>
+      <a href="../../curso/index.html">Curso actual</a>
+      <a href="../../herramientas-lectura.html">Herramienta de lectura</a>
+      <a href="../../herramientas-matematicas.html">Herramienta de matemáticas</a>
+    </div>
+    Fase 0 · Documento de trabajo. No se ejecutó SQL ni se modificó el curso.
+  </footer>
+</div>
+
+<script>
+  const key = 'ecoems_fase0_checklist_v1';
+  const boxes = Array.from(document.querySelectorAll('#checklist input'));
+  const bar = document.getElementById('bar');
+  const count = document.getElementById('count');
+  let state = {};
+
+  try { state = JSON.parse(localStorage.getItem(key) || '{}'); } catch (error) { state = {}; }
+
+  function render() {
+    let done = 0;
+    boxes.forEach((box) => {
+      const checked = Boolean(state[box.dataset.key]);
+      box.checked = checked;
+      box.closest('.check').classList.toggle('done', checked);
+      if (checked) done += 1;
+    });
+    const pct = Math.round((done / boxes.length) * 100);
+    bar.style.width = pct + '%';
+    count.textContent = done + ' de ' + boxes.length;
+  }
+
+  boxes.forEach((box) => {
+    box.addEventListener('change', () => {
+      state[box.dataset.key] = box.checked;
+      localStorage.setItem(key, JSON.stringify(state));
+      render();
+    });
+  });
+
+  render();
+</script>
+</body>
+</html>

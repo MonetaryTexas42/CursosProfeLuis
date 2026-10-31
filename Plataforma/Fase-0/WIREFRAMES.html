@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframes · Plataforma ECOEMS</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #131a2e;
+    --panel2: #1a2340;
+    --line: #2a3556;
+    --text: #e8edf9;
+    --muted: #98a4c4;
+    --brand: #5b8cff;
+    --brand2: #8b5cf6;
+    --good: #34d399;
+    --warn: #fbbf24;
+    --bad: #fb7185;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #1b2a5a 0%, transparent 60%), var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px clamp(16px, 4vw, 48px) 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: end;
+    justify-content: space-between;
+  }
+  h1 { margin: 0; font-size: clamp(24px, 3vw, 38px); letter-spacing: -0.03em; }
+  h1 span { color: var(--brand); }
+  .sub { color: var(--muted); margin: 4px 0 0; max-width: 780px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line);
+    background: rgba(91, 140, 255, 0.08);
+    color: #cfe0ff;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px clamp(16px, 4vw, 48px);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    backdrop-filter: blur(12px);
+    background: rgba(11, 16, 32, 0.78);
+    border-bottom: 1px solid rgba(42, 53, 86, 0.7);
+  }
+  .tab {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab[aria-selected="true"] {
+    background: linear-gradient(135deg, var(--brand), var(--brand2));
+    border-color: transparent;
+  }
+  main { padding: 24px clamp(16px, 4vw, 48px) 64px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .screen-head { margin-bottom: 18px; }
+  .screen-head h2 { margin: 0 0 4px; font-size: 22px; }
+  .screen-head p { margin: 0; color: var(--muted); }
+  .frame {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.35);
+  }
+  .browser {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: #0f1527;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #3a466b; }
+  .url {
+    flex: 1;
+    margin-left: 8px;
+    background: #0a0f1f;
+    border: 1px solid #222c4a;
+    border-radius: 8px;
+    padding: 5px 10px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .app { display: grid; grid-template-columns: 220px 1fr; min-height: 560px; }
+  .app.no-side { grid-template-columns: 1fr; }
+  .side {
+    border-right: 1px solid var(--line);
+    background: #0f1527;
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; letter-spacing: -0.02em;
+  }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--brand), var(--brand2));
+    font-size: 14px;
+  }
+  .nav { display: grid; gap: 4px; }
+  .nav a {
+    color: var(--muted); text-decoration: none; font-size: 14px;
+    padding: 8px 10px; border-radius: 8px;
+  }
+  .nav a.on, .nav a:hover { background: var(--panel2); color: var(--text); }
+  .side-foot { margin-top: auto; font-size: 12px; color: var(--muted); }
+  .content { padding: 22px; min-width: 0; }
+  .topbar {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 12px; margin-bottom: 18px;
+  }
+  .topbar h3 { margin: 0; font-size: 20px; }
+  .who { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: #23305a; color: #cfe0ff; font-weight: 800; font-size: 12px;
+  }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .card {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    min-width: 0;
+  }
+  .card h4 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; color: var(--muted); font-size: 13px; }
+  .stat { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-top: 6px; }
+  .stat small { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .between { justify-content: space-between; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; border: 0; border-radius: 9px;
+    padding: 9px 14px; font: inherit; font-size: 13px; font-weight: 700;
+    background: var(--brand); color: white; cursor: default;
+  }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  .btn.good { background: #0f7b5a; }
+  .btn.small { padding: 6px 10px; font-size: 12px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 750; letter-spacing: .02em;
+    background: #22305a; color: #cfe0ff;
+  }
+  .pill.good { background: rgba(52,211,153,.12); color: var(--good); }
+  .pill.warn { background: rgba(251,191,36,.12); color: var(--warn); }
+  .pill.bad { background: rgba(251,113,133,.12); color: var(--bad); }
+  .list { display: grid; gap: 8px; }
+  .item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    background: #151d35; border: 1px solid #222c4a;
+  }
+  .item .grow { flex: 1; min-width: 0; }
+  .item b { display: block; font-size: 13px; }
+  .item small { color: var(--muted); font-size: 12px; }
+  .bar { height: 8px; background: #0d1326; border-radius: 999px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand), var(--brand2)); }
+  .split { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; }
+  .field { display: grid; gap: 6px; margin-bottom: 12px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 650; }
+  .input {
+    height: 40px; border-radius: 9px; border: 1px solid var(--line);
+    background: #0d1326; display: flex; align-items: center;
+    padding: 0 12px; color: var(--muted); font-size: 13px;
+  }
+  .tabs-inline { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+    color: var(--muted); font-size: 12px; font-weight: 650;
+  }
+  .chip.on { background: var(--panel2); color: var(--text); border-color: #3b4a76; }
+  .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table th, .table td { text-align: left; padding: 9px 8px; border-bottom: 1px solid #222c4a; }
+  .table th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  .table td { color: #dbe3f7; }
+  .note {
+    margin-top: 16px; border-left: 3px solid var(--brand);
+    background: rgba(91,140,255,.08); padding: 10px 14px;
+    color: #cfe0ff; font-size: 13px; border-radius: 0 10px 10px 0;
+  }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sq { width: 9px; height: 9px; border-radius: 3px; background: var(--brand); }
+  .mobile-note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .side { border-right: 0; border-bottom: 1px solid var(--line); }
+    .nav { display: flex; flex-wrap: wrap; }
+    .g4, .g3, .g2, .split { grid-template-columns: 1fr; }
+    .content { padding: 16px; }
+  }
+  @media print {
+    body { background: white; color: #111; }
+    .tabs { display: none; }
+    .screen { display: block !important; page-break-after: always; }
+    .frame { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="badge">Fase 0 · Wireframes</div>
+    <h1>Plataforma <span>ECOEMS</span></h1>
+    <p class="sub">Pantallas base para alumno, profesor, tutor y administrador. Son estructuras de información, no el diseño final. Prioridad: claridad, velocidad y uso en laptop/tableta.</p>
+  </div>
+  <div class="row">
+    <span class="pill good">Menos de 20 alumnos</span>
+    <span class="pill">Sin pagos</span>
+    <span class="pill">Sin entregas de archivos</span>
+  </div>
+</header>
+
+<div class="tabs" role="tablist" aria-label="Pantallas">
+  <button class="tab" role="tab" aria-selected="true" data-screen="login">01 · Login</button>
+  <button class="tab" role="tab" aria-selected="false" data-screen="alumno">02 · Alumno</button>
+  <button class="tab" role="tab" aria-selected="false" data-screen="unidad">03 · Unidad</button>
+  <button class="tab" role="tab" aria-selected="false" data-screen="profe">04 · Profesor</button>
+  <button class="tab" role="tab" aria-selected="false" data-screen="familia">05 · Tutor</button>
+  <button class="tab" role="tab" aria-selected="false" data-screen="admin">06 · Admin</button>
+</div>
+
+<main>
+  <section class="screen active" id="screen-login">
+    <div class="screen-head">
+      <h2>Login unificado</h2>
+      <p>El alumno usa usuario; el staff, correo; el tutor, enlace mágico. Sinautorregistro.</p>
+    </div>
+    <div class="frame">
+      <div class="browser"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">app.ecoems.mx/login</div></div>
+      <div class="app no-side">
+        <div class="content" style="display:grid;place-items:center;min-height:520px;">
+          <div style="width:min(420px,100%);">
+            <div class="logo" style="justify-content:center;margin-bottom:16px;"><span class="logo-mark">E</span> ECOEMS</div>
+            <div class="card">
+              <div class="tabs-inline">
+                <span class="chip on">Alumno</span>
+                <span class="chip">Profesor</span>
+                <span class="chip">Tutor</span>
+              </div>
+              <div class="field"><label>Usuario</label><div class="input">ana.martinez</div></div>
+              <div class="field"><label>Contraseña</label><div class="input">••••••••</div></div>
+              <button class="btn" style="width:100%;">Entrar</button>
+              <p style="margin:12px 0 0;color:var(--muted);font-size:12px;text-align:center;">¿Olvidaste tu contraseña? Pídele una temporal a tu profesor.</p>
+            </div>
+            <div class="note">El tutor entra desde el enlace del correo. Si no lo recibió, el profesor puede reenviarlo.</div>
+            <div class="row" style="justify-content:center;margin-top:14px;">
+              <span class="pill">Aviso de privacidad</span>
+              <span class="pill">Soporte</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span><i class="sq"></i> Un solo formulario, tres contextos</span><span><i class="sq" style="background:var(--good)"></i> Sin correo para alumnos</span></div>
+  </section>
+
+  <section class="screen" id="screen-alumno">
+    <div class="screen-head">
+      <h2>Inicio del alumno</h2>
+      <p>Lo primero que ve: qué estudiar hoy, cuánto ha avanzado y cómo va su racha.</p>
+    </div>
+    <div class="frame">
+      <div class="browser"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">app.ecoems.mx/alumno</div></div>
+      <div class="app">
+        <aside class="side">
+          <div class="logo"><span class="logo-mark">E</span> ECOEMS</div>
+          <nav class="nav">
+            <a class="on" href="#">Inicio</a>
+            <a href="#">Mis materias</a>
+            <a href="#">Juegos</a>
+            <a href="#">Mi progreso</a>
+            <a href="#">Mi perfil</a>
+          </nav>
+          <div class="side-foot">Grupo ECOEMS-PILOTO-A<br>3.er periodo</div>
+        </aside>
+        <div class="content">
+          <div class="topbar">
+            <div><h3>Hola, Ana</h3><p style="margin:0;color:var(--muted);font-size:13px;">Tienes 2 unidades activas esta semana.</p></div>
+            <div class="who"><span class="avatar">AM</span><span>Ana Martínez<br><small>Alumna</small></span></div>
+          </div>
+          <div class="grid g4" style="margin-bottom:14px;">
+            <div class="card"><p>XP total</p><div class="stat">1,240</div></div>
+            <div class="card"><p>Racha</p><div class="stat">6 <small>días</small></div></div>
+            <div class="card"><p>Unidades</p><div class="stat">8/60</div></div>
+            <div class="card"><p>Precisión</p><div class="stat">78<small>%</small></div></div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <div class="row between"><h4>Continuar estudiando</h4><span class="pill good">2 activas</span></div>
+              <div class="list" style="margin-top:12px;">
+                <div class="item">
+                  <div class="grow"><b>Español · Unidad 4</b><small>La noticia y la opinión</small><div class="bar" style="margin-top:8px;"><i style="width:64%"></i></div></div>
+                  <button class="btn small">Seguir</button>
+                </div>
+                <div class="item">
+                  <div class="grow"><b>Matemáticas · Unidad 12</b><small>Fracciones equivalentes</small><div class="bar" style="margin-top:8px;"><i style="width:22%"></i></div></div>
+                  <button class="btn small">Seguir</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <h4>Reto del día</h4>
+              <p>Lectura rápida · 3 minutos</p>
+              <div class="stat" style="font-size:22px;">+40 XP</div>
+              <button class="btn ghost" style="width:100%;margin-top:12px;">Abrir juego</button>
+              <div class="note" style="margin-top:14px;">El ranking es personal y de grupo. No muestra calificaciones de otros.</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="row between"><h4>Mis materias</h4><span class="pill">4 activas</span></div>
+            <div class="grid g4" style="margin-top:12px;">
+              <div class="item"><div class="grow"><b>Español</b><small>13 unidades</small></div><span class="pill good">Activa</span></div>
+              <div class="item"><div class="grow"><b>Habilidad verbal</b><small>4 unidades</small></div><span class="pill good">Activa</span></div>
+              <div class="item"><div class="grow"><b>Matemáticas</b><small>36 unidades</small></div><span class="pill good">Activa</span></div>
+              <div class="item"><div class="grow"><b>Habilidad matemática</b><small>7 unidades</small></div><span class="pill good">Activa</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-unidad">
+    <div class="screen-head">
+      <h2>Unidad y ejercicio</h2>
+      <p>Contenido corto, progreso visible y una acción clara por pantalla. Sin distractores.</p>
+    </div>
+    <div class="frame">
+      <div class="browser"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">app.ecoems.mx/alumno/unidad/8f2c</div></div>
+      <div class="app">
+        <aside class="side">
+          <div class="logo"><span class="logo-mark">E</span> ECOEMS</div>
+          <nav class="nav">
+            <a href="#">Inicio</a>
+            <a class="on" href="#">Mis materias</a>
+            <a href="#">Juegos</a>
+            <a href="#">Mi progreso</a>
+          </nav>
+          <div class="side-foot">Español · Unidad 4<br>Activa hasta el viernes</div>
+        </aside>
+        <div class="content">
+          <div class="topbar">
+            <div><span class="pill">Español · Unidad 4</span><h3 style="margin-top:8px;">La noticia y la opinión</h3><p style="margin:0;color:var(--muted);font-size:13px;">Objetivo: distinguir hechos de opiniones en un texto periodístico.</p></div>
+            <div class="pill warn">64% completado</div>
+          </div>
+          <div class="split">
+            <div>
+              <div class="card">
+                <div class="tabs-inline"><span class="chip on">Lección</span><span class="chip">Ejemplo</span><span class="chip">Práctica</span></div>
+                <h4>Hecho vs. opinión</h4>
+                <p style="margin-top:8px;">Un hecho se puede verificar. Una opinión expresa una valoración. En una noticia, ambos pueden aparecer, pero el lector debe distinguirlos.</p>
+                <div class="note">Ejemplo: “La ciudad inauguró tres bibliotecas” es un hecho. “Es la mejor inversión del año” es una opinión.</div>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <div class="row between"><h4>Práctica 4 de 8</h4><span class="pill">+10 XP</span></div>
+                <p style="margin-top:10px;">¿Cuál de las siguientes expresiones es una opinión?</p>
+                <div class="list" style="margin-top:12px;">
+                  <div class="item"><div class="grow"><b>A. La biblioteca abrió en marzo.</b></div></div>
+                  <div class="item" style="border-color:#3b4a76;background:#1d2848;"><div class="grow"><b>B. La biblioteca es la mejor de la ciudad.</b></div><span class="pill good">Seleccionada</span></div>
+                  <div class="item"><div class="grow"><b>C. El edificio tiene dos pisos.</b></div></div>
+                  <div class="item"><div class="grow"><b>D. La inauguración fue el lunes.</b></div></div>
+                </div>
+                <div class="row between" style="margin-top:14px;"><button class="btn ghost">Anterior</button><button class="btn">Comprobar</button></div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <h4>Tu avance</h4>
+                <div class="bar" style="margin:12px 0;"><i style="width:64%"></i></div>
+                <div class="row between"><small style="color:var(--muted)">8 de 13 pasos</small><small style="color:var(--muted)">17 min</small></div>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <h4>Mapa de la unidad</h4>
+                <div class="list" style="margin-top:10px;">
+                  <div class="item"><span class="pill good">OK</span><div class="grow"><b>Concepto</b><small>Completado</small></div></div>
+                  <div class="item"><span class="pill good">OK</span><div class="grow"><b>Ejemplo</b><small>Completado</small></div></div>
+                  <div class="item"><span class="pill warn">3/8</span><div class="grow"><b>Práctica</b><small>En curso</small></div></div>
+                  <div class="item"><span class="pill">Reto</span><div class="grow"><b>Reto final</b><small>Bloqueado</small></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-profe">
+    <div class="screen-head">
+      <h2>Panel del profesor</h2>
+      <p>Activación, asistencia, calificaciones y expediente. Todo lo del grupo en una sola vista.</p>
+    </div>
+    <div class="frame">
+      <div class="browser"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">app.ecoems.mx/profe/grupos/ecoems-piloto-a</div></div>
+      <div class="app">
+        <aside class="side">
+          <div class="logo"><span class="logo-mark">E</span> ECOEMS</div>
+          <nav class="nav">
+            <a href="#">Inicio</a>
+            <a class="on" href="#">Grupos</a>
+            <a href="#">Activación</a>
+            <a href="#">Asistencia</a>
+            <a href="#">Calificaciones</a>
+            <a href="#">Mensajes</a>
+          </nav>
+          <div class="side-foot">Prof. Laura Gómez<br>ECOEMS-PILOTO-A</div>
+        </aside>
+        <div class="content">
+          <div class="topbar">
+            <div><h3>ECOEMS-PILOTO-A</h3><p style="margin:0;color:var(--muted);font-size:13px;">18 alumnos · 3.er periodo · Tutor: Laura Gómez</p></div>
+            <div class="row"><button class="btn ghost small">Exportar CSV</button><button class="btn small">+ Activar unidad</button></div>
+          </div>
+          <div class="grid g4" style="margin-bottom:14px;">
+            <div class="card"><p>Asistencia hoy</p><div class="stat">16/18</div></div>
+            <div class="card"><p>Unidades activas</p><div class="stat">2</div></div>
+            <div class="card"><p>Promedio grupo</p><div class="stat">7.8</div></div>
+            <div class="card"><p>Alertas</p><div class="stat" style="color:var(--warn)">3</div></div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <div class="tabs-inline"><span class="chip on">Alumnos</span><span class="chip">Activación</span><span class="chip">Asistencia</span><span class="chip">Calificaciones</span></div>
+              <table class="table">
+                <thead><tr><th>Alumno</th><th>Avance</th><th>Asistencia</th><th>Promedio</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>Ana Martínez</td><td><span class="pill good">64%</span></td><td>96%</td><td>8.6</td><td><span class="pill">Ver</span></td></tr>
+                  <tr><td>Diego López</td><td><span class="pill warn">32%</span></td><td>88%</td><td>7.2</td><td><span class="pill">Ver</span></td></tr>
+                  <tr><td>Sofía Ramírez</td><td><span class="pill bad">12%</span></td><td>72%</td><td>6.1</td><td><span class="pill bad">Alerta</span></td></tr>
+                  <tr><td>Emilio Torres</td><td><span class="pill good">81%</span></td><td>100%</td><td>9.1</td><td><span class="pill">Ver</span></td></tr>
+                  <tr><td>Valeria Cruz</td><td><span class="pill good">58%</span></td><td>94%</td><td>8.0</td><td><span class="pill">Ver</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div class="card">
+                <h4>Activar unidad</h4>
+                <div class="field"><label>Materia</label><div class="input">Español</div></div>
+                <div class="field"><label>Unidad</label><div class="input">Unidad 5 · El reportaje</div></div>
+                <div class="field"><label>Abre</label><div class="input">Hoy, 08:00</div></div>
+                <div class="field"><label>Cierra</label><div class="input">Viernes, 20:00</div></div>
+                <button class="btn good" style="width:100%;">Activar para el grupo</button>
+                <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">Publicar no es activar. Los alumnos solo ven lo activo.</p>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <h4>Alertas</h4>
+                <div class="list" style="margin-top:10px;">
+                  <div class="item"><span class="pill bad">Riesgo</span><div class="grow"><b>Sofía Ramírez</b><small>3 días sin actividad</small></div></div>
+                  <div class="item"><span class="pill warn">Revisar</span><div class="grow"><b>Diego López</b><small>Baja precisión en fracciones</small></div></div>
+                  <div class="item"><span class="pill">Tutor</span><div class="grow"><b>Ana Martínez</b><small>Mensaje sin leer</small></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-familia">
+    <div class="screen-head">
+      <h2>Portal del tutor</h2>
+      <p>Resumen claro, sin tecnicismos. Solo ve a sus hijos y solo la información marcada como familiar.</p>
+    </div>
+    <div class="frame">
+      <div class="browser"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">app.ecoems.mx/familia</div></div>
+      <div class="app">
+        <aside class="side">
+          <div class="logo"><span class="logo-mark">E</span> ECOEMS</div>
+          <nav class="nav">
+            <a class="on" href="#">Inicio</a>
+            <a href="#">Mis hijos</a>
+            <a href="#">Mensajes</a>
+            <a href="#">Consentimiento</a>
+          </nav>
+          <div class="side-foot">Tutor: Patricia Martínez<br>2 alumnos vinculados</div>
+        </aside>
+        <div class="content">
+          <div class="topbar">
+            <div><h3>Hola, Patricia</h3><p style="margin:0;color:var(--muted);font-size:13px;">Este es el resumen de Ana.</p></div>
+            <div class="who"><span class="avatar">PM</span><span>Patricia Martínez<br><small>Tutora</small></span></div>
+          </div>
+          <div class="grid g3" style="margin-bottom:14px;">
+            <div class="card"><p>Asistencia</p><div class="stat">96<small>%</small></div><p style="margin-top:4px;">17 de 18 sesiones</p></div>
+            <div class="card"><p>Promedio</p><div class="stat">8.6</div><p style="margin-top:4px;">3.er periodo</p></div>
+            <div class="card"><p>Avance</p><div class="stat">64<small>%</small></div><div class="bar" style="margin-top:8px;"><i style="width:64%"></i></div></div>
+          </div>
+          <div class="split">
+            <div>
+              <div class="card">
+                <div class="row between"><h4>Materias</h4><span class="pill">4 activas</span></div>
+                <table class="table" style="margin-top:8px;">
+                  <thead><tr><th>Materia</th><th>Avance</th><th>Promedio</th></tr></thead>
+                  <tbody>
+                    <tr><td>Español</td><td>74%</td><td>8.8</td></tr>
+                    <tr><td>Habilidad verbal</td><td>50%</td><td>8.4</td></tr>
+                    <tr><td>Matemáticas</td><td>61%</td><td>8.2</td></tr>
+                    <tr><td>Habilidad matemática</td><td>43%</td><td>9.0</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <h4>Observaciones para familia</h4>
+                <div class="list" style="margin-top:10px;">
+                  <div class="item"><div class="grow"><b>Buen avance en lectura</b><small>Prof. Laura · hace 2 días</small></div><span class="pill good">Nueva</span></div>
+                  <div class="item"><div class="grow"><b>Recomendación: practicar fracciones</b><small>Prof. Laura · hace 5 días</small></div></div>
+                </div>
+                <div class="note">Las notas internas del profesor no se muestran aquí.</div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <h4>Reporte</h4>
+                <p>Descarga el reporte del periodo en PDF.</p>
+                <button class="btn ghost" style="width:100%;margin-top:12px;">Descargar PDF</button>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <h4>Mensajes</h4>
+                <div class="list" style="margin-top:10px;">
+                  <div class="item"><div class="grow"><b>Citatorio de seguimiento</b><small>Prof. Laura · no leído</small></div><span class="pill warn">1</span></div>
+                  <div class="item"><div class="grow"><b>Reporte del periodo</b><small>Sistema · leído</small></div></div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <h4>Consentimiento</h4>
+                <div class="row between"><span class="pill good">Aceptado</span><small style="color:var(--muted)">v1.0</small></div>
+                <p style="margin-top:8px;">Puedes revocar o actualizar tus datos de contacto.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-admin">
+    <div class="screen-head">
+      <h2>Administración</h2>
+      <p>Usuarios, contenido, configuración y auditoría. Solo para el administrador.</p>
+    </div>
+    <div class="frame">
+      <div class="browser"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">app.ecoems.mx/admin</div></div>
+      <div class="app">
+        <aside class="side">
+          <div class="logo"><span class="logo-mark">E</span> ECOEMS</div>
+          <nav class="nav">
+            <a class="on" href="#">Resumen</a>
+            <a href="#">Usuarios</a>
+            <a href="#">Contenido</a>
+            <a href="#">Configuración</a>
+            <a href="#">Auditoría</a>
+          </nav>
+          <div class="side-foot">Admin<br>Producción</div>
+        </aside>
+        <div class="content">
+          <div class="topbar">
+            <div><h3>Resumen general</h3><p style="margin:0;color:var(--muted);font-size:13px;">Piloto ECOEMS · ciclo 2026–2027</p></div>
+            <div class="row"><span class="pill good">Sistema operando</span><span class="pill">1 grupo</span></div>
+          </div>
+          <div class="grid g4" style="margin-bottom:14px;">
+            <div class="card"><p>Alumnos</p><div class="stat">18</div></div>
+            <div class="card"><p>Tutores</p><div class="stat">16</div></div>
+            <div class="card"><p>Unidades activas</p><div class="stat">7</div></div>
+            <div class="card"><p>Correos pendientes</p><div class="stat" style="color:var(--warn)">2</div></div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <div class="tabs-inline"><span class="chip on">Contenido</span><span class="chip">Usuarios</span><span class="chip">Auditoría</span></div>
+              <table class="table">
+                <thead><tr><th>Materia</th><th>Unidades</th><th>Ejercicios</th><th>Estado</th></tr></thead>
+                <tbody>
+                  <tr><td>Español</td><td>13</td><td>117</td><td><span class="pill good">Publicada</span></td></tr>
+                  <tr><td>Habilidad verbal</td><td>4</td><td>36</td><td><span class="pill good">Publicada</span></td></tr>
+                  <tr><td>Matemáticas</td><td>36</td><td>324</td><td><span class="pill good">Publicada</span></td></tr>
+                  <tr><td>Habilidad matemática</td><td>7</td><td>63</td><td><span class="pill good">Publicada</span></td></tr>
+                  <tr><td>Otras 7 materias</td><td>—</td><td>—</td><td><span class="pill">Vacías</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div class="card">
+                <h4>Acciones rápidas</h4>
+                <div class="list" style="margin-top:10px;">
+                  <div class="item"><div class="grow"><b>Crear profesor</b><small>Correo real + contraseña</small></div><button class="btn small ghost">Crear</button></div>
+                  <div class="item"><div class="grow"><b>Importar grupo</b><small>CSV del piloto</small></div><button class="btn small ghost">Importar</button></div>
+                  <div class="item"><div class="grow"><b>Reenviar invitaciones</b><small>2 tutores pendientes</small></div><button class="btn small ghost">Reenviar</button></div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:14px;">
+                <h4>Salud del sistema</h4>
+                <div class="row between" style="margin-top:8px;"><span>Respaldo diario</span><span class="pill good">OK</span></div>
+                <div class="row between" style="margin-top:8px;"><span>Última restauración</span><span class="pill">Hace 6 días</span></div>
+                <div class="row between" style="margin-top:8px;"><span>Errores 24 h</span><span class="pill good">0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span><i class="sq"></i> Admin no se usa para dar clase</span><span><i class="sq" style="background:var(--good)"></i> Todo cambio queda en auditoría</span></div>
+  </section>
+</main>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const screens = document.querySelectorAll('.screen');
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
+      screens.forEach((s) => s.classList.remove('active'));
+      tab.setAttribute('aria-selected', 'true');
+      document.getElementById('screen-' + tab.dataset.screen).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>

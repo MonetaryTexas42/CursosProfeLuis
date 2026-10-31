@@ -1,0 +1,5 @@
+student_code,student_name,birth_date,group_name,username,temp_password,guardian_name,guardian_relationship,guardian_email,guardian_phone,is_primary,consent_status,notes
+P001,Alumno Ejemplo Uno,2010-04-12,ECOEMS-PILOTO-A,alumno.ejemplo1,,Tutor Ejemplo Uno,madre,tutor1@example.com,5550000001,si,pendiente,Grupo piloto
+P002,Alumno Ejemplo Dos,2010-07-23,ECOEMS-PILOTO-A,alumno.ejemplo2,,Tutor Ejemplo Dos,padre,tutor2@example.com,5550000002,si,pendiente,Grupo piloto
+P003,Alumno Ejemplo Tres,2010-01-09,ECOEMS-PILOTO-A,alumno.ejemplo3,,Tutor Ejemplo Tres,tía,tutor3@example.com,5550000003,no,pendiente,"Mismo tutor que P004; validar vínculo"
+P004,Alumno Ejemplo Cuatro,2010-11-30,ECOEMS-PILOTO-A,alumno.ejemplo4,,Tutor Ejemplo Tres,tía,tutor3@example.com,5550000003,si,pendiente,"Segundo alumno del mismo tutor"
