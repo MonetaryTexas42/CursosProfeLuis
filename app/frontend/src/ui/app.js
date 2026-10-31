@@ -991,6 +991,136 @@ function sectionMarkup(section, results) {
   `;
 }
 
+function flashcardMarkup(exercise, result) {
+  const key = String(exercise.key || '');
+  const answered = Boolean(result);
+
+  return `
+    <article class="card wide question-card">
+      <span class="card-label">Ejercicio ${escapeHtml(key.replace('ej-', ''))}</span>
+      <h2>${escapeHtml(exercise.prompt || 'Ejercicio')}</h2>
+      ${exercise.figure ? `<div class="figure">${escapeHtml(exercise.figure)}</div>` : ''}
+      <button class="btn ghost reveal-btn" data-reveal="${escapeHtml(key)}">Ver respuesta</button>
+      <div class="flashcard-answer hidden" data-flashcard-answer="${escapeHtml(key)}">
+        <p class="unit-body"><strong>Respuesta:</strong> ${escapeHtml(exercise.answer || '')}</p>
+        ${(exercise.steps || []).length ? `
+          <ol class="steps">
+            ${exercise.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}
+          </ol>
+        ` : ''}
+        ${(exercise.acceptedAnswers || []).length ? `
+          <p class="muted"><small>También vale: ${exercise.acceptedAnswers.map(escapeHtml).join(' · ')}</small></p>
+        ` : ''}
+        <div class="row">
+          <button class="btn primary" data-answer-kind="flashcard"
+            data-answer-key="${escapeHtml(key)}" data-answer-text="${escapeHtml(exercise.answer)}"
+            ${answered ? 'disabled' : ''}>Lo acerté</button>
+          <button class="btn ghost" data-answer-kind="flashcard"
+            data-answer-key="${escapeHtml(key)}" data-answer-text="x"
+            ${answered ? 'disabled' : ''}>Todavía no</button>
+        </div>
+      </div>
+      ${result ? `
+        <div class="answer-box ${result.is_correct ? 'correct' : 'incorrect'}">
+          <strong>${result.is_correct ? 'Correcto' : 'Todavía no'}</strong>
+          ${result.explanation ? `<p>${escapeHtml(result.explanation)}</p>` : ''}
+          <small>Intento ${result.attempt_no || 1}</small>
+        </div>
+      ` : ''}
+    </article>
+  `;
+}
+
+function lessonCard(label, title, body) {
+  return `
+    <article class="card wide unit-section">
+      <span class="card-label">${escapeHtml(label)}</span>
+      <h2>${escapeHtml(title)}</h2>
+      <p class="unit-body">${textBlock(body)}</p>
+    </article>
+  `;
+}
+
+function exampleMarkup(example, index) {
+  return `
+    <article class="card wide unit-section">
+      <span class="card-label">Ejemplo ${index + 1}</span>
+      <h2>${escapeHtml(example.prompt || 'Ejemplo')}</h2>
+      ${(example.steps || []).length ? `
+        <ol class="steps">
+          ${example.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}
+        </ol>
+      ` : ''}
+      ${example.result ? `<p class="unit-body"><strong>Resultado:</strong> ${escapeHtml(example.result)}</p>` : ''}
+    </article>
+  `;
+}
+
+function chapterMarkup(chapter) {
+  if (!chapter || typeof chapter !== 'object') return '';
+
+  const intro = chapter.intro;
+  const bloques = Array.isArray(chapter.bloques) ? chapter.bloques : [];
+
+  const introCard = intro ? `
+    <article class="card wide unit-section">
+      <span class="card-label">Capítulo</span>
+      <h2>${escapeHtml(intro.t || 'Antes de empezar')}</h2>
+      ${intro.p1 ? `<p class="unit-body">${textBlock(intro.p1)}</p>` : ''}
+      ${intro.p2 ? `<p class="unit-body">${textBlock(intro.p2)}</p>` : ''}
+      ${(intro.items || []).length ? `
+        <ul class="steps">
+          ${intro.items.map((item) => `<li>${escapeHtml(String(item))}</li>`).join('')}
+        </ul>
+      ` : ''}
+    </article>
+  ` : '';
+
+  const blockCards = bloques.map((bloque) => `
+    <article class="card wide unit-section">
+      <span class="card-label">${escapeHtml(bloque.rotulo || 'Bloque')}</span>
+      <h2>${escapeHtml(bloque.nombre || 'Sección del capítulo')}</h2>
+      ${bloque.intro ? `<p class="unit-body">${textBlock(bloque.intro)}</p>` : ''}
+      ${(bloque.cards || []).map((card) => `
+        <div class="chapter-card">
+          <strong>${escapeHtml(card.titulo || '')}</strong>
+          ${card.pill ? `<span class="pill">${escapeHtml(card.pill)}</span>` : ''}
+          ${card.hace ? `<p class="unit-body">${textBlock(card.hace)}</p>` : ''}
+        </div>
+      `).join('')}
+    </article>
+  `).join('');
+
+  return introCard + blockCards;
+}
+
+function realContentMarkup(content) {
+  const theory = Array.isArray(content.theory) ? content.theory : [];
+  const guides = Array.isArray(content.guides) ? content.guides : [];
+  const examples = Array.isArray(content.examples) ? content.examples : [];
+  const mistakes = Array.isArray(content.commonMistakes) ? content.commonMistakes : [];
+  const exercises = Array.isArray(content.exercises) ? content.exercises : [];
+  const hook = content.unit?.hook || '';
+  const truco = content.unit?.truco || '';
+
+  return [
+    hook ? lessonCard('Para empezar', '¿De qué trata?', hook) : '',
+    theory.map((item, index) => lessonCard('Concepto', `Idea ${index + 1}`, item)).join(''),
+    truco ? lessonCard('Truco', 'Recuerda', truco) : '',
+    guides.map((item, index) => lessonCard('Guía práctica', `Actividad ${index + 1}`, item)).join(''),
+    examples.map(exampleMarkup).join(''),
+    mistakes.map((mistake) => `
+      <article class="card wide unit-section mistake-card">
+        <span class="card-label">Error común</span>
+        <h2>${escapeHtml(mistake.title || 'Cuidado')}</h2>
+        <p class="unit-body">${textBlock(mistake.detail || '')}</p>
+      </article>
+    `).join(''),
+    chapterMarkup(content.chapter),
+    exercises.map((exercise) => flashcardMarkup(exercise, state.unitResults[`exercise:${exercise.key}`])).join('')
+  ].join('');
+}
+
 function quizBlockMarkup(content, results) {
   const quiz = Array.isArray(content.quiz) ? content.quiz : [];
   const reto = content.reto && typeof content.reto === 'object' ? content.reto : null;
@@ -1047,13 +1177,16 @@ function unitMarkup(unitView) {
   const assignment = unitView.assignment;
   const unit = unitView.unit;
   const content = unitView.version?.content || {};
-  const sections = Array.isArray(content.sections) ? content.sections : [];
+  const hasSections = Array.isArray(content.sections) && content.sections.length > 0;
   const progress = unitView.progress;
   const isDone = progress?.status === 'completed' || progress?.status === 'mastered';
-  const objective = content.unit?.objective || '';
+  const objective = Array.isArray(content.unit?.objective)
+    ? content.unit.objective[0]
+    : (content.unit?.objective || '');
   const estimated = unit?.estimated_minutes || content.unit?.estimatedMinutes;
   const subject = unit?.subject_name || content.unit?.subjectKey || 'Materia';
-  const hasQuestions = sections.some((section) => section.type === 'exercise')
+  const hasQuestions = hasSections
+    || (Array.isArray(content.exercises) && content.exercises.length > 0)
     || (Array.isArray(content.quiz) && content.quiz.length > 0)
     || Boolean(content.reto);
 
@@ -1091,7 +1224,9 @@ function unitMarkup(unitView) {
             ${assignment.instructions ? `<p class="unit-body">${textBlock(assignment.instructions)}</p>` : ''}
           </article>
 
-          ${sections.map((section) => sectionMarkup(section, state.unitResults)).join('')}
+          ${hasSections
+            ? content.sections.map((section) => sectionMarkup(section, state.unitResults)).join('')
+            : realContentMarkup(content)}
           ${quizBlockMarkup(content, state.unitResults)}
 
           ${hasQuestions ? '' : '<article class="card wide"><p class="empty-state">Esta versión todavía no tiene ejercicios.</p></article>'}
@@ -1119,6 +1254,19 @@ function renderUnit() {
 
   appRoot.querySelectorAll('[data-answer-key]').forEach((button) => {
     button.addEventListener('click', answerQuestion);
+  });
+
+  appRoot.querySelectorAll('[data-reveal]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const key = button.dataset.reveal;
+      const panel = appRoot.querySelector(`[data-flashcard-answer="${key}"]`);
+      if (panel) {
+        panel.classList.toggle('hidden');
+        button.textContent = panel.classList.contains('hidden')
+          ? 'Ver respuesta'
+          : 'Ocultar respuesta';
+      }
+    });
   });
 }
 
@@ -1187,10 +1335,41 @@ async function answerQuestion(event) {
   const kind = button.dataset.answerKind;
   const key = button.dataset.answerKey;
   const part = button.dataset.answerPart || 'reto';
-  const index = Number(button.dataset.answerIndex);
-  const resultKey = kind === 'exercise' ? `exercise:${key}` : `quiz:${part}:${key}`;
+  const resultKey = kind === 'exercise' || kind === 'flashcard'
+    ? `exercise:${key}`
+    : `quiz:${part}:${key}`;
 
-  if (!key || Number.isNaN(index)) return;
+  if (!key) return;
+
+  if (kind === 'flashcard') {
+    state.error = '';
+    state.notice = '';
+    button.disabled = true;
+
+    try {
+      const { data, error } = await supabase.rpc('app_record_exercise_attempt', {
+        p_assignment_id: unitView.assignment.id,
+        p_exercise_key: key,
+        p_answer: { text: button.dataset.answerText || 'x' },
+        p_duration_ms: null
+      });
+
+      if (error) throw error;
+      if (state.view !== 'unit' || state.unitView?.assignment.id !== unitView.assignment.id) return;
+
+      state.unitResults[resultKey] = data;
+      if (data.progress) state.unitView.progress = data.progress;
+    } catch {
+      if (state.view !== 'unit' || state.unitView?.assignment.id !== unitView.assignment.id) return;
+      setError('No se pudo guardar tu respuesta. Revisa la conexión e intenta de nuevo.');
+    }
+
+    renderUnit();
+    return;
+  }
+
+  const index = Number(button.dataset.answerIndex);
+  if (Number.isNaN(index)) return;
 
   state.error = '';
   state.notice = '';

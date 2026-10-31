@@ -649,6 +649,56 @@ pre code {
   width: auto;
 }
 
+.reveal-btn {
+  width: auto;
+  justify-self: start;
+}
+
+.flashcard-answer {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.flashcard-answer.hidden {
+  display: none;
+}
+
+.flashcard-answer .row {
+  margin-top: 2px;
+}
+
+.chapter-card {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  display: grid;
+  gap: 6px;
+}
+
+.chapter-card .pill {
+  justify-self: start;
+}
+
+.mistake-card {
+  border-left: 4px solid rgba(251, 113, 133, 0.7);
+}
+
+.figure {
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: 1fr;

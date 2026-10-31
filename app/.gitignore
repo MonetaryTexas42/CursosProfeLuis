@@ -11,3 +11,5 @@ dist/
 # temporal supabase cli
 .supabase/.temp/
 supabase/.temp/
+
+.backups/

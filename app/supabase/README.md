@@ -9,53 +9,57 @@ migrations/
   0003_rls.sql                 funciones auxiliares y 77 políticas
   0004_progress_rpcs.sql       inicio, intentos, quiz/reto y completar unidad
   0005_fix_quiz_accuracy.sql   corrige el cálculo de precisión del quiz
+  0006_game_reading_rpcs.sql   sesiones de juego y evaluaciones de lectura
+  0007_exercise_answers.sql    calificación de flashcards (respuesta de texto)
 tests/
-  0004_progress_rpcs.sql       prueba SQL transaccional de las RPC
+  0004_progress_rpcs.sql       prueba SQL transaccional de las RPC de progreso
+  0006_game_reading_rpcs.sql   prueba SQL transaccional de juegos y lectura
+  0007_content_smoke.sql       flujo completo con contenido real (asignación → completar)
 ```
 
-Las cinco migraciones se aplicaron al proyecto `ioikcrdxneuydylyhvwi` el 30 de octubre de 2026. La base tiene 34 tablas, 34 tablas con RLS y 77 políticas.
+Las siete migraciones están aplicadas al proyecto `ioikcrdxneuydylyhvwi`. La base tiene 34 tablas, RLS en todas y 77 políticas.
+
+## Contenido real cargado
+
+- 11 materias (4 activas: español, habilidad verbal, matemáticas, habilidad matemática).
+- 60 unidades publicadas con versión 1 (checksum SHA-256 del contenido).
+- 540 ejercicios flashcard, 426 preguntas de quiz (tipo + capítulo) y 47 retos.
+- El contenido se extrae del curso actual con `scripts/extract-content.mjs` y se
+  siembra con `scripts/seed-content.mjs` (idempotente).
+- Formato de contenido (schemaVersion 1): ver `seed/content-v1.json` y
+  `Fase-0/04-contenido-y-versionado.md` (adaptado al formato real de `data.js`).
+- El grupo **Piloto A** tiene una asignación activa de `espanol-u01` como piloto.
 
 ## Pruebas ejecutadas
 
-Se corrieron 17 pruebas de RLS con usuarios ficticios dentro de una transacción con `rollback`; no quedaron datos de prueba. Pasaron todos los casos, incluidos:
+- **17 pruebas de RLS** con usuarios ficticios dentro de una transacción con `rollback`.
+- `tests/0004_progress_rpcs.sql`: inicio, intentos, quiz/reto, precisión, completado,
+  tutor bloqueado y asignación cerrada bloqueada (8 verificaciones).
+- `tests/0006_game_reading_rpcs.sql`: sesiones de juego, lecturas, estadísticas y
+  bloqueos de tutor/juego inactivo (7 verificaciones).
+- `tests/0007_content_smoke.sql`: con contenido real — inicio, lectura del contenido
+  por RLS, flashcard correcta/incorrecta, quiz, completado y tutor bloqueado.
+- `scripts/ui-smoke.mjs`: Chrome headless contra la app real — login de alumno,
+  unidad visible, render del contenido, revelado de flashcard e intento calificado.
 
-- Alumno A no lee a alumno B ni una unidad sin asignación activa.
-- Alumno A sí lee la unidad y versión asignadas y no inserta progreso directamente.
-- Profesor A no lee ni califica al grupo B, pero sí activa una asignación de su grupo.
-- Tutor A no lee al alumno B ni observaciones `internal`; sí lee las `family`.
-- Admin lee todas las filas; anónimo recibe `permission denied`.
+## Funciones Edge
 
-También se ejecutó `tests/0004_progress_rpcs.sql` en una transacción con `rollback`: inicio de unidad, intentos incorrecto/correcto, quiz/reto, precisión, completado, tutor bloqueado y asignación cerrada bloqueada. El flujo completo de activación docente → abrir unidad → responder → completar se verificó en Chrome headless con una unidad demo, que se eliminó al terminar.
+```text
+functions/
+  admin-create-student/        alta de alumno (admin o profesor del grupo)   [listo]
+  admin-reset-student-password/ contraseña temporal con auditoría            [listo]
+  invite-guardian/             invitación de tutor con enlace mágico         [nuevo, por desplegar]
+  guardian-consent/            aceptación/revocación del aviso de privacidad [nuevo, por desplegar]
+```
 
 ## Importante
 
 - El esquema asume que existe `auth.users`, provisto por Supabase.
-- Los alumnos **no** escriben tablas directamente; usan RPC para inicio, intentos, quiz/reto y completar unidad. Faltan las RPC de juegos y lectura.
+- Los alumnos **no** escriben tablas directamente; usan RPC para inicio, intentos,
+  quiz/reto, completar unidad, juegos y lectura.
 - No se deben cargar datos reales hasta revisar privacidad y completar el consentimiento.
 - No se usa `service_role` en el frontend.
 - Los correos de alumnos son sintéticos: `usuario@alumnos.ecoems.mx`.
-
-## Crear el primer admin
-
-1. En Supabase Dashboard, Authentication → Users → Add user: correo real y contraseña.
-2. Copia el UUID del usuario y ejecuta:
-
-```sql
-insert into public.profiles (id, role, full_name, email)
-values ('UUID_DEL_USUARIO', 'admin', 'Nombre del admin', 'correo@dominio.mx')
-on conflict (id) do update
-set role = 'admin', active = true;
-```
-
-El primer admin del piloto ya fue creado y su login real está verificado.
-
-## Datos ficticios de staging
-
-Ya existen el ciclo `2026-2027` con sus tres trimestres, el grupo `Piloto A`, tres alumnos, dos profesores y dos tutores vinculados. Los logins de profesor, alumno y tutor se probaron contra la API real y el panel por rol se verificó en Chrome headless.
-
-Las contraseñas están solo en `app/.secrets/test-users.txt`, que está ignorado por git. No se versionan ni se usan en producción.
-
-Las altas directas en `auth.users` requieren `instance_id='00000000-0000-0000-0000-000000000000'` y tokens no nulos (`confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new` en `''`). `confirmed_at` es generado y no se actualiza. El correo en `auth.users` tiene un índice único parcial, así que no se use `on conflict (email)`.
 
 ## Flujo de migraciones
 
@@ -66,12 +70,35 @@ npx supabase db push --db-url "$(cat .secrets/database-url)" \
   --workdir "$(pwd)" --yes
 ```
 
-La cadena directa vive en `.secrets/database-url`, que está ignorado por git, y solo se usa en administración local. No debe ir al frontend ni a un repositorio. No se ejecuta en producción sin respaldo y ventana de mantenimiento.
+La cadena directa vive en `.secrets/database-url`, que está ignorado por git, y solo
+se usa en administración local. No debe ir al frontend ni a un repositorio.
 
-Para probar las RPC en una transacción revertida:
+## Pruebas SQL
 
 ```bash
 cd app
 DATABASE_URL="$(cat .secrets/database-url)" \
-  node /ruta/al/runner.js supabase/tests/0004_progress_rpcs.sql
+  node scripts/run-sql-test.mjs supabase/tests/0004_progress_rpcs.sql
+```
+
+## Respaldo
+
+```bash
+cd app
+DATABASE_URL="$(cat .secrets/database-url)" node scripts/backup-db.mjs
+```
+
+Escribe en `.backups/` (ignorado por git) un JSON con todas las tablas de
+`auth` y `public`. El esquema se reproduce con las migraciones.
+
+## Despliegue de Edge Functions
+
+Requiere `SUPABASE_ACCESS_TOKEN`:
+
+```bash
+cd app
+npx supabase link --project-ref ioikcrdxneuydylyhvwi --workdir "$(pwd)"
+npx supabase functions deploy invite-guardian guardian-consent \
+  admin-create-student admin-reset-student-password \
+  --project-ref ioikcrdxneuydylyhvwi
 ```
