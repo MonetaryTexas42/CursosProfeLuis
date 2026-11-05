@@ -180,7 +180,73 @@ async function main() {
   }
   console.log("   ✓ consentimiento registrado:", consent.data.status);
 
-  console.log("\nPASS · Funciones Edge desplegadas y flujo WhatsApp/consentimiento verificado.");
+  // ---- Funciones de administración (requieren ADMIN_PASSWORD) ----
+  if (process.env.ADMIN_PASSWORD) {
+    const adminEmail = process.env.ADMIN_EMAIL || "cursosprofeluis@gmail.com";
+    const testTeacherEmail = `profesor.test.${Date.now()}@ecoems.local`;
+
+    console.log("9) Login del admin…");
+    const adminToken = await login(adminEmail, process.env.ADMIN_PASSWORD);
+
+    console.log("10) admin-create-teacher…");
+    const created = await callFunction("admin-create-teacher", adminToken, {
+      full_name: "Profesor de Prueba",
+      email: testTeacherEmail,
+      password: "Aa1!contraseñaTemporal",
+    });
+    if (created.status !== 201 || !created.data?.ok) {
+      throw new Error(`admin-create-teacher falló: ${JSON.stringify(created)}`);
+    }
+    const teacherProfileId = created.data.profile.id;
+    console.log("   ✓ profesor creado:", created.data.profile.email);
+
+    console.log("11) admin-create-teacher con correo repetido (409)…");
+    const duplicated = await callFunction("admin-create-teacher", adminToken, {
+      full_name: "Profesor de Prueba",
+      email: testTeacherEmail,
+      password: "Aa1!contraseñaTemporal",
+    });
+    if (duplicated.status !== 409) {
+      throw new Error(`Se esperaba 409 y llegó ${duplicated.status}`);
+    }
+    console.log("   ✓ duplicado rechazado");
+
+    console.log("12) deactivate-user (desactivar profesor de prueba)…");
+    const deactivated = await callFunction("deactivate-user", adminToken, {
+      user_id: teacherProfileId,
+      active: false,
+    });
+    if (deactivated.status !== 200 || deactivated.data?.active !== false) {
+      throw new Error(`deactivate-user falló: ${JSON.stringify(deactivated)}`);
+    }
+    console.log("   ✓ cuenta desactivada");
+
+    console.log("13) deactivate-user al propio admin (debe bloquearse)…");
+    const adminProfilesRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?select=id&email=eq.${encodeURIComponent(adminEmail)}`,
+      { headers: { apikey: ANON_KEY, Authorization: `Bearer ${adminToken}` } },
+    );
+    const adminProfiles = await adminProfilesRes.json();
+    const adminProfileId = adminProfiles?.[0]?.id;
+    if (adminProfileId) {
+      const blocked = await callFunction("deactivate-user", adminToken, {
+        user_id: adminProfileId,
+        active: false,
+      });
+      if (blocked.status !== 400) {
+        throw new Error(`Se esperaba 400 y llegó ${blocked.status}`);
+      }
+      console.log("   ✓ auto-desactivación bloqueada");
+    } else {
+      console.log("   (omitido: no se pudo leer el perfil del admin)");
+    }
+
+    // Nota: el profesor de prueba se limpia con la conexión directa a la base
+    // después de la prueba (el borrado de auth.users requiere service_role).
+    console.log(`   (profesor de prueba ${testTeacherEmail} queda para limpieza directa)`);
+  }
+
+  console.log("\nPASS · Funciones Edge desplegadas y flujos verificados.");
 }
 
 main().catch((error) => {

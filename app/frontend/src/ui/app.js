@@ -36,6 +36,13 @@ const assignmentStatusLabels = {
 // Debe coincidir con settings.privacy_document_version de la base.
 const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
 
+const adminTabLabels = {
+  resumen: 'Resumen',
+  usuarios: 'Usuarios',
+  contenido: 'Contenido',
+  configuracion: 'Configuración'
+};
+
 const state = {
   mode: 'student',
   session: null,
@@ -47,6 +54,7 @@ const state = {
   unitResults: {},
   error: '',
   notice: '',
+  adminTab: 'resumen',
   loading: true
 };
 
@@ -333,34 +341,86 @@ async function fetchDashboardData(profile) {
 }
 
 async function fetchAdminDashboard() {
-  const [yearRes, groupsRes, profilesRes, studentsRes] = await Promise.all([
+  const [
+    yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
+    settingsRes, statsRes, unitsRes
+  ] = await Promise.all([
     supabase
       .from('academic_years')
       .select('name,starts_on,ends_on')
       .eq('is_active', true)
       .maybeSingle(),
-    supabase.from('groups').select('name,level,schedule').order('name'),
-    supabase.from('profiles').select('role'),
-    supabase.from('students').select('id')
+    supabase.from('groups').select('id,name,level,schedule,teacher_id').order('name'),
+    supabase
+      .from('profiles')
+      .select('id,role,full_name,email,username,active,phone,created_at')
+      .order('created_at'),
+    supabase.from('students').select('id,student_code,group_id,profile_id,status').order('student_code'),
+    supabase.from('guardians').select('id,profile_id,email,full_name,phone,active').order('email'),
+    supabase.from('student_guardians').select('student_id,guardian_id'),
+    supabase.from('settings').select('key,value,updated_at,updated_by').order('key'),
+    supabase.rpc('app_admin_content_stats'),
+    supabase.from('units').select('id,subject_id,num,title,status').order('num')
   ]);
 
   assertNoError(yearRes.error);
   assertNoError(groupsRes.error);
   assertNoError(profilesRes.error);
   assertNoError(studentsRes.error);
+  assertNoError(guardiansRes.error);
+  assertNoError(linksRes.error);
+  assertNoError(settingsRes.error);
+  assertNoError(statsRes.error);
+  assertNoError(unitsRes.error);
 
-  const roleCounts = (profilesRes.data || []).reduce((counts, item) => {
+  const profiles = profilesRes.data || [];
+  const students = studentsRes.data || [];
+  const guardians = guardiansRes.data || [];
+  const groups = groupsRes.data || [];
+  const units = unitsRes.data || [];
+
+  const roleCounts = profiles.reduce((counts, item) => {
     counts[item.role] = (counts[item.role] || 0) + 1;
     return counts;
   }, {});
 
+  const profileNames = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
+  const groupNames = new Map(groups.map((group) => [group.id, group.name]));
+  const teacherNames = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
+
+  const studentCodes = new Map(students.map((student) => [student.id, student.student_code]));
+  const guardianLinks = new Map();
+  for (const link of linksRes.data || []) {
+    if (!guardianLinks.has(link.guardian_id)) guardianLinks.set(link.guardian_id, []);
+    guardianLinks.get(link.guardian_id).push(studentCodes.get(link.student_id) || '?');
+  }
+
   return {
     kind: 'admin',
     year: yearRes.data,
-    groups: groupsRes.data || [],
+    groups: groups.map((group) => ({
+      ...group,
+      teacher_name: teacherNames.get(group.teacher_id) || 'Sin profesor'
+    })),
+    profiles,
+    students: students.map((student) => ({
+      ...student,
+      full_name: profileNames.get(student.profile_id) || 'Alumno sin nombre',
+      group_name: groupNames.get(student.group_id) || 'Sin grupo'
+    })),
+    guardians: guardians.map((guardian) => ({
+      ...guardian,
+      students: guardianLinks.get(guardian.id) || []
+    })),
+    settings: settingsRes.data || [],
+    stats: statsRes.data || [],
+    units,
+    subjectNames: new Map(
+      (statsRes.data || []).map((row) => [row.subject_id, row.subject_name])
+    ),
     counts: {
-      profiles: (profilesRes.data || []).length,
-      students: (studentsRes.data || []).length,
+      profiles: profiles.length,
+      students: students.length,
       ...roleCounts
     }
   };
@@ -658,6 +718,7 @@ function countLabel(count, singular, plural) {
 function adminDashboardMarkup(data) {
   const counts = data.counts;
   const year = data.year;
+  const tab = state.adminTab || 'resumen';
 
   return `
     <article class="card wide">
@@ -677,6 +738,25 @@ function adminDashboardMarkup(data) {
       </div>
     </article>
 
+    <nav class="card wide admin-tabs" aria-label="Administración">
+      ${Object.entries(adminTabLabels).map(([key, label]) => `
+        <button class="mode-tab ${tab === key ? 'active' : ''}" data-admin-tab="${key}">
+          ${escapeHtml(label)}
+        </button>
+      `).join('')}
+    </nav>
+
+    ${tab === 'usuarios' ? adminUsersMarkup(data)
+      : tab === 'contenido' ? adminContentMarkup(data)
+      : tab === 'configuracion' ? adminSettingsMarkup(data)
+      : adminResumenMarkup(data)}
+  `;
+}
+
+function adminResumenMarkup(data) {
+  const activeStudents = data.students.filter((student) => student.status === 'active').length;
+
+  return `
     <article class="card wide">
       <div class="card-heading">
         <div>
@@ -690,14 +770,217 @@ function adminDashboardMarkup(data) {
             <li>
               <div>
                 <strong>${escapeHtml(group.name)}</strong>
-                <small>${escapeHtml([group.level, group.schedule].filter(Boolean).join(' · ') || 'Sin nivel ni horario')}</small>
+                <small>${escapeHtml([group.level, group.schedule].filter(Boolean).join(' · ') || 'Sin nivel ni horario')} · Prof.: ${escapeHtml(group.teacher_name)}</small>
               </div>
             </li>
           `).join('')}
         </ul>
       ` : '<p class="empty-state">Todavía no hay grupos. Crea el primero para iniciar el piloto.</p>'}
     </article>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Piloto en números</span>
+          <h2>Contenido y avance</h2>
+        </div>
+      </div>
+      <div class="row">
+        <span class="pill">${data.stats.filter((row) => row.subject_active).length} materias activas</span>
+        <span class="pill">${countLabel(data.units.filter((unit) => unit.status === 'published').length, 'unidad publicada', 'unidades publicadas')}</span>
+        <span class="pill">${countLabel(activeStudents, 'alumno activo', 'alumnos activos')}</span>
+      </div>
+    </article>
   `;
+}
+
+function adminUsersMarkup(data) {
+  const teachers = data.profiles.filter((profile) => profile.role === 'teacher');
+  const guardians = data.guardians;
+
+  const userRow = (profile) => `
+    <li>
+      <div>
+        <strong>${escapeHtml(profile.full_name)}${profile.role === 'admin' ? ' · Tú' : ''}</strong>
+        <small>${escapeHtml(profile.email || profile.username || 'Sin identificador')}</small>
+      </div>
+      ${profile.role === 'admin' ? `
+        <span class="pill success">Activo</span>
+      ` : `
+        <button class="btn ghost" data-toggle-user="${escapeHtml(profile.id)}" data-active="${profile.active ? '1' : '0'}">
+          ${profile.active ? 'Desactivar' : 'Activar'}
+        </button>
+      `}
+    </li>
+  `;
+
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Profesores y admin</span>
+          <h2>${teachers.length ? countLabel(teachers.length, 'profesor', 'profesores') : 'Sin profesores'}</h2>
+        </div>
+      </div>
+      <ul class="data-list">
+        ${data.profiles.filter((profile) => profile.role === 'teacher' || profile.role === 'admin').map(userRow).join('')}
+      </ul>
+
+      <details class="admin-details">
+        <summary>Crear profesor</summary>
+        <form class="form" id="create-teacher-form">
+          <label class="field">
+            <span>Nombre completo</span>
+            <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
+          </label>
+          <label class="field">
+            <span>Correo</span>
+            <input name="email" type="email" autocomplete="off" placeholder="profesor@colegio.mx" required>
+          </label>
+          <label class="field">
+            <span>Contraseña (mínimo 10 caracteres)</span>
+            <input name="password" type="text" autocomplete="off" minlength="10" placeholder="Contraseña temporal" required>
+          </label>
+          <button class="btn primary" type="submit">Crear profesor</button>
+        </form>
+      </details>
+    </article>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Alumnos</span>
+          <h2>${data.students.length ? countLabel(data.students.length, 'alumno', 'alumnos') : 'Sin alumnos'}</h2>
+        </div>
+      </div>
+      ${data.students.length ? `
+        <ul class="data-list">
+          ${data.students.map((student) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(student.full_name)}</strong>
+                <small>${escapeHtml(student.student_code)} · ${escapeHtml(student.group_name)} · ${escapeHtml(student.status)}</small>
+              </div>
+              <button class="btn ghost" data-reset-student="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.full_name)}">Nueva contraseña</button>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">Todavía no hay alumnos.</p>'}
+    </article>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Tutores</span>
+          <h2>${guardians.length ? countLabel(guardians.length, 'tutor', 'tutores') : 'Sin tutores'}</h2>
+        </div>
+      </div>
+      ${guardians.length ? `
+        <ul class="data-list">
+          ${guardians.map((guardian) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(guardian.full_name)}</strong>
+                <small>${escapeHtml(guardian.email || guardian.phone || 'Sin contacto')} · Alumnos: ${guardian.students.map(escapeHtml).join(', ') || '—'}</small>
+              </div>
+              <span class="pill ${guardian.active ? 'success' : ''}">${guardian.active ? 'Activo' : 'Inactivo'}</span>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">Todavía no hay tutores. Invítalos desde el panel del profesor.</p>'}
+    </article>
+  `;
+}
+
+function adminContentMarkup(data) {
+  const unitsBySubject = new Map();
+  for (const unit of data.units) {
+    if (!unitsBySubject.has(unit.subject_id)) unitsBySubject.set(unit.subject_id, []);
+    unitsBySubject.get(unit.subject_id).push(unit);
+  }
+
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Contenido</span>
+          <h2>Materias y unidades</h2>
+        </div>
+        <span class="pill">Versión 1 publicada</span>
+      </div>
+      ${data.stats.length ? `
+        <ul class="data-list">
+          ${data.stats.map((row) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(row.subject_name)}</strong>
+                <small>
+                  ${row.units_total} unidades · ${row.units_published} publicadas ·
+                  ${row.exercises} ejercicios · ${row.quiz_count} quiz · ${Number(row.has_reto) > 0 ? 'con reto' : 'sin reto'}
+                </small>
+              </div>
+              <span class="pill ${row.subject_active ? 'success' : ''}">${row.subject_active ? 'Activa' : 'Inactiva'}</span>
+            </li>
+            ${(unitsBySubject.get(row.subject_id) || []).map((unit) => `
+              <li class="unit-row">
+                <div>
+                  <small>U${String(unit.num).padStart(2, '0')} · ${escapeHtml(unit.title)}</small>
+                </div>
+                <span class="pill ${unit.status === 'published' ? 'success' : ''}">${escapeHtml(unit.status)}</span>
+              </li>
+            `).join('')}
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">Sin estadísticas de contenido.</p>'}
+    </article>
+  `;
+}
+
+function adminSettingsMarkup(data) {
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Configuración</span>
+          <h2>Parámetros del sistema</h2>
+        </div>
+      </div>
+      ${data.settings.length ? `
+        <ul class="data-list settings-list">
+          ${data.settings.map((setting) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(setting.key)}</strong>
+                <small>Actualizado: ${escapeHtml(setting.updated_at ? new Date(setting.updated_at).toLocaleString() : '—')}</small>
+              </div>
+              <div class="row setting-edit">
+                <input data-setting-value="${escapeHtml(setting.key)}" value="${escapeHtml(JSON.stringify(setting.value))}">
+                <button class="btn primary" data-save-setting="${escapeHtml(setting.key)}">Guardar</button>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">Sin parámetros configurados.</p>'}
+    </article>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Entorno</span>
+          <h2>Información técnica</h2>
+        </div>
+      </div>
+      <ul class="data-list">
+        <li><div><strong>App</strong><small>${escapeHtml(appEnv)} · GitHub Pages</small></div></li>
+        <li><div><strong>Supabase</strong><small>${escapeHtml(projectUrlLabel())}</small></div></li>
+        <li><div><strong>Aviso de privacidad vigente</strong><small>${escapeHtml(PRIVACY_DOCUMENT_VERSION)}</small></div></li>
+      </ul>
+    </article>
+  `;
+}
+
+function projectUrlLabel() {
+  return 'ioikcrdxneuydylyhvwi.supabase.co';
 }
 
 function teacherGroupMarkup(group, data) {
@@ -1543,6 +1826,161 @@ function renderDashboard() {
   appRoot.querySelectorAll('[data-invite-form]').forEach((form) => {
     form.addEventListener('submit', inviteGuardian);
   });
+
+  appRoot.querySelectorAll('[data-admin-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.adminTab = button.dataset.adminTab;
+      state.error = '';
+      state.notice = '';
+      renderDashboard();
+    });
+  });
+
+  const createTeacherForm = appRoot.querySelector('#create-teacher-form');
+  if (createTeacherForm) createTeacherForm.addEventListener('submit', createTeacher);
+
+  appRoot.querySelectorAll('[data-reset-student]').forEach((button) => {
+    button.addEventListener('click', () => resetStudentPassword(button.dataset.resetStudent, button));
+  });
+
+  appRoot.querySelectorAll('[data-toggle-user]').forEach((button) => {
+    button.addEventListener('click', () => toggleUserActive(button));
+  });
+
+  appRoot.querySelectorAll('[data-save-setting]').forEach((button) => {
+    button.addEventListener('click', () => saveSetting(button.dataset.saveSetting, button));
+  });
+}
+
+async function createTeacher(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const fullName = String(data.get('full_name') || '').trim();
+  const email = String(data.get('email') || '').trim().toLowerCase();
+  const password = String(data.get('password') || '');
+
+  if (!fullName || !email || password.length < 10) {
+    setError('Completa los datos: nombre, correo y contraseña de al menos 10 caracteres.');
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = 'Creando…';
+
+  state.error = '';
+  state.notice = '';
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('admin-create-teacher', {
+      body: { full_name: fullName, email, password }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo crear el profesor');
+
+    setNotice(`Profesor ${result.profile.full_name} creado. Entrégale el correo y la contraseña.`);
+    form.reset();
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo crear el profesor.');
+    submitButton.disabled = false;
+    submitButton.textContent = 'Crear profesor';
+  }
+}
+
+async function resetStudentPassword(studentId, button) {
+  if (!studentId || button.disabled) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Generando…';
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('admin-reset-student-password', {
+      body: { student_id: studentId }
+    });
+
+    if (error) throw error;
+    if (!result?.temporary_password) throw new Error(result?.error || 'No se pudo restablecer la contraseña');
+
+    const name = button.dataset.studentName || result.username || 'el alumno';
+    setNotice(`Contraseña temporal de ${name} (${result.username}): ${result.temporary_password}. Entrégala una sola vez.`);
+    button.disabled = false;
+    button.textContent = 'Nueva contraseña';
+  } catch (error) {
+    setError(error?.message || 'No se pudo restablecer la contraseña.');
+    button.disabled = false;
+    button.textContent = 'Nueva contraseña';
+  }
+}
+
+async function toggleUserActive(button) {
+  const userId = button.dataset.toggleUser;
+  const currentlyActive = button.dataset.active === '1';
+
+  if (!userId || button.disabled) return;
+
+  const targetName = button.closest('li')?.querySelector('strong')?.textContent || 'usuario';
+
+  if (!currentlyActive && !window.confirm(`¿Activar la cuenta de ${targetName}?`)) return;
+  if (currentlyActive && !window.confirm(`¿Desactivar la cuenta de ${targetName}? Perderá el acceso de inmediato.`)) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('deactivate-user', {
+      body: { user_id: userId, active: !currentlyActive }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo actualizar la cuenta');
+
+    setNotice(`Cuenta de ${targetName} ${result.active ? 'activada' : 'desactivada'}.`);
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo actualizar la cuenta.');
+    button.disabled = false;
+  }
+}
+
+async function saveSetting(key, button) {
+  const input = appRoot.querySelector(`[data-setting-value="${key}"]`);
+  if (!input || button.disabled) return;
+
+  let value;
+  try {
+    value = JSON.parse(input.value);
+  } catch {
+    setError(`El valor de ${key} debe ser JSON válido.`);
+    return;
+  }
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+
+  try {
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key, value, updated_by: state.profile?.id ?? null });
+
+    if (error) throw error;
+
+    setNotice(`Configuración ${key} guardada.`);
+    button.disabled = false;
+    button.textContent = 'Guardar';
+  } catch (error) {
+    setError(error?.message || `No se pudo guardar ${key}.`);
+    button.disabled = false;
+    button.textContent = 'Guardar';
+  }
 }
 
 async function inviteGuardian(event) {

@@ -168,11 +168,73 @@ async function main() {
       return;
     }
 
+    if (mode === "admin") {
+      await runAdminFlow(pageEval, waitFor);
+      return;
+    }
+
     await runStudentFlow(pageEval, waitFor);
   } finally {
     cdp.close();
     chrome.kill();
   }
+}
+
+async function runAdminFlow(pageEval, waitFor) {
+  const email = process.env.ADMIN_EMAIL || "cursosprofeluis@gmail.com";
+  const password = process.env.ADMIN_PASSWORD;
+  if (!password) {
+    throw new Error("Define ADMIN_PASSWORD en el entorno");
+  }
+
+  console.log(`Entrando como admin (${email})…`);
+  await pageEval(`document.querySelector('[data-mode="teacher"]').click(); true`);
+  await pageEval(`(() => {
+    const setValue = (selector, value) => {
+      const input = document.querySelector(selector);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    setValue('input[name="email"]', ${JSON.stringify(email)});
+    setValue('input[name="password"]', ${JSON.stringify(password)});
+    document.querySelector('#login-form').requestSubmit();
+    return true;
+  })()`);
+
+  await waitFor(`document.body.innerText.includes('Hola,')`, "panel del admin");
+  await waitFor(
+    `document.querySelectorAll('[data-admin-tab]').length === 4`,
+    "pestañas de administración",
+  );
+  console.log("  ✓ 4 pestañas visibles (Resumen, Usuarios, Contenido, Configuración)");
+
+  console.log("Abriendo pestaña Usuarios…");
+  await pageEval(`document.querySelector('[data-admin-tab="usuarios"]').click(); true`);
+  await waitFor(`document.body.innerText.includes('Crear profesor')`, "gestión de usuarios");
+  const usersText = await pageEval(`document.body.innerText.toLowerCase()`);
+  for (const fragment of ["crear profesor", "nueva contraseña", "tutores", "profesores"]) {
+    if (!usersText.includes(fragment)) throw new Error(`Falta "${fragment}" en Usuarios`);
+  }
+  console.log("  ✓ profesores, alumnos (nueva contraseña) y tutores visibles");
+
+  console.log("Abriendo pestaña Contenido…");
+  await pageEval(`document.querySelector('[data-admin-tab="contenido"]').click(); true`);
+  await waitFor(`document.body.innerText.includes('Materias y unidades')`, "contenido");
+  const contentText = await pageEval(`document.body.innerText.toLowerCase()`);
+  if (!contentText.includes("español") || !contentText.includes("ejercicios")) {
+    throw new Error("Faltan estadísticas de contenido");
+  }
+  console.log("  ✓ estadísticas por materia visibles (unidades, ejercicios, quiz)");
+
+  console.log("Abriendo pestaña Configuración…");
+  await pageEval(`document.querySelector('[data-admin-tab="configuracion"]').click(); true`);
+  await waitFor(
+    `document.querySelector('[data-setting-value="privacy_document_version"]')`,
+    "configuración",
+  );
+  console.log("  ✓ parámetro privacy_document_version editable");
+
+  console.log("\nPASS · Panel de administración verificado (usuarios, contenido y configuración).");
 }
 
 async function runTeacherFlow(pageEval, waitFor) {

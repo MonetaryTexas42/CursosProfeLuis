@@ -757,6 +757,83 @@ pre code {
   -webkit-box-orient: vertical;
 }
 
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.admin-tabs .mode-tab {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-tabs .mode-tab.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.admin-details {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.admin-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.admin-details .form {
+  margin-top: 10px;
+}
+
+.unit-row {
+  padding-left: 22px !important;
+  border-left: 2px solid var(--line);
+}
+
+.settings-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.setting-edit {
+  gap: 8px;
+  align-items: center;
+}
+
+.setting-edit input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.setting-edit .btn {
+  flex: none;
+}
+
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: 1fr;
