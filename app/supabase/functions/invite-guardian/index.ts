@@ -123,22 +123,15 @@ Deno.serve(async (req) => {
 
     const link = linkData.properties.action_link;
 
-    const { error: outboxError } = await admin.from("email_outbox").insert({
-      to_email: email,
-      template: resend ? "guardian_invite_resend" : "guardian_invite",
-      payload: {
-        guardian_name: fullName,
-        student_name: studentProfile?.full_name ?? null,
-        student_code: student.student_code,
-        relationship,
-        link,
-      },
-      status: "pending",
-    });
+    // Entrega por WhatsApp: no se envía correo. El profesor comparte el
+    // enlace con el tutor por el medio que prefiera (WhatsApp, impreso, etc.).
+    const whatsappMessage = [
+      `Hola ${fullName} 👋`,
+      `Soy el Prof. Luis. Te invito a la plataforma ECOEMS para dar seguimiento a ${studentProfile?.full_name ?? student.student_code}.`,
+      `Entra con este enlace: ${link}`,
+    ].join("\n");
 
-    if (outboxError) {
-      console.error("email_outbox_error", outboxError.message);
-    }
+    const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
 
     await audit(
       admin,
@@ -150,6 +143,7 @@ Deno.serve(async (req) => {
         guardian_email: email,
         student_id: studentId,
         student_code: student.student_code,
+        delivery: "whatsapp",
         resend,
       },
       req,
@@ -161,8 +155,9 @@ Deno.serve(async (req) => {
         guardian_id: guardianRow.id,
         email,
         resend,
-        // El enlace se entrega por correo; aquí solo para depuración o entrega impresa.
+        delivery: "whatsapp",
         magic_link: link,
+        whatsapp_share_url: whatsappShareUrl,
       },
       201,
     );

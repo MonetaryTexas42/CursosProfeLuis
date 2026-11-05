@@ -22,28 +22,37 @@ const DEBUG_PORT = 9333;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function readStudentCredentials() {
+function readTestUser(role) {
   const text = readFileSync(resolve(here, "../.secrets/test-users.txt"), "utf8");
   const lines = text.split("\n");
-  let username = null;
-  let password = null;
+  const users = {};
+  let current = null;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    if (line.includes("usuario:")) {
-      username = line.split("usuario:")[1].trim();
-    }
-    if (username && lines[index + 1]?.includes("contraseña:")) {
-      password = lines[index + 1].split("contraseña:")[1].trim();
-      break;
+    const roleMatch = line.match(/^\[(\w+)\]\s+(.+)$/);
+    if (roleMatch) {
+      current = { role: roleMatch[1], name: roleMatch[2], email: null, password: null, username: null };
+    } else if (current) {
+      const email = line.match(/correo:\s*(\S+)/);
+      const password = line.match(/contraseña:\s*(\S+)/);
+      const username = line.match(/usuario:\s*(\S+)/);
+      if (email) current.email = email[1];
+      if (password) current.password = password[1];
+      if (username) current.username = username[1];
+      if (current.email && current.password) {
+        if (!users[current.role]) users[current.role] = current;
+        current = null;
+      }
     }
   }
 
-  if (!username || !password) {
-    throw new Error("No se encontraron las credenciales de alumno en test-users.txt");
+  const user = users[role];
+  if (!user?.password) {
+    throw new Error(`No se encontraron las credenciales de ${role} en test-users.txt`);
   }
 
-  return { username, password };
+  return user;
 }
 
 async function launchChrome() {
@@ -115,7 +124,7 @@ class Cdp {
 }
 
 async function main() {
-  const { username, password } = readStudentCredentials();
+  const mode = process.env.MODE || "student";
   const { chrome, wsUrl } = await launchChrome();
   const cdp = new Cdp(wsUrl);
   await cdp.open();
@@ -154,7 +163,78 @@ async function main() {
     await cdp.send("Page.navigate", { url: APP_URL });
     await waitFor(`document.querySelector('#login-form')`, "formulario de login");
 
-    console.log(`Entrando como ${username}…`);
+    if (mode === "teacher") {
+      await runTeacherFlow(pageEval, waitFor);
+      return;
+    }
+
+    await runStudentFlow(pageEval, waitFor);
+  } finally {
+    cdp.close();
+    chrome.kill();
+  }
+}
+
+async function runTeacherFlow(pageEval, waitFor) {
+  const teacher = readTestUser("teacher");
+
+  console.log(`Entrando como profesor (${teacher.email})…`);
+  await pageEval(`document.querySelector('[data-mode="teacher"]').click(); true`);
+  await pageEval(`(() => {
+    const setValue = (selector, value) => {
+      const input = document.querySelector(selector);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    setValue('input[name="email"]', ${JSON.stringify(teacher.email)});
+    setValue('input[name="password"]', ${JSON.stringify(teacher.password)});
+    document.querySelector('#login-form').requestSubmit();
+    return true;
+  })()`);
+
+  await waitFor(`document.body.innerText.includes('Hola,')`, "panel del profesor");
+  await waitFor(
+    `document.querySelectorAll('[data-invite-toggle]').length > 0 || document.body.innerText.includes('El administrador todavía no te asignó un grupo')`,
+    "lista de alumnos del profesor",
+  );
+
+  const inviteCount = await pageEval(
+    `document.querySelectorAll('[data-invite-toggle]').length`,
+  );
+  console.log(`Botones "Invitar tutor" visibles: ${inviteCount}`);
+
+  if (inviteCount < 1) {
+    throw new Error("El profesor no ve la lista de alumnos con invitación");
+  }
+
+  console.log("Abriendo el formulario de invitación…");
+  await pageEval(`document.querySelector('[data-invite-toggle]').click(); true`);
+  await waitFor(
+    `!document.querySelector('[data-invite-form]').classList.contains('hidden')`,
+    "formulario de invitación visible",
+  );
+
+  const hasFields = await pageEval(`(() => {
+    const form = document.querySelector('[data-invite-form]');
+    return Boolean(
+      form.querySelector('input[name="full_name"]') &&
+      form.querySelector('input[name="phone"]') &&
+      form.querySelector('input[name="email"]') &&
+      form.querySelector('button[type="submit"]')
+    );
+  })()`);
+
+  if (!hasFields) {
+    throw new Error("El formulario de invitación no tiene los campos esperados");
+  }
+
+  console.log("  ✓ formulario con nombre, teléfono, correo y botón de crear");
+  console.log("\nPASS · Flujo UI del profesor con invitación de tutores verificado.");
+}
+
+async function runStudentFlow(pageEval, waitFor) {
+  const { username, password } = readTestUser("student");
+  console.log(`Entrando como ${username}…`);
     await pageEval(`(() => {
       const setValue = (selector, value) => {
         const input = document.querySelector(selector);
@@ -228,10 +308,6 @@ async function main() {
     console.log("  ✓ intento calificado como correcto");
 
     console.log("\nPASS · Flujo UI del alumno con contenido real verificado.");
-  } finally {
-    cdp.close();
-    chrome.kill();
-  }
 }
 
 main().catch((error) => {

@@ -34,7 +34,7 @@ app/
 - [x] Estructura del repositorio.
 - [x] Vite + módulos JS.
 - [x] Cliente Supabase con variables de entorno.
-- [x] Login de alumno, profesor y tutor.
+- [x] Login de alumno, profesor y tutor (tutor: enlace por WhatsApp, sin correo).
 - [x] Carga de perfil y redirección por rol.
 - [x] Migración inicial con 34 tablas.
 - [x] RLS activo en todas las tablas.
@@ -49,14 +49,14 @@ app/
       426 preguntas de quiz y 47 retos (versión 1 publicada).
 - [x] Pantalla de unidad del alumno con contenido real (teoría, guías,
       ejemplos, errores comunes, capítulo, flashcards y quiz).
-- [x] Prueba UI en Chrome headless con la unidad real (`scripts/ui-smoke.mjs`).
-- [x] Edge Functions `admin-create-student` y `admin-reset-student-password`.
-- [x] Edge Functions `invite-guardian` y `guardian-consent` (código listo).
-- [x] Frontend publicado en GitHub Pages y verificado contra la URL pública.
-- [ ] Despliegue de Edge Functions (falta `SUPABASE_ACCESS_TOKEN`).
-- [ ] Proyecto staging separado.
-- [ ] Correo transaccional (SMTP) para invitaciones.
-- [ ] Consentimiento probado con un tutor real.
+- [x] Edge Functions desplegadas: `admin-create-student`,
+      `admin-reset-student-password`, `invite-guardian` y `guardian-consent`.
+- [x] Invitación de tutores **por WhatsApp** (botón en el panel del profesor;
+      sin envío de correos) y consentimiento del tutor funcional E2E.
+- [x] Frontend publicado en GitHub Pages y verificado contra la URL pública
+      (flujos de alumno y profesor).
+- [ ] Proyecto staging separado (bloqueado por la API: crear desde el dashboard).
+- [ ] Aviso de privacidad validado por un abogado antes del piloto real.
 
 ## Arranque local
 
@@ -87,7 +87,11 @@ DATABASE_URL="$(cat .secrets/database-url)" node scripts/run-sql-test.mjs supaba
 DATABASE_URL="$(cat .secrets/database-url)" node scripts/backup-db.mjs
 
 # Prueba UI con Chrome headless (requiere la app servida en :5173)
-node scripts/ui-smoke.mjs
+node scripts/ui-smoke.mjs               # flujo del alumno
+MODE=teacher node scripts/ui-smoke.mjs  # flujo del profesor (invitación de tutores)
+
+# Prueba E2E de las Edge Functions desplegadas
+node scripts/test-functions.mjs
 ```
 
 ## Reglas
@@ -100,5 +104,6 @@ node scripts/ui-smoke.mjs
 
 ## Siguiente paso
 
-Desplegar las Edge Functions (requiere `SUPABASE_ACCESS_TOKEN`), crear el proyecto
-staging, configurar el correo transaccional y publicar el frontend.
+Crear el proyecto staging desde el dashboard ([supabase.com/dashboard/new](https://supabase.com/dashboard/new))
+y aplicar las migraciones con `db push`. Validar el aviso de privacidad con un
+abogado antes de cargar datos reales y de ampliar el piloto.

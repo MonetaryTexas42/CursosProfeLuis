@@ -699,6 +699,64 @@ pre code {
   white-space: pre-wrap;
 }
 
+.guardian-login-note {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.guardian-login-note h2 {
+  font-size: 17px;
+}
+
+.invite-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.invite-list .invite-form,
+.invite-list .invite-result {
+  grid-column: 1 / -1;
+}
+
+.invite-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.invite-form.hidden,
+.invite-result.hidden {
+  display: none;
+}
+
+.invite-result {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  border-radius: 10px;
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.invite-link {
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: 1fr;

@@ -135,7 +135,6 @@ npm run dev</code></pre>
 function renderLogin() {
   const isStudent = state.mode === 'student';
   const isGuardian = state.mode === 'guardian';
-  const submitLabel = isGuardian ? 'Enviar enlace mágico' : 'Entrar';
 
   appRoot.innerHTML = `
     <div class="shell">
@@ -166,11 +165,12 @@ function renderLogin() {
                 <input name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
               </label>
             ` : isGuardian ? `
-              <label class="field">
-                <span>Correo del tutor</span>
-                <input name="email" type="email" autocomplete="email" placeholder="tutor@correo.com" required>
-              </label>
-              <p class="hint">Te enviaremos un enlace de acceso. No necesitas contraseña.</p>
+              <div class="guardian-login-note">
+                <span class="card-label">Acceso para tutores</span>
+                <h2>Usa tu enlace de acceso</h2>
+                <p>Tu profesor te comparte el enlace de acceso por <strong>WhatsApp</strong>. Tócalo y entrarás directo, sin contraseña.</p>
+                <p class="hint">¿El enlace venció o no lo tienes? Pídele a tu profesor que te lo reenvíe.</p>
+              </div>
             ` : `
               <label class="field">
                 <span>Correo</span>
@@ -181,10 +181,10 @@ function renderLogin() {
                 <input name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
               </label>
             `}
-            <button class="btn primary" type="submit" id="submit-btn">${submitLabel}</button>
+            ${isGuardian ? '' : `<button class="btn primary" type="submit" id="submit-btn">Entrar</button>`}
           </form>
 
-          <p class="fine-print">Si olvidaste tu contraseña, pide una temporal a tu profesor. El tutor entra desde el enlace de su correo.</p>
+          <p class="fine-print">Si olvidaste tu contraseña, pide una temporal a tu profesor. El tutor entra con el enlace que recibe por WhatsApp.</p>
         </section>
       </main>
     </div>
@@ -214,20 +214,6 @@ async function handleLogin(event) {
   button.textContent = 'Conectando…';
 
   try {
-    if (state.mode === 'guardian') {
-      const email = String(data.get('email') || '').trim().toLowerCase();
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin }
-      });
-
-      if (error) throw error;
-
-      setNotice('Revisa tu correo. El enlace de acceso caduca y solo sirve para tu cuenta.');
-      renderLogin();
-      return;
-    }
-
     const email = state.mode === 'student'
       ? toStudentEmail(data.get('username'))
       : String(data.get('email') || '').trim().toLowerCase();
@@ -257,7 +243,7 @@ async function handleLogin(event) {
     renderLogin();
   } finally {
     button.disabled = false;
-    button.textContent = state.mode === 'guardian' ? 'Enviar enlace mágico' : 'Entrar';
+    button.textContent = 'Entrar';
   }
 }
 
@@ -733,13 +719,37 @@ function teacherGroupMarkup(group, data) {
 
       <span class="card-label">Alumnos</span>
       ${group.students.length ? `
-        <ul class="data-list">
+        <ul class="data-list invite-list">
           ${group.students.map((student) => `
             <li>
               <div>
                 <strong>${escapeHtml(student.full_name)}</strong>
                 <small>${escapeHtml(student.student_code)}</small>
               </div>
+              <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
+              <form class="form invite-form hidden" data-invite-form="${escapeHtml(student.id)}" data-student-code="${escapeHtml(student.student_code)}">
+                <label class="field">
+                  <span>Nombre del tutor</span>
+                  <input name="full_name" autocomplete="off" placeholder="Nombre completo" required>
+                </label>
+                <label class="field">
+                  <span>Teléfono (WhatsApp)</span>
+                  <input name="phone" type="tel" autocomplete="off" placeholder="52 1 55 1234 5678">
+                </label>
+                <label class="field">
+                  <span>Parentesco (opcional)</span>
+                  <input name="relationship" autocomplete="off" placeholder="madre, padre, tutor…">
+                </label>
+                <label class="field">
+                  <span>Correo (opcional — si no tiene, se genera uno interno)</span>
+                  <input name="email" type="email" autocomplete="off" placeholder="correo@ejemplo.com">
+                </label>
+                <div class="row">
+                  <button class="btn primary" type="submit">Crear invitación</button>
+                  <button class="btn ghost" type="button" data-invite-cancel="${escapeHtml(student.id)}">Cancelar</button>
+                </div>
+              </form>
+              <div class="invite-result hidden" data-invite-result="${escapeHtml(student.id)}"></div>
             </li>
           `).join('')}
         </ul>
@@ -1515,6 +1525,96 @@ function renderDashboard() {
   appRoot.querySelectorAll('[data-consent-student]').forEach((button) => {
     button.addEventListener('click', () => acceptConsent(button.dataset.consentStudent, button));
   });
+
+  appRoot.querySelectorAll('[data-invite-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const form = appRoot.querySelector(`[data-invite-form="${button.dataset.inviteToggle}"]`);
+      if (form) form.classList.toggle('hidden');
+    });
+  });
+
+  appRoot.querySelectorAll('[data-invite-cancel]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const form = appRoot.querySelector(`[data-invite-form="${button.dataset.inviteCancel}"]`);
+      if (form) form.classList.add('hidden');
+    });
+  });
+
+  appRoot.querySelectorAll('[data-invite-form]').forEach((form) => {
+    form.addEventListener('submit', inviteGuardian);
+  });
+}
+
+async function inviteGuardian(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const studentId = form.dataset.inviteForm;
+  const studentCode = String(form.dataset.studentCode || 'alumno').toLowerCase();
+  const data = new FormData(form);
+
+  const fullName = String(data.get('full_name') || '').trim();
+  const phone = String(data.get('phone') || '').trim();
+  const relationship = String(data.get('relationship') || '').trim();
+  const email = String(data.get('email') || '').trim().toLowerCase()
+    || `tutor.${studentCode}@tutores.ecoems.mx`;
+
+  if (!fullName) return;
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Creando…';
+  }
+
+  state.error = '';
+  state.notice = '';
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('invite-guardian', {
+      body: {
+        student_id: studentId,
+        full_name: fullName,
+        phone: phone || null,
+        relationship: relationship || null,
+        email
+      }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo crear la invitación');
+
+    form.classList.add('hidden');
+
+    const box = appRoot.querySelector(`[data-invite-result="${studentId}"]`);
+    if (box) {
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <span class="card-label">Invitación lista · ${escapeHtml(fullName)}</span>
+        <p>Comparte el enlace de acceso por WhatsApp. El tutor entra sin contraseña; si el enlace caduca, vuelve a generar otro con el mismo botón.</p>
+        <div class="row">
+          <a class="btn primary" href="${escapeHtml(result.whatsapp_share_url)}" target="_blank" rel="noopener">Compartir por WhatsApp</a>
+          <button class="btn ghost" data-copy-link="${escapeHtml(result.magic_link)}">Copiar enlace</button>
+        </div>
+        <p class="invite-link" title="${escapeHtml(result.magic_link)}">${escapeHtml(result.magic_link)}</p>
+      `;
+
+      const copyButton = box.querySelector('[data-copy-link]');
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(copyButton.dataset.copyLink);
+          copyButton.textContent = '¡Copiado!';
+        } catch {
+          copyButton.textContent = 'No se pudo copiar';
+        }
+      });
+    }
+  } catch (error) {
+    setError(error?.message || 'No se pudo crear la invitación. Revisa la conexión.');
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Crear invitación';
+    }
+  }
 }
 
 async function acceptConsent(studentId, button) {
