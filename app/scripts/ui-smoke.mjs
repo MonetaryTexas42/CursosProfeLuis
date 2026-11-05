@@ -173,11 +173,73 @@ async function main() {
       return;
     }
 
+    if (mode === "curso") {
+      await runCourseFlow(pageEval, waitFor);
+      return;
+    }
+
     await runStudentFlow(pageEval, waitFor);
   } finally {
     cdp.close();
     chrome.kill();
   }
+}
+
+async function loginAsStudent(pageEval, waitFor) {
+  const { username, password } = readTestUser("student");
+
+  await pageEval(`(() => {
+    const setValue = (selector, value) => {
+      const input = document.querySelector(selector);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    setValue('input[name="username"]', ${JSON.stringify(username)});
+    setValue('input[name="password"]', ${JSON.stringify(password)});
+    document.querySelector('#login-form').requestSubmit();
+    return true;
+  })()`);
+
+  await waitFor(`document.body.innerText.includes('Hola,')`, "panel del alumno");
+}
+
+async function runCourseFlow(pageEval, waitFor) {
+  console.log("Entrando como alumno…");
+  await loginAsStudent(pageEval, waitFor);
+
+  await waitFor(
+    `document.querySelector('a[href="./curso/"]')`,
+    "botón de abrir curso completo",
+  );
+
+  console.log("Abriendo el reproductor del curso…");
+  await pageEval(`document.querySelector('a[href="./curso/"]').click(); true`);
+  await waitFor(
+    `document.body.innerText.toLowerCase().includes('español')`,
+    "materias del curso cargadas desde Supabase",
+  );
+
+  const shellText = await pageEval(`document.body.innerText.toLowerCase()`);
+  for (const fragment of ["español", "matemáticas", "materias"]) {
+    if (!shellText.includes(fragment)) {
+      throw new Error(`El curso no muestra "${fragment}" (contenido de Supabase)`);
+    }
+    console.log(`  ✓ materia visible: "${fragment}"`);
+  }
+
+  const badge = await pageEval(
+    `(document.querySelector('.session-chip') || {}).textContent || ''`,
+  );
+  if (!badge.includes("🎓")) {
+    throw new Error("No se muestra la insignia de sesión del alumno");
+  }
+  console.log(`  ✓ insignia de sesión: ${badge.trim()}`);
+
+  const urlOk = await pageEval(`location.pathname.includes('/curso/')`);
+  if (!urlOk) throw new Error("El reproductor no está en /curso/");
+  console.log("  ✓ el contenido se sirve desde Supabase (sin data.js público)");
+
+  console.log("\nPASS · Reproductor del curso con login y contenido protegido verificado.");
 }
 
 async function runAdminFlow(pageEval, waitFor) {
@@ -295,21 +357,9 @@ async function runTeacherFlow(pageEval, waitFor) {
 }
 
 async function runStudentFlow(pageEval, waitFor) {
-  const { username, password } = readTestUser("student");
-  console.log(`Entrando como ${username}…`);
-    await pageEval(`(() => {
-      const setValue = (selector, value) => {
-        const input = document.querySelector(selector);
-        input.value = value;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      setValue('input[name="username"]', ${JSON.stringify(username)});
-      setValue('input[name="password"]', ${JSON.stringify(password)});
-      document.querySelector('#login-form').requestSubmit();
-      return true;
-    })()`);
+  console.log("Entrando como alumno…");
+  await loginAsStudent(pageEval, waitFor);
 
-    await waitFor(`document.body.innerText.includes('Hola,')`, "panel del alumno");
     await waitFor(
       `document.querySelectorAll('[data-open-unit]').length > 0 || document.body.innerText.includes('Tus unidades aparecerán aquí')`,
       "datos del panel del alumno",

@@ -1110,6 +1110,7 @@ function studentDashboardMarkup(data) {
       </div>
       <p>${escapeHtml(data.group ? [data.group.level, data.group.schedule].filter(Boolean).join(' · ') || 'Sin horario' : 'Tu grupo aún no está asignado.')}</p>
       <div class="row">
+        <a class="btn primary" href="./curso/">📚 Abrir curso completo</a>
         <span class="pill">${countLabel(data.activeAssignments, 'unidad activa', 'unidades activas')}</span>
         <span class="pill">${escapeHtml(data.student.status)}</span>
       </div>

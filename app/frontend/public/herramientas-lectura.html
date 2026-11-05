@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Herramientas de Lectura · COMIPEMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+  <header class="bg-gradient-to-r from-blue-800 via-indigo-800 to-violet-800 text-white">
+    <div class="max-w-6xl mx-auto px-4 py-10">
+      <p class="text-sm uppercase tracking-widest text-indigo-200 mb-2">Preparación COMIPEMS · Comprensión lectora</p>
+      <h1 class="text-4xl md:text-5xl font-extrabold">Herramientas de Lectura</h1>
+      <p class="mt-3 text-indigo-100 max-w-2xl">
+        Cuatro prácticas para leer más, más rápido y más fluido: retos que suben de dificultad, velocidad de lectura, lectura cronometrada con micrófono y el juego en salón.
+      </p>
+    </div>
+  </header>
+
+  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3">
+      <div class="flex flex-wrap gap-2" id="tabbar">
+        <button data-tab="reto" class="px-3 py-1.5 rounded-full text-sm font-medium transition tab-btn">📈 Reto del mes</button>
+        <button data-tab="velocidad" class="px-3 py-1.5 rounded-full text-sm font-medium transition tab-btn">⚡ Velocidad</button>
+        <button data-tab="oral" class="px-3 py-1.5 rounded-full text-sm font-medium transition tab-btn">🎤 Lectura oral</button>
+        <button data-tab="presencial" class="px-3 py-1.5 rounded-full text-sm font-medium transition tab-btn">🏫 En el salón</button>
+        <a href="index.html" class="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition ml-auto">← Guía de estudio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- ==================== 1. RETO ASCENDENTE ==================== -->
+    <section id="seccion-reto" class="route">
+      <div class="rounded-2xl overflow-hidden border border-amber-200 shadow-sm">
+        <div class="bg-amber-600 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-2xl font-bold flex items-center gap-3">📈 Reto ascendente de lectura</h2>
+          <button id="reto-reset" class="text-sm bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 font-semibold">Reiniciar reto</button>
+        </div>
+        <div class="bg-white p-6 space-y-6">
+          <div class="grid md:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-600">¿Qué libro estás leyendo?</span>
+              <input id="reto-libro" type="text" value="el libro que te indicó tu maestro"
+                class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </label>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+              <b>Meta final del mes:</b> leer <b>3 capítulos</b> de <span id="reto-meta-libro">el libro que te indicó tu maestro</span>.
+              Cada día el reto crece. Completa 30 días y llega a la meta. Tu avance se guarda en este navegador.
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+            <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4">
+              <div class="text-2xl font-extrabold text-amber-600" id="reto-prog">0%</div>
+              <div class="text-xs font-semibold text-slate-500 mt-1">Días completados</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4">
+              <div class="text-2xl font-extrabold text-slate-700" id="reto-racha">0</div>
+              <div class="text-xs font-semibold text-slate-500 mt-1">🔥 Racha actual</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4">
+              <div class="text-2xl font-extrabold text-indigo-600" id="reto-xp">0</div>
+              <div class="text-xs font-semibold text-slate-500 mt-1">⚡ Puntos de reto</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4">
+              <div class="text-2xl font-extrabold text-emerald-600" id="reto-semana">Semana 1</div>
+              <div class="text-xs font-semibold text-slate-500 mt-1">Dificultad actual</div>
+            </div>
+          </div>
+
+          <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div id="reto-bar" class="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all" style="width:0%"></div>
+          </div>
+
+          <div id="reto-ladder" class="space-y-6"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. VELOCIDAD RSVP ==================== -->
+    <section id="seccion-velocidad" class="route hidden">
+      <div class="rounded-2xl overflow-hidden border border-sky-200 shadow-sm">
+        <div class="bg-sky-600 text-white px-6 py-4 flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-2xl font-bold flex items-center gap-3">⚡ Velocidad de lectura</h2>
+          <span class="text-sm text-sky-100">Una palabra por vez · al final se arma la frase completa</span>
+        </div>
+        <div class="bg-white p-6 space-y-6">
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="flex flex-wrap gap-2" id="vel-presets"></div>
+          </div>
+
+          <div class="flex flex-col md:flex-row md:items-center gap-4">
+            <label class="block flex-1">
+              <span class="text-sm font-semibold text-slate-600">Velocidad</span>
+              <div class="flex items-center gap-3 mt-1">
+                <input id="vel-speed" type="range" min="60" max="500" value="180" class="flex-1 accent-sky-600" />
+                <span id="vel-speed-lbl" class="font-mono text-sm bg-sky-50 rounded-lg px-3 py-1.5 font-bold text-sky-700">180 ppm</span>
+              </div>
+            </label>
+            <div class="flex gap-2">
+              <button id="vel-play" class="bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl px-6 py-2.5 transition">▶ Leer</button>
+              <button id="vel-stop" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl px-5 py-2.5 transition">⏹ Cancelar</button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-900 text-white px-4 py-10 md:py-12 text-center relative overflow-hidden">
+            <div class="h-2 rounded-full bg-slate-700 absolute top-0 left-0 right-0">
+              <div id="vel-prog" class="h-full bg-sky-400 transition-all" style="width:0%"></div>
+            </div>
+            <div id="vel-word" class="text-4xl md:text-6xl font-extrabold tracking-wide min-h-[4rem] flex items-center justify-center">⚡</div>
+            <div id="vel-info" class="mt-4 text-xs md:text-sm text-slate-400"></div>
+          </div>
+
+          <div id="vel-frase" class="hidden rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4">
+            <div class="text-sm font-bold text-sky-700 mb-1">✨ La frase completa</div>
+            <p id="vel-frase-txt" class="text-slate-700 leading-relaxed"></p>
+            <p id="vel-frase-stats" class="mt-2 text-xs font-mono text-slate-500"></p>
+          </div>
+
+          <details class="rounded-xl border border-slate-200 px-4 py-3">
+            <summary class="text-sm font-semibold text-slate-600 cursor-pointer">Pega tu propio texto</summary>
+            <div class="mt-3">
+              <textarea id="vel-custom" rows="4" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" placeholder="Pega aquí una noticia, un párrafo del libro, etc."></textarea>
+              <button id="vel-use" class="mt-2 text-sm bg-sky-100 hover:bg-sky-200 text-sky-700 font-semibold rounded-lg px-4 py-2 transition">Usar ese texto</button>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. LECTURA ORAL CON META ==================== -->
+    <section id="seccion-oral" class="route hidden">
+      <div class="rounded-2xl overflow-hidden border border-rose-200 shadow-sm">
+        <div class="bg-rose-600 text-white px-6 py-4 flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-2xl font-bold flex items-center gap-3">🎤 Lectura oral con meta</h2>
+          <span class="text-sm text-rose-100">Lee en voz alta · el micrófono sigue tu ritmo · test sorpresa</span>
+        </div>
+        <div class="bg-white p-6 space-y-6">
+
+          <!-- Config -->
+          <div id="oral-cfg" class="space-y-5">
+            <div class="grid md:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">Texto a leer</label>
+                <select id="oral-texto" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400"></select>
+                <div id="oral-texto-desc" class="mt-2 text-xs text-slate-500 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <label class="block">
+                  <span class="text-sm font-semibold text-slate-600">Meta (palabras)</span>
+                  <input id="oral-palabras" type="number" min="10" class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-rose-400" />
+                </label>
+                <label class="block">
+                  <span class="text-sm font-semibold text-slate-600">Tiempo (segundos)</span>
+                  <input id="oral-seg" type="number" min="10" class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-rose-400" />
+                </label>
+              </div>
+            </div>
+
+            <!-- Texto propio -->
+            <details id="oral-own" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <summary class="cursor-pointer text-sm font-bold text-slate-700">✍️ Usar mi propio texto (pegar aquí)</summary>
+              <p class="text-xs text-slate-500 mt-2 mb-2">Pega cualquier texto y la herramienta calcula solo cuántas palabras tiene. Sirve para trabajos del temario o textos más largos que los del banco.</p>
+              <textarea id="oral-custom" rows="6" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 leading-relaxed" placeholder="Pega aquí el texto que quieres leer en voz alta…"></textarea>
+              <div class="flex flex-wrap items-center gap-2 mt-2">
+                <button id="oral-use" class="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg px-4 py-2 text-sm transition">Usar este texto</button>
+                <button id="oral-clear" class="bg-white hover:bg-slate-50 border border-slate-300 font-bold rounded-lg px-4 py-2 text-sm transition">Borrar</button>
+                <span id="oral-custom-n" class="text-xs font-semibold text-slate-500"></span>
+              </div>
+            </details>
+
+            <!-- Prueba de micrófono -->
+            <div class="rounded-xl border border-slate-200 px-4 py-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-sm font-bold text-slate-700">🎙️ Probar micrófono</span>
+                <button id="oral-mictest" class="bg-slate-100 hover:bg-slate-200 font-bold rounded-lg px-4 py-2 text-sm transition">▶ Probar</button>
+              </div>
+              <div class="max-w-md mx-auto mt-2 h-3 rounded-full bg-slate-200 overflow-hidden">
+                <div id="oral-micbar" class="h-full bg-slate-300 transition-all" style="width:0%"></div>
+              </div>
+              <div id="oral-mictip" class="text-center text-xs font-semibold text-slate-500 mt-1">Pulsa Probar y di algo en voz alta.</div>
+            </div>
+
+            <div class="text-sm text-slate-500">💡 Ejemplo: meta de <b>100 palabras</b> para leer en <b>60 segundos</b>. Si la meta es mayor que el texto, se repite en <b>vueltas</b> hasta completarla. Las <b>pausas largas</b> (>2.5s) se reportan como "me trabé".</div>
+            <button id="oral-start" class="bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl px-8 py-3.5 transition text-lg">▶ Prepararme e iniciar</button>
+            <div id="oral-micnote" class="hidden text-xs text-amber-700 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2"></div>
+          </div>
+
+          <!-- Ejecución -->
+          <div id="oral-run" class="hidden">
+            <div id="oral-count" class="text-center text-6xl font-extrabold text-rose-600 py-10" style="display:none"></div>
+            <div id="oral-timer" class="text-center">
+              <div class="text-7xl font-extrabold font-mono text-slate-800" id="oral-timer-seg">60</div>
+              <div class="text-sm font-semibold text-slate-500 mt-1">segundos restantes</div>
+              <div class="mx-auto my-5 h-3 rounded-full bg-slate-100 overflow-hidden max-w-xl">
+                <div id="oral-timer-bar" class="h-full bg-rose-500 transition-all" style="width:100%"></div>
+              </div>
+              <div class="text-center mb-2">
+                <span id="oral-vuelta" class="hidden text-xs font-extrabold text-rose-700 bg-rose-100 rounded-full px-3 py-1"></span>
+              </div>
+              <div class="flex justify-center">
+                <div class="w-full max-w-xl rounded-xl bg-slate-50 border border-slate-200 px-3 py-4 text-left text-sm text-slate-700 leading-relaxed" id="oral-texto-ref"></div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 text-center">
+              <div class="rounded-xl bg-rose-50 border border-rose-100 px-3 py-3">
+                <div class="text-xl md:text-2xl font-extrabold text-rose-700" id="oral-wordlive">0</div>
+                <div class="text-xs font-semibold text-slate-500 mt-1" id="oral-countmode">palabras leídas</div>
+              </div>
+              <div class="rounded-xl bg-rose-50 border border-rose-100 px-3 py-3">
+                <div class="text-xl md:text-2xl font-extrabold text-rose-700" id="oral-pace">0</div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">palabras por minuto</div>
+              </div>
+              <div class="rounded-xl bg-rose-50 border border-rose-100 px-3 py-3">
+                <div class="h-3 rounded-full bg-slate-200 overflow-hidden mt-2">
+                  <div id="oral-meter" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
+                </div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">tu voz ahora</div>
+              </div>
+              <div class="rounded-xl bg-rose-50 border border-rose-100 px-3 py-3">
+                <div class="text-xl md:text-2xl font-extrabold text-slate-700" id="oral-sil">0</div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">pausas largas</div>
+              </div>
+            </div>
+            <div class="text-center mt-6">
+              <button id="oral-abort" class="bg-slate-100 hover:bg-slate-200 font-bold rounded-xl px-6 py-2.5 transition">⏹ Terminar y empezar de nuevo</button>
+            </div>
+          </div>
+
+          <!-- Resultado -->
+          <div id="oral-res" class="hidden">
+            <div id="oral-verdict" class="text-center rounded-2xl border px-6 py-8"></div>
+            <div id="oral-quiz" class="mt-6"></div>
+            <div class="flex flex-wrap justify-center gap-3 mt-6">
+              <button id="oral-retry" class="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl px-6 py-2.5 transition">↻ Intentar otra vez</button>
+              <button id="oral-back" class="bg-slate-100 hover:bg-slate-200 font-bold rounded-xl px-6 py-2.5 transition">Cambiar texto</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 4. MODO PRESENCIAL ==================== -->
+    <section id="seccion-presencial" class="route hidden">
+      <div class="rounded-2xl overflow-hidden border border-emerald-200 shadow-sm">
+        <div class="bg-emerald-600 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-2xl font-bold flex items-center gap-3">🏫 Lectura en el salón</h2>
+          <span class="text-sm text-emerald-100">Un solo equipo · pasa la compu cada 5 segundos</span>
+        </div>
+        <div class="bg-white p-6 space-y-6">
+
+          <!-- Config presencial -->
+          <div id="pres-cfg" class="space-y-5">
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <label class="block">
+                <span class="text-sm font-semibold text-slate-600">Número de alumnos</span>
+                <input id="pres-n" type="number" min="2" max="12" value="6" class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm font-semibold text-slate-600">Preparación (seg)</span>
+                <input id="pres-prep" type="number" min="5" max="60" value="20" class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm font-semibold text-slate-600">Ritmo para pasar (ppm)</span>
+                <input id="pres-ppm" type="number" min="60" max="300" value="150" class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+              </label>
+              <label class="flex items-end gap-2 pb-1">
+                <input id="pres-quiz" type="checkbox" class="w-5 h-5 accent-emerald-600" />
+                <span class="text-sm font-semibold text-slate-600">Test sorpresa aleatorio</span>
+              </label>
+            </div>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-600">Nombres de los alumnos <span class="text-slate-400">(opcional, uno por línea)</span></span>
+              <textarea id="pres-nombres" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="Ana&#10;Luis&#10;Mía&#10;..."></textarea>
+            </label>
+            <button id="pres-start" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl px-8 py-3.5 transition text-lg">🎲 Iniciar sesión aleatoria</button>
+          </div>
+
+          <!-- Mesa -->
+          <div id="pres-mesa" class="hidden">
+            <div class="flex flex-wrap items-center gap-4 mb-4">
+              <span id="pres-turno" class="font-mono text-sm bg-emerald-50 text-emerald-700 rounded-lg px-3 py-1.5 font-bold"></span>
+              <div class="text-sm text-slate-500 flex-1" id="pres-live"></div>
+              <button id="pres-salir" class="text-sm text-slate-400 hover:text-slate-600 font-semibold">Salir de la sesión</button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4" id="pres-order"></div>
+
+            <div id="pres-phase" class="rounded-2xl border px-6 py-8 text-center space-y-4"></div>
+
+            <div id="pres-meter-row" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 text-center">
+              <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-3">
+                <div class="text-xl md:text-2xl font-extrabold text-emerald-700" id="pres-wordlive">0</div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">palabras leídas</div>
+              </div>
+              <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-3">
+                <div class="h-3 rounded-full bg-slate-200 overflow-hidden mt-2">
+                  <div id="pres-meter" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
+                </div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">tu voz ahora</div>
+              </div>
+              <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-3">
+                <div class="text-xl md:text-2xl font-extrabold text-slate-700" id="pres-sil">0</div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">pausas largas</div>
+              </div>
+              <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-3">
+                <div class="text-xl md:text-2xl font-extrabold text-emerald-700" id="pres-pace">0</div>
+                <div class="text-xs font-semibold text-slate-500 mt-1">palabras por minuto</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Podio -->
+          <div id="pres-podio" class="hidden rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-8 text-center">
+            <h3 class="text-2xl font-extrabold text-emerald-800 mb-4">🏆 Resultados de la ronda</h3>
+            <div id="pres-podio-list" class="max-w-md mx-auto space-y-2"></div>
+            <div class="flex flex-wrap justify-center gap-3 mt-6">
+              <button id="pres-ronda" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-6 py-2.5 transition">🎲 Nueva ronda</button>
+              <button id="pres-salir2" class="bg-slate-100 hover:bg-slate-200 font-bold rounded-xl px-6 py-2.5 transition">Volver a configurar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+<script>
+"use strict";
+
+/* =============================================================
+   HERRAMIENTAS DE LECTURA · COMIPEMS
+   Sin dependencias externas. Guarda avance en localStorage.
+   Micrófono: Web Audio API (nivel de voz) + Web Speech API
+   (reconocimiento, cuando el navegador lo soporta).
+   ============================================================= */
+
+const LS_RETO = "lectura_reto_v1";
+const $ = s => document.querySelector(s);
+const el = (id) => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const isEmbedded = (() => { try { return window.self !== window.top; } catch (e) { return false; } })();
+function notifyXp(delta) {
+  if (isEmbedded) { try { window.parent.postMessage({ type: "lecturaXp", xp: delta }, "*"); } catch (e) { /* ignorar */ } }
+}
+function autoHeight() {
+  if (!isEmbedded) return;
+  let lastH = 0;
+  const rep = () => {
+    const h = document.body.offsetHeight + 10;
+    if (h !== lastH) {
+      lastH = h;
+      try { window.parent.postMessage({ type: "lecturaHeight", h: h }, "*"); } catch (e) { /* ignorar */ }
+    }
+  };
+  setInterval(rep, 600);
+  window.addEventListener("load", rep);
+  setTimeout(rep, 350);
+}
+
+/* ---------------- Navegación por pestañas ---------------- */
+const TABS = ["reto", "velocidad", "oral", "presencial"];
+
+function showTab(t) {
+  TABS.forEach(x => {
+    const sec = el("seccion-" + x);
+    if (sec) sec.classList.toggle("hidden", x !== t);
+    const btn = document.querySelector('.tab-btn[data-tab="' + x + '"]');
+    if (btn) {
+      btn.className = "px-3 py-1.5 rounded-full text-sm font-medium transition tab-btn " +
+        (x === t ? "bg-sky-600 text-white shadow" : "bg-sky-100 text-sky-700 hover:bg-sky-200");
+    }
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function initTabs() {
+  document.getElementById("tabbar").addEventListener("click", e => {
+    const b = e.target.closest(".tab-btn");
+    if (b) showTab(b.dataset.tab);
+  });
+  let t = (location.hash || "").replace("#", "").replace("/", "");
+  if (!TABS.includes(t)) t = "reto";
+  showTab(t);
+}
+
+/* =============================================================
+   MÓDULO 1 · RETO ASCENDENTE
+   ============================================================= */
+const RETOS = [
+  // Semana 1 · ligero
+  { w: 1, em: "📱", t: "Noticia del día", m: 5,   d: "Lee completa una noticia de última hora desde tu celular." },
+  { w: 1, em: "📊", t: "Noticia + datos", m: 6,   d: "Lee una noticia y subraya 3 ideas clave." },
+  { w: 1, em: "📓", t: "Artículo de revista", m: 8, d: "Lee un artículo breve de revista o blog." },
+  { w: 1, em: "🗞️", t: "Doble noticia", m: 8,   d: "Lee 2 noticias completas del día." },
+  { w: 1, em: "📖", t: "Cuento corto", m: 15,    d: "Lee un cuento corto (5 o 6 páginas)." },
+  { w: 1, em: "🗣️", t: "Noticia en voz alta", m: 6, d: "Lee en voz alta una noticia frente a un espejo." },
+  { w: 1, em: "✅", t: "Cierre de semana", m: 15, d: "Elige algo largo que te guste: crónica o reportaje." },
+  // Semana 2 · medio
+  { w: 2, em: "📄", t: "Primeras páginas", m: 15, d: "Lee 10 páginas de {LIBRO}." },
+  { w: 2, em: "📕", t: "Capítulo corto", m: 20,  d: "Lee 1 capítulo corto de {LIBRO}." },
+  { w: 2, em: "✏️", t: "Leer + ideas", m: 25,   d: "Lee 1 capítulo y anota 5 ideas clave." },
+  { w: 2, em: "📚", t: "Veinte páginas", m: 30,  d: "Lee 20 páginas de {LIBRO}." },
+  { w: 2, em: "📝", t: "Capítulo + resumen", m: 30, d: "Lee 1 capítulo y escribe un resumen de 5 renglones." },
+  { w: 2, em: "📰", t: "Noticia y artículo", m: 15, d: "Lee 1 noticia y 1 artículo de tema distinto." },
+  { w: 2, em: "🏅", t: "Mitad de mes", m: 40,   d: "Lee 30 páginas de {LIBRO}." },
+  // Semana 3 · fuerte
+  { w: 3, em: "📖", t: "Capítulo + noticia", m: 25, d: "Lee 1 capítulo de {LIBRO} y 1 noticia." },
+  { w: 3, em: "📚", t: "Doble capítulo", m: 35, d: "Lee 2 capítulos cortos de {LIBRO}." },
+  { w: 3, em: "🏔️", t: "Cuarenta páginas", m: 45, d: "Lee 40 páginas de {LIBRO}." },
+  { w: 3, em: "❓", t: "Libro pregunta", m: 30,  d: "Lee 1 capítulo y contesta 5 preguntas propias por escrito." },
+  { w: 3, em: "🏃", t: "Maratón", m: 45,        d: "Lee 2 capítulos seguidos de {LIBRO}." },
+  { w: 3, em: "⏱️", t: "En voz alta cronometrada", m: 30, d: "Lee 1 capítulo en voz alta, cronometrado." },
+  { w: 3, em: "🔥", t: "Cincuenta páginas", m: 60, d: "Lee 50 páginas de {LIBRO}." },
+  // Semana 4 · reto
+  { w: 4, em: "🔁", t: "Repaso doble", m: 40,   d: "Lee 2 capítulos y repasa los apuntes que tomaste." },
+  { w: 4, em: "💪", t: "Sesenta páginas", m: 70, d: "Lee 60 páginas de {LIBRO}." },
+  { w: 4, em: "📚", t: "Tres capítulos cortos", m: 60, d: "Lee 3 capítulos cortos de {LIBRO}." },
+  { w: 4, em: "🗞️", t: "Capítulo y artículo", m: 30, d: "Lee 1 capítulo y el artículo del día." },
+  { w: 4, em: "🕯️", t: "Lectura total", m: 80,  d: "Lee 70 páginas acumuladas de {LIBRO}." },
+  { w: 4, em: "🧘", t: "Sin distracciones", m: 30, d: "Lee 1 capítulo sin distracciones (sin celular ni ruido)." },
+  { w: 4, em: "🎯", t: "Preparación final", m: 90, d: "Lee la mitad que te falta de {LIBRO}." },
+  { w: 4, em: "📖", t: "Repaso de capítulos", m: 45, d: "Relee los 3 capítulos más difíciles de {LIBRO}." },
+  { w: 4, em: "🏆", t: "LA META", m: 90,        d: "Lee 3 capítulos completos de {LIBRO} en una sentada. ¡Llegaste!" }
+];
+
+function retoLoad() {
+  try {
+    const raw = localStorage.getItem(LS_RETO);
+    if (raw) return Object.assign({ done: [], libro: "el libro que te indicó tu maestro" }, JSON.parse(raw));
+  } catch (e) { /* ignorar */ }
+  return { done: [], libro: "el libro que te indicó tu maestro" };
+}
+function retoSave(s) { try { localStorage.setItem(LS_RETO, JSON.stringify(s)); } catch (e) { /* ignorar */ } }
+
+function retoStrip(s) {
+  return String(s || "").replace(/[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ .]/g, "").trim()
+    || "el libro que te indicó tu maestro";
+}
+
+function retoStreak(done) {
+  const d = done.slice().sort((a, b) => a - b);
+  if (!d.length || d[0] !== 1) return 0;
+  let run = 1;
+  for (let i = 1; i < d.length; i++) {
+    if (d[i] === d[i - 1] + 1) run++;
+    else if (d[i] !== d[i - 1]) break;
+  }
+  return run;
+}
+
+function retoRender() {
+  const s = retoLoad();
+  const libro = retoStrip(el("reto-libro").value || s.libro);
+  s.libro = libro;
+  el("reto-libro").value = libro;
+  el("reto-meta-libro").textContent = libro;
+  retoSave(s);
+
+  const done = s.done;
+  const pct = Math.round((done.length / RETOS.length) * 100);
+  const xp = done.reduce((a, b) => a + b, 0);
+  const racha = retoStreak(done);
+  const semanaActual = Math.min(4, Math.floor(done.length / 7) + 1);
+
+  el("reto-prog").textContent = done.length + "/30";
+  el("reto-bar").style.width = pct + "%";
+  el("reto-racha").textContent = racha;
+  el("reto-xp").textContent = xp;
+  const sa = el("reto-semana");
+  sa.textContent = "Semana " + semanaActual;
+  sa.className = "text-2xl font-extrabold " + (semanaActual === 4 ? "text-rose-600" : semanaActual === 3 ? "text-orange-500" : semanaActual === 2 ? "text-amber-600" : "text-emerald-600");
+
+  const semanas = [];
+  RETOS.forEach((r, i) => {
+    const dia = i + 1;
+    (semanas[r.w - 1] = semanas[r.w - 1] || []).push({ r, dia });
+  });
+
+  const nomLibro = "<b>" + libro + "</b>";
+  el("reto-ladder").innerHTML = semanas.map((items, wi) => {
+    const rows = items.map(x => {
+      const completo = done.includes(x.dia);
+      return '<div class="flex items-center gap-3 rounded-xl px-4 py-3 border ' +
+        (completo ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100") + '">' +
+        '<div class="w-12 text-center shrink-0">' +
+          '<div class="text-xs font-bold text-slate-400">Día ' + x.dia + '</div>' +
+          '<div class="text-2xl">' + x.r.em + '</div>' +
+        '</div>' +
+        '<div class="flex-1 min-w-0">' +
+          '<div class="font-bold ' + (completo ? "text-emerald-700" : "text-slate-700") + '">' +
+            (completo ? "✓ " : "") + x.r.t + ' <span class="text-xs text-slate-400 font-semibold">· ' + x.r.m + ' min</span></div>' +
+          '<div class="text-sm text-slate-500">' + x.r.d.split("{LIBRO}").join(nomLibro) + '</div>' +
+        '</div>' +
+        '<button data-dia="' + x.dia + '" class="reto-dia shrink-0 rounded-lg px-3 py-2 text-sm font-bold transition ' +
+          (completo ? "bg-emerald-600 text-white" : "bg-white border border-slate-300 text-slate-600 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700") + '">' +
+          (completo ? "Completado" : "Terminé") + '</button>' +
+      '</div>';
+    }).join("");
+    return '<div class="rounded-xl border border-amber-100 overflow-hidden">' +
+      '<div class="bg-amber-50 px-4 py-2.5 text-sm font-extrabold text-amber-800">SEMANA ' + wi + ' · ' +
+        ["Ligero", "Medio", "Fuerte", "El gran reto"][wi] + '</div>' +
+      '<div class="space-y-2 p-3">' + rows + '</div>' +
+    '</div>';
+  }).join("");
+}
+
+function retoInit() {
+  el("reto-libro").addEventListener("input", () => retoRender());
+  el("reto-ladder").addEventListener("click", e => {
+    const b = e.target.closest(".reto-dia");
+    if (!b) return;
+    const s = retoLoad();
+    const dia = parseInt(b.dataset.dia, 10);
+    const ix = s.done.indexOf(dia);
+    let delta = 0;
+    if (ix >= 0) { s.done.splice(ix, 1); delta = -5; } else { s.done.push(dia); delta = 5; }
+    retoSave(s);
+    retoRender();
+    notifyXp(delta);
+  });
+  el("reto-reset").addEventListener("click", () => {
+    if (confirm("¿Reiniciar todo el reto de lectura en este navegador?")) {
+      retoSave({ done: [], libro: retoStrip(el("reto-libro").value) });
+      retoRender();
+    }
+  });
+  retoRender();
+}
+
+/* =============================================================
+   MÓDULO 2 · VELOCIDAD RSVP
+   ============================================================= */
+const VELOS = [
+  { t: "La fuerza de la costumbre", b: "Cada mañana, al despertar, el cuerpo repite los mismos movimientos. Cepillarse, vestirse y desayunar forman parte de una rutina que casi no requiere pensar. Por eso los expertos recomiendan convertir los buenos hábitos en costumbres automáticas: así son más fáciles de conservar con el tiempo." },
+  { t: "El poder de la música", b: "La música acompaña al ser humano desde la antigüedad. Diversos estudios aseguran que escuchar melodías tranquilas ayuda a relajarse y a concentrarse. Por esa razón se utiliza en bibliotecas, salas de espera y hasta en las aulas antes de un examen." },
+  { t: "La luz de las estrellas", b: "Cuando vemos una estrella brillar en el cielo, en realidad observamos la luz que viajó durante muchos años. Algunas de esas estrellas ya no existen, pero su luz sigue recorriendo el espacio. Esa es una de las maravillas que el telescopio nos permite imaginar." },
+  { t: "Los modos discursivos", b: "Los textos se pueden desarrollar de varias maneras. La narración cuenta hechos en una secuencia de tiempo. La descripción explica cómo es una persona, un lugar o un objeto. La exposición ordena un tema con datos para explicarlo con claridad. El diálogo reproduce el intercambio de voces y la argumentación defiende una postura con razones." }
+];
+
+const vel = { words: [], i: 0, timer: null, running: false, t0: 0 };
+
+function velRenderPresets() {
+  el("vel-presets").innerHTML = VELOS.map((v, i) =>
+    '<button class="vel-preset bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 rounded-full px-4 py-1.5 text-sm font-semibold transition" data-i="' + i + '">' + v.t + "</button>"
+  ).join("") +
+  '<button class="vel-preset bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-full px-4 py-1.5 text-sm font-bold transition" data-i="-1">🎲 Sorpréndeme</button>';
+}
+
+function velLoad(words) {
+  velStop();
+  vel.words = words.filter(Boolean);
+  vel.i = 0;
+  el("vel-word").textContent = "⚡";
+  el("vel-frase").classList.add("hidden");
+  el("vel-prog").style.width = "0%";
+  el("vel-info").textContent = vel.words.length + " palabras · pulsa ▶";
+  velStart();
+}
+
+function velStart() {
+  if (vel.running) return;
+  if (!vel.words.length) return;
+  vel.running = true;
+  vel.t0 = Date.now();
+  el("vel-play").textContent = "⏸ Pausa";
+  const ms = Math.round(60000 / parseInt(el("vel-speed").value, 10));
+  const paso = () => {
+    if (!vel.running) return;
+    if (vel.i >= vel.words.length) { velDone(); return; }
+    el("vel-word").textContent = vel.words[vel.i];
+    el("vel-prog").style.width = ((vel.i / vel.words.length) * 100) + "%";
+    el("vel-info").textContent = "palabra " + (vel.i + 1) + " de " + vel.words.length;
+    vel.i++;
+    vel.timer = setTimeout(paso, ms);
+  };
+  paso();
+}
+
+function velPause() {
+  vel.running = false;
+  clearTimeout(vel.timer);
+  el("vel-play").textContent = "▶ Leer";
+}
+
+function velStop() {
+  velPause();
+}
+
+function velDone() {
+  velPause();
+  const frase = vel.words.join(" ");
+  const t = ((Date.now() - vel.t0) / 1000).toFixed(1);
+  const ppm = Math.round(vel.words.length / (t / 60));
+  el("vel-word").textContent = "✅";
+  el("vel-prog").style.width = "100%";
+  el("vel-info").textContent = "¡Terminaste!";
+  el("vel-frase").classList.remove("hidden");
+  el("vel-frase-txt").textContent = frase;
+  el("vel-frase-stats").textContent = vel.words.length + " palabras en " + t + " s → " + ppm + " palabras por minuto";
+}
+
+function velInit() {
+  velRenderPresets();
+  el("vel-speed").addEventListener("input", () => {
+    el("vel-speed-lbl").textContent = el("vel-speed").value + " ppm";
+  });
+  el("vel-presets").addEventListener("click", e => {
+    const b = e.target.closest(".vel-preset");
+    if (!b) return;
+    const i = parseInt(b.dataset.i, 10);
+    const t = i < 0 ? VELOS[Math.floor(Math.random() * VELOS.length)] : VELOS[i];
+    velLoad(t.b.split(/\s+/));
+  });
+  el("vel-play").addEventListener("click", () => { vel.running ? velPause() : velStart(); });
+  el("vel-stop").addEventListener("click", () => { velStop(); vel.words = []; el("vel-word").textContent = "⚡"; el("vel-info").textContent = ""; el("vel-prog").style.width = "0%"; el("vel-frase").classList.add("hidden"); });
+  el("vel-use").addEventListener("click", () => {
+    const txt = el("vel-custom").value.trim();
+    if (!txt) { alert("Escribe o pega un texto primero."); return; }
+    velLoad(txt.split(/\s+/));
+  });
+}
+
+/* =============================================================
+   MICRÓFONO COMPARTIDO (VAD + Reconocimiento)
+   ============================================================= */
+const VAD = {
+  ctx: null, an: null, buf: null, stream: null, thr: 0.05, noise: 0.03, ready: false,
+  async init() {
+    if (this.ready && this.stream && this.stream.active) return true;
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const p = await navigator.permissions.query({ name: "microphone" });
+          if (p.state === "denied") {
+            this.ready = false;
+            return false;
+          }
+        } catch (e) { /* ignorar */ }
+      }
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      if (this.ctx.state === "suspended") { try { await this.ctx.resume(); } catch (e) { /* ignorar */ } }
+      const src = this.ctx.createMediaStreamSource(this.stream);
+      this.an = this.ctx.createAnalyser();
+      this.an.fftSize = 2048;
+      this.an.smoothingTimeConstant = 0.25;
+      src.connect(this.an);
+      this.buf = new Uint8Array(this.an.fftSize);
+      let sum = 0, t = 0, mins = 1;
+      for (let i = 0; i < 10; i++) {
+        await sleep(80);
+        const l = this.level();
+        if (l < mins) mins = l;
+        sum += l; t++;
+      }
+      this.noise = mins;
+      this.thr = Math.min(0.10, Math.max(0.04, (sum / t) * 1.6));
+      this.ready = true;
+      return true;
+    } catch (e) {
+      this.ready = false;
+      return false;
+    }
+  },
+  level() {
+    if (!this.an) return 0;
+    this.an.getByteTimeDomainData(this.buf);
+    let s = 0; const n = this.buf.length;
+    for (let i = 0; i < n; i++) { const v = (this.buf[i] - 128) / 128; s += v * v; }
+    return Math.sqrt(s / n);
+  },
+  stop(full = false) {
+    if (full) {
+      if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+      if (this.ctx && this.ctx.state !== "closed") { try { this.ctx.close(); } catch (e) { /* ignorar */ } }
+      this.ctx = null; this.an = null; this.buf = null;
+      this.ready = false;
+    }
+  }
+};
+
+const SR_OK = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+function srStart(onWord, onState) {
+  if (!SR_OK) return null;
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let sr, dead = false, restarting = false;
+  let fails = 0, timer = null;
+  const MAX_FAILS = 5;
+
+  // Reiniciar sin límite hace que el navegador vuelva a pedir el micrófono
+  // cada vez (SpeechRecognition pide el mic por su cuenta). Con retroceso
+  // progresivo y tope de intentos se detiene y deja el estimado por tiempo.
+  function delay() {
+    return Math.min(8000, 500 * Math.pow(2, Math.max(0, fails - 1)));
+  }
+
+  function spin() {
+    if (dead || restarting) return;
+    restarting = true;
+    (async () => {
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const p = await navigator.permissions.query({ name: "microphone" });
+          if (p.state === "denied") { dead = true; restarting = false; if (onState) onState(false); return; }
+        }
+      } catch (e) { /* ignorar */ }
+      restarting = false;
+      if (dead) return;
+      try { sr.start(); if (onState) onState(true); }
+      catch (e) { fails++; if (onState) onState(false); if (fails >= MAX_FAILS) dead = true; }
+    })();
+  }
+
+  function retry() {
+    if (dead) return;
+    fails++;
+    if (fails >= MAX_FAILS) { dead = true; if (onState) onState(false); return; }
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(spin, delay());
+  }
+
+  try {
+    sr = new R();
+    sr.lang = "es-MX";
+    sr.continuous = true;
+    sr.maxAlternatives = 1;
+    sr.interimResults = true;
+
+    sr.onresult = e => {
+      fails = 0;
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (!r.isFinal) continue;
+        const n = (r[0].transcript || "").trim().split(/\s+/).filter(Boolean).length;
+        if (n && onWord) onWord(n);
+      }
+    };
+    // Chrome corta el reconocimiento tras unos segundos de silencio:
+    // hay que reiniciarlo o el contador se congela a media lectura.
+    sr.onend = () => { if (!dead) { fails = 0; if (timer) clearTimeout(timer); timer = setTimeout(spin, 250); } };
+    sr.onerror = ev => {
+      const err = ev && ev.error;
+      if (onState) onState(false);
+      if (err === "not-allowed" || err === "service-not-allowed") { dead = true; return; }
+      if (err === "no-speech" || err === "aborted" || err === "network") retry();
+    };
+    spin();
+  } catch (e) {
+    return null;
+  }
+
+  return {
+    stop() {
+      dead = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      try { sr.onend = null; sr.onerror = null; sr.stop(); } catch (e) { /* ignorar */ }
+    }
+  };
+}
+
+/* Estima cuántas sílabas tiene cada palabra en un texto dado, contando
+   grupos de vocales. La prosa ronda 2.2, pero los poemas y los textos
+   con palabras largas se salen del promedio, así que se mide del texto. */
+function syllableRatio(text) {
+  const words = (text || "").toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
+  if (!words.length) return 2.2;
+  const V = /[aeiou]/;
+  let syl = 0;
+  for (const w of words) {
+    let grupos = 0, prev = false;
+    for (const ch of w) { const v = V.test(ch); if (v && !prev) grupos++; prev = v; }
+    syl += Math.max(1, grupos);
+  }
+  return syl / words.length;
+}
+
+/* Lector con análisis de voz en vivo.
+   Reporta cada ~160 ms y devuelve una foto del estado. */
+function createReader(onTick, silPerWord) {
+  const silPer = silPerWord || 2.2;
+  const st = {
+    words: 0, estWords: 0, talkMs: 0, totalMs: 0,
+    speaking: false, silRun: 0, longestSil: 0, pauseCount: 0, spoke: false,
+    last: 0, t0: 0, running: false, justSpoke: false, sample: 0,
+    env: 0, peak: 0, peakT: 0, rising: false, syl: 0, srAlive: false
+  };
+  let iv = null, sr = null;
+
+  function loop() {
+    if (!st.running) return;
+    const now = Date.now();
+    const dt = now - (st.last || now);
+    st.last = now;
+    st.totalMs += dt;
+    st.sample++;
+
+    // Umbral adaptativo: si el ambiente está ruidoso el umbral fijo se queda
+    // corto y las sílabas suaves no cuentan, por eso el piso de ruido se ajusta.
+    const l = VAD.level();
+    VAD.noise = l < VAD.noise ? VAD.noise * 0.9 + l * 0.1 : VAD.noise * 0.999 + l * 0.001;
+    VAD.thr = Math.min(0.12, Math.max(0.012, VAD.noise * 2.2 + 0.006));
+    const sp = l >= VAD.thr;
+
+    if (sp) { st.talkMs += dt; st.spoke = true; st.justSpoke = true; }
+    else {
+      st.silRun += dt;
+      if (st.justSpoke && st.silRun >= 120 && st.silRun <= 900) st.justSpoke = false;
+    }
+
+    // Cada sílaba del español es un pico de energía. Contarlos da un estimado
+    // mucho más fiel que multiplicar el tiempo por una constante fija.
+    st.env = l > st.env ? l : st.env * 0.55 + l * 0.45;
+    if (st.env > st.peak) { st.peak = st.env; st.peakT = now; st.rising = true; }
+    else if (st.rising && st.peak >= VAD.thr && now - st.peakT > 90) { st.syl++; st.rising = false; }
+
+    let bySyl = st.syl / silPer;
+    // Tope de seguridad: nadie dice más de ~4 palabras/segundo, así que un
+    // pico de ruido aislado no puede inflar el conteo.
+    bySyl = Math.min(bySyl, (st.talkMs / 1000) * 4);
+    st.estWords = Math.max(st.estWords, Math.floor(bySyl));
+
+    if (!sp) st.longestSil = Math.max(st.longestSil, st.silRun);
+    else st.silRun = 0;
+    if (st.longestSil >= 1500 && sp === false) st.silRun = st.longestSil;
+
+    if (st.sample % 3 === 0) {
+      onTick({
+        elapsed: (now - st.t0) / 1000,
+        words: st.words, est: st.estWords, srAlive: st.srAlive,
+        talk: st.totalMs ? st.talkMs / st.totalMs : 0,
+        level: l, speaking: sp, sil: st.longestSil, silRun: st.silRun
+      });
+    }
+  }
+
+  return {
+    start(onWord) {
+      st.t0 = Date.now();
+      st.running = true;
+      sr = srStart(n => { st.words += n; }, alive => { st.srAlive = !!alive; });
+      iv = setInterval(loop, 50);
+      st.last = Date.now();
+    },
+    stop(bruto) {
+      st.running = false;
+      if (iv) { clearInterval(iv); iv = null; }
+      if (sr) { try { sr.stop(); } catch (e) { /* ignorar */ } sr = null; }
+      const res = {
+        words: Math.max(st.words, 0),
+        est: st.estWords,
+        usedWords: Math.max(st.words, bruto ? st.estWords : 0),
+        spoke: st.spoke,
+        talk: st.totalMs ? st.talkMs / st.totalMs : 0,
+        longestSil: st.longestSil,
+        pauses: st.pauseCount,
+        elapsed: (Date.now() - st.t0) / 1000
+      };
+      res.pace = res.elapsed > 0 ? Math.round(res.usedWords / (res.elapsed / 60)) : 0;
+      return res;
+    }
+  };
+}
+
+/* =============================================================
+   TEST DE COMPRENSIÓN (compartido)
+   ============================================================= */
+function renderQuiz(preguntas, count, container, titulo) {
+  const pool = preguntas.slice();
+  const eleg = [];
+  while (pool.length && eleg.length < Math.min(count, pool.length)) {
+    eleg.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  container.innerHTML =
+    '<div class="rounded-2xl border border-rose-100 bg-rose-50/60 px-5 py-5">' +
+    '<div class="font-extrabold text-rose-700 mb-3">❓ Test de comprensión lectora</div>' +
+    eleg.map((q, qi) =>
+      '<div class="quiz-q mb-4" data-ci="' + q.c + '">' +
+        '<div class="font-semibold text-slate-700 mb-2">' + (qi + 1) + ". " + q.q + "</div>" +
+        '<div class="grid sm:grid-cols-2 gap-2">' +
+        q.ops.map((op, oi) =>
+          '<button data-o="' + oi + '" class="quiz-op text-left rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:border-rose-400 transition">' +
+            '<span class="inline-block w-5 h-5 rounded-full bg-rose-100 text-rose-700 text-xs font-extrabold text-center leading-5 mr-1">' +
+            String.fromCharCode(65 + oi) + "</span>" + op + "</button>"
+        ).join("") +
+        "</div>" +
+        '<div class="quiz-fb text-sm mt-1"></div>' +
+      "</div>"
+    ).join("") + "</div>";
+
+  container.querySelectorAll("button.quiz-op").forEach(b => {
+    b.addEventListener("click", () => {
+      const host = b.closest(".quiz-q");
+      if (host.dataset.done) return;
+      host.dataset.done = "1";
+      const ci = parseInt(host.dataset.ci, 10);
+      const oi = parseInt(b.dataset.o, 10);
+      host.querySelectorAll("button.quiz-op").forEach(x => {
+        x.classList.remove("border-rose-400");
+        const xi = parseInt(x.dataset.o, 10);
+        if (xi === ci) x.classList.add("border-emerald-500", "bg-emerald-50");
+        else if (xi === oi) x.classList.add("border-rose-500", "bg-rose-50");
+      });
+      const fb = host.querySelector(".quiz-fb");
+      fb.classList.add("font-bold");
+      fb.style.color = oi === ci ? "#059669" : "#e11d48";
+      fb.textContent = oi === ci ? "✓ ¡Correcto!" : "✗ Incorrecta. La correcta es " + String.fromCharCode(65 + ci) + ".";
+    });
+  });
+}
+
+/* =============================================================
+   MÓDULO 3 · LECTURA ORAL CON META
+   ============================================================= */
+const TEXTO_ORAL = [
+  {
+    t: "Jóvenes y la programación", n: 84,
+    b: "En varias escuelas de la ciudad se imparten clases de programación desde la secundaria. Los alumnos aprenden a crear pequeñas aplicaciones y páginas web. Los maestros aseguran que programar desarrolla la lógica y la paciencia. Además, muchos estudiantes descubren una posible carrera profesional. Los talleres se realizan una vez por semana y no requieren experiencia previa. Al finalizar el ciclo, los participantes presentan un proyecto ante sus compañeros y los padres de familia. Las autoridades esperan duplicar el número de escuelas que participan el próximo año.",
+    p: [
+      { q: "¿Qué se imparte en varias escuelas de la ciudad?", ops: ["Idiomas extranjeros", "Clases de programación", "Clases de dibujo", "Música"], c: 1 },
+      { q: "Según los maestros, programar desarrolla:", ops: ["La memoria fotográfica", "La lógica y la paciencia", "La velocidad corporal", "El oído musical"], c: 1 },
+      { q: "¿Cuándo se realizan los talleres?", ops: ["Todos los días", "Dos veces al mes", "Una vez por semana", "Solo en vacaciones"], c: 2 },
+      { q: "¿Qué presentan los alumnos al finalizar el ciclo?", ops: ["Un examen escrito", "Un proyecto ante compañeros y padres", "Una obra de teatro", "Un torneo deportivo"], c: 1 }
+    ]
+  },
+  {
+    t: "El cuidado del agua", n: 100,
+    b: "El agua es un recurso indispensable para la vida. Solo menos del tres por ciento del agua del planeta es dulce y resulta apta para consumirla. Por eso, cuidarla es responsabilidad de todos. Cerrar la llave mientras te cepillas los dientes, reparar las fugas y usar la lavadora con carga completa son medidas sencillas. También es importante no tirar basura a los ríos, pues contamina el agua que usamos para beber. Si cada familia ahorra un poco, las reservas alcanzan para más personas. El agua que ahorramos hoy es el agua que tendremos mañana.",
+    p: [
+      { q: "¿Qué porcentaje del agua del planeta es dulce y apta para consumir?", ops: ["Más del 50 %", "Menos del 3 %", "El 30 %", "El 100 %"], c: 1 },
+      { q: "Cerrar la llave mientras te cepillas los dientes es una medida para:", ops: ["Ensuciar más", "Ahorrar agua", "Gastar más agua", "Lavar la ropa"], c: 1 },
+      { q: "¿Qué pasa si tiramos basura a los ríos?", ops: ["Se purifica el agua", "Se contamina el agua", "Se acumula más agua", "Se calienta el agua"], c: 1 },
+      { q: "La idea principal del texto es:", ops: ["El agua es dulce", "Hay que cuidar el agua", "La lavadora consume mucha agua", "Los ríos son peligrosos"], c: 1 }
+    ]
+  },
+  {
+    t: "Nueva especie descubierta", n: 112,
+    b: "Un grupo de biólogos descubrió en la selva de Chiapas una nueva especie de rana de color verde y pequeño tamaño. El anfibio fue localizado mientras los científicos investigaban la calidad del agua de un arroyo. Los investigadores destacan que el hallazgo confirma la gran riqueza natural de México. La especie se distingue por un canto nocturno muy peculiar y por vivir únicamente cerca del agua limpia. Los especialistas recomiendan proteger su hábitat, pues el arroyo corre riesgo por la deforestación y la contaminación. El siguiente paso será estudiar su dieta y su reproducción.",
+    p: [
+      { q: "¿Qué descubrieron los biólogos en Chiapas?", ops: ["Una nueva rana verde", "Un arroyo contaminado", "Una planta medicinal", "Una cueva"], c: 0 },
+      { q: "¿Cómo se distingue la nueva especie?", ops: ["Por su tamaño gigante", "Por su canto nocturno peculiar", "Por vivir en el desierto", "Por ser de color rojo"], c: 1 },
+      { q: "¿Por qué corre riesgo el hábitat de la especie?", ops: ["Por el crecimiento de la selva", "Por la deforestación y la contaminación", "Por el canto de las aves", "Por el exceso de agua"], c: 1 },
+      { q: "¿Cuál será el siguiente paso de los investigadores?", ops: ["Vender las ranas", "Estudiar su dieta y reproducción", "Tumbar el arroyo", "Regresar a la ciudad"], c: 1 }
+    ]
+  },
+  {
+    t: "Las funciones de la lengua", n: 82,
+    b: "Cuando hablamos o escribimos, cada mensaje cumple una función. Si la noticia informa sobre un hecho y se puede verificar, es referencial. Si un anuncio busca que el receptor compre o vote, es apelativa. Cuando saludamos y respondemos «ajá» o preguntamos si nos escuchan, usamos la función fática, que mantiene abierta la comunicación. Si jugamos con las palabras, como en un poema, la función es poética. Por último, cuando explicamos qué significa una palabra, como en un diccionario, usamos la función metalingüística.",
+    p: [
+      { q: "¿Qué función cumple un mensaje que busca que el receptor compre?", ops: ["Referencial", "Apelativa", "Poética", "Fática"], c: 1 },
+      { q: "La función que mantiene abierta la comunicación es:", ops: ["Metalingüística", "Referencial", "Fática", "Poética"], c: 2 },
+      { q: "Un diccionario que define una palabra es ejemplo de función:", ops: ["Metalingüística", "Apelativa", "Fática", "Poética"], c: 0 },
+      { q: "Un poema que juega con las palabras es función:", ops: ["Referencial", "Apelativa", "Fática", "Poética"], c: 3 }
+    ]
+  },
+  {
+    t: "Textos periodísticos", n: 98,
+    b: "Los textos periodísticos informan sobre la realidad. La nota informativa presenta los hechos de manera objetiva, respondiendo a qué, quién, cuándo, dónde y por qué. El reportaje profundiza en un tema con testimonios y datos. La crónica narra los hechos en orden, como un relato. El artículo de opinión defiende una postura personal y usa la argumentación. Por último, la entrevista reproduce el diálogo entre un periodista y un especialista. Todos deben ser claros y veraces, porque su función principal es comunicar la verdad de forma oportuna.",
+    p: [
+      { q: "¿Qué texto presenta los hechos respondiendo a qué, quién, cuándo, dónde y por qué?", ops: ["La crónica", "La nota informativa", "La entrevista", "El artículo de opinión"], c: 1 },
+      { q: "La crónica narra los hechos:", ops: ["En orden, como un relato", "Sin ningún orden", "Solo con imágenes", "En verso"], c: 0 },
+      { q: "El artículo de opinión se caracteriza por:", ops: ["Ser totalmente objetivo", "Defender una postura personal", "No tener autor", "Ser muy corto"], c: 1 },
+      { q: "La función principal de los textos periodísticos es:", ops: ["Entretener", "Comunicar la verdad de forma oportuna", "Decorar la página", "Obligar al lector"], c: 1 }
+    ]
+  }
+];
+
+/* Fragmentos clásicos y hechos históricos.
+   Clásicos y noticias redactados en prosa original, no copias de traducciones. */TEXTO_ORAL.push(
+  {
+    t: "Clásico · La Iliada", g: "Clásicos griegos y latinos", n: 0,
+    b: "La Iliada es el poema más antiguo de la literatura griega y se atribuye a Homero. No cuenta toda la guerra de Troya, sino un solo episodio: la ira del héroe Aquiles. Al comienzo del poema, Agamenón le quita a Aquiles a su esclava Briseida, y el héroe, ofendido, decide retirarse del combate. Su madre Tetis le suplica que regrese, pero él se niega. Los griegos, sin su mejor guerrero, empiezan a perder frente a los troyanos. Entonces Aquiles envía a su amigo Patroclo a luchar en su lugar, y Patroclo muere a manos de Héctor. El duelo transforma al héroe, que vuelve al combate para vengar a su compañero. La obra muestra que el honor y la amistad importan más que la victoria.",
+    p: [
+      { q: "¿Qué episodio relata La Iliada?", ops: ["Toda la guerra de Troya", "La ira de Aquiles", "El regreso de Odiseo", "La caída de Troya"], c: 1 },
+      { q: "¿Por qué Aquiles se retira de la batalla?", ops: ["Por estar cansado", "Porque Agamenón le quita a Briseida", "Porque quiere volver a casa", "Por una herida de guerra"], c: 1 },
+      { q: "¿Quién muere a manos de Héctor?", ops: ["Agamenón", "Patroclo", "Menelao", "Príamo"], c: 1 },
+      { q: "Según el poema, lo más importante es:", ops: ["Ganar la guerra", "El honor y la amistad", "Conseguir oro", "Reunir trofeos"], c: 1 }
+    ]
+  },
+  {
+    t: "Clásico · La Odisea", g: "Clásicos griegos y latinos", n: 0,
+    b: "La Odisea continúa la historia de La Iliada y narra el regreso de Odiseo a su patria, Ítaca. Después de diez años de guerra, el héroe desea volver a casa, pero el camino está lleno de peligros. Primero debe escapar de un cíclope que lo encierra en una cueva, luego librarse de las sirenas que lo seducen con su canto y finalmente resistir la cólera de los dioses del mar. Durante su ausencia, su esposa Penélope espera con fidelidad y rechaza a los pretendientes que presionan para casarse con ella. Cuando Odiseo por fin regresa, no se da a conocer: primero observa en silencio y solo actúa en el momento preciso. Su triunfo se debe tanto a su astucia como a su paciencia.",
+    p: [
+      { q: "¿Qué narra La Odisea?", ops: ["La guerra de Troya", "El regreso de Odiseo", "La muerte de Patroclo", "El juicio de los dioses"], c: 1 },
+      { q: "¿Cuánto tiempo dura la ausencia de Odiseo?", ops: ["Cinco años", "Diez años", "Tres años", "Veinte años"], c: 1 },
+      { q: "Odiseo vence al cíclope principalmente con:", ops: ["Su fuerza física", "Su astucia", "La ayuda de Hércules", "Un caballo de Troya"], c: 1 },
+      { q: "Penélope destaca sobre todo por su:", ops: ["Riqueza", "Fidelidad y paciencia", "Valentía física", "Dulzura de voz"], c: 1 }
+    ]
+  },
+  {
+    t: "Clásico · El Principito", g: "Clásicos universales", n: 0,
+    b: "El Principito es un cuento escrito por Antoine de Saint-Exupéry. Narra el encuentro de un aviador perdido en el desierto con un pequeño príncipe que viene de un diminuto planeta. El niño le pide que le dibuje una oveja y le cuenta sus viajes por otros astros, donde encuentra personas adultas ocupadas en asuntos que nada importan. Su mayor preocupación es una rosa, que exige cuidados y se enferma cuando él se aleja. Antes de partir, el príncipe enseña al aviador que lo esencial es invisible a los ojos. Su consejo final se dirige a los adultos: para comprender lo que el niño ya sabe, hace falta leer.",
+    p: [
+      { q: "¿Dónde se encuentran el aviador y el pequeño príncipe?", ops: ["En un bosque", "En el desierto", "En una ciudad", "En alta mar"], c: 1 },
+      { q: "El pequeño príncipe viene de:", ops: ["Una montaña", "Un diminuto planeta", "Un castillo", "Una isla"], c: 1 },
+      { q: "Según el cuento, lo esencial es:", ops: ["Visible a los ojos", "Invisible a los ojos", "Muy caro", "Muy raro"], c: 1 },
+      { q: "La rosa del príncipe representa algo que:", ops: ["Se rompe con facilidad", "Exige cuidados y atención", "Es invisible", "No tiene dueño"], c: 1 }
+    ]
+  },
+  {
+    t: "Historia · La llegada a la Luna", g: "Historia", n: 0,
+    b: "El 20 de julio de 1969 se grabó uno de los mayores logros de la humanidad. La misión Apolo 11 se posó sobre la superficie lunar con dos hombres a bordo, Neil Armstrong y Buzz Aldrin, mientras Michael Collins permanecía orbitando en el módulo de mando. Armstrong se convirtió en el primer ser humano en pisar otro cuerpo celeste. Millones de personas en el mundo siguieron el hecho por radio y televisión. La misión fue el resultado de varios años de trabajo, en el que participaron miles de científicos, ingenieros y técnicos. Su legado va más allá de la Luna: demostró que un ser humano podía caminar en otro planeta y regresar con vida.",
+    p: [
+      { q: "¿Qué misión llevó al hombre a la Luna?", ops: ["Apolo 11", "Apolo 13", "Gemini 5", "Sputnik 2"], c: 0 },
+      { q: "¿Quién fue el primer hombre en pisar la Luna?", ops: ["Buzz Aldrin", "Michael Collins", "Neil Armstrong", "Yuri Gagarin"], c: 2 },
+      { q: "¿De qué país fueron los primeros pisadores?", ops: ["Rusia", "Estados Unidos", "Francia", "China"], c: 1 },
+      { q: "La misión demostró que era posible:", ops: ["Vivir de forma permanente en el espacio", "Pisar otro planeta y regresar", "Construir satélites", "Llegar a Marte"], c: 1 }
+    ]
+  },
+  {
+    t: "Historia · La caída de Tenochtitlan", g: "Historia", n: 0,
+    b: "El 13 de agosto de 1521 ocurrió uno de los episodios más importantes de la historia de México. Tenochtitlan, la gran capital del imperio mexica construida sobre un islote del lago Texcoco, fue conquistada por las tropas españolas comandadas por Hernán Cortés, con apoyo de miles de tlaxcaltecas. La ciudad resistió durante meses y su población sufrió hambre y enfermedades. Al final del día, el último emperador, Cuauhtémoc, fue capturado. Este hecho marca el fin del Mexica y el inicio de la época colonial.",
+    p: [
+      { q: "¿Qué ciudad fue conquistada en 1521?", ops: ["Cali", "Tenochtitlan", "Teotihuacan", "Tula"], c: 1 },
+      { q: "Tenochtitlan estaba construida sobre:", ops: ["Una montaña", "Un islote del lago", "Un desierto", "Una cueva"], c: 1 },
+      { q: "¿Quién comandaba las tropas españolas?", ops: ["Moctezuma", "Hernán Cortés", "Cuauhtémoc", "Malintzin"], c: 1 },
+      { q: "¿Quién fue el último emperador mexica?", ops: ["Moctezuma", "Nezahualcóyotl", "Cuauhtémoc", "Itzcoatl"], c: 2 }
+    ]
+  }
+);
+
+TEXTO_ORAL.push(
+  {
+    t: "Clásico · Don Quijote de la Mancha", g: "Clásicos en español", n: 0,
+    b: "Miguel de Cervantes publicó esta novela en dos partes, en 1605 y 1615. Cuenta las aventuras de un hidalgo pobre de La Mancha que, después de leer tantas novelas de caballería, decide convertirse en caballero andante. Toma el nombre de Quijote y como escudero a Sancho Panza, un labriego muy sensato. Sus aventuras son famosas porque casi nunca coinciden con la realidad: los molinos parecen gigantes y las posadas parecen castillos. Cervantes no escribió una historia de la locura, sino una novela sobre el honor, la amistad y la diferencia entre lo que imaginamos y lo que de verdad existe.",
+    p: [
+      { q: "¿Quién escribió Don Quijote de la Mancha?", ops: ["Lope de Vega", "Miguel de Cervantes", "Federico García Lorca", "Antonio Machado"], c: 1 },
+      { q: "¿Cómo se llama el escudero de Don Quijote?", ops: ["Sancho Panza", "Ginete", "El moro", "Sansón"], c: 0 },
+      { q: "¿Por qué Don Quijote decide salir a buscar aventuras?", ops: ["Por herencia", "Por haber leído muchas novelas de caballería", "Por orden del rey", "Por una deuda"], c: 1 },
+      { q: "Según el texto, el caballero confunde la realidad porque:", ops: ["Está loco", "Su imaginación es más grande que los hechos", "No ve bien", "Le mienten sus amigos"], c: 1 }
+    ]
+  }
+);
+
+TEXTO_ORAL.push(
+  {
+    t: "Clásico · Romeo y Julieta", g: "Clásicos universales", n: 0,
+    b: "Romeo y Julieta es una tragedia escrita por William Shakespeare hacia 1595. Narra el amor de dos jóvenes de familias enemigas en la ciudad de Verona: Romeo pertenece a los Montesco y Julieta a los Capuleto. Ninguno de los dos sabe al principio que está enamorada del hijo de la familia rival. Un fraile los ayuda a casarse en secreto, pero la familia de Julieta la obliga a casarse con otro hombre. Enterado de la noticia, Romeo se precipita de inmediato a Verona. La tragedia termina con la muerte de los dos jóvenes y con la reconciliación de sus familias, que deciden erigir un monumento en su memoria.",
+    p: [
+      { q: "¿Quién escribió Romeo y Julieta?", ops: ["William Shakespeare", "Lope de Vega", "William Blake", "Walter Scott"], c: 0 },
+      { q: "¿A qué familias pertenecen los dos jóvenes?", ops: ["Montesco y Capuleto", "Romeo y Paris", "Verona y Mantua", "Nápoles y Sicilia"], c: 0 },
+      { q: "¿Por qué el amor de los jóvenes es complicado?", ops: ["Porque son pobres", "Porque sus familias son enemigas", "Porque no se conocen", "Porque viven lejos"], c: 1 },
+      { q: "¿Cómo termina la tragedia?", ops: ["Con un casamiento feliz", "Con la muerte de ambos y la paz entre las familias", "Con que Julieta se casa con Paris", "Con que Romeo se va de Verona"], c: 1 }
+    ]
+  },
+  {
+    t: "Clásico · La Eneida", g: "Clásicos griegos y latinos", n: 0,
+    b: "La Eneida es un poema que Virgilio escribió en el siglo primero antes de Cristo. Narra las aventuras de Eneas, un príncipe troyano que logra escapar de su ciudad después de que los griegos la destruyen. Acosado por Neptuno y por otros dioses, Eneas navega durante años, atraviesa tormentas y llega por fin a Italia, donde funda la estirpe que más tarde daría origen a Roma. La obra combina la guerra y el viaje, y presenta a Eneas como un personaje obligado a cumplir un destino que él no ha elegido.",
+    p: [
+      { q: "¿Quién escribió La Eneida?", ops: ["Homero", "Virgilio", "Ovidio", "Eurípides"], c: 1 },
+      { q: "¿De qué ciudad huye el protagonista?", ops: ["De Troya", "De Roma", "De Atenas", "De Cartago"], c: 0 },
+      { q: "¿Qué tiene que enfrentar Eneas durante el viaje?", ops: ["Tormentas y la ira de los dioses", "Una guerra civil", "Una hambruna", "Un naufragio sin más"], c: 0 },
+      { q: "Según el poema, Eneas cumple:", ops: ["Su propio capricho", "Un destino que no ha elegido", "Las órdenes de su padre", "Una promesa a su esposa"], c: 1 }
+    ]
+  },
+  {
+    t: "Clásico · Alicia en el país de las maravillas", g: "Clásicos universales", n: 0,
+    b: "Alicia en el país de las maravillas es un cuento que Lewis Carroll escribió en 1865. Una niña llamada Alicia sigue a un conejo blanco que lleva un reloj de bolsillo y cae por un pozo hasta llegar a un país donde las reglas son distintas. Allí conoce a un gato que se ríe sin parar, a una liebre que siempre llega tarde y a la Reina de Corazones, que ordena cortar las cabezas de todos. Alicia no entiende nada, y por eso el cuento funciona como sátira: lo que en el mundo real parece absurdo ocurre en ese país, y lo que allí se considera normal resulta raro.",
+    p: [
+      { q: "¿Quién escribió este cuento?", ops: ["Charles Dickens", "Lewis Carroll", "Oscar Wilde", "Hans Christian Andersen"], c: 1 },
+      { q: "¿Qué sigue Alicia al principio?", ops: ["A un ratón", "A un conejo blanco", "A un cuervo", "A una princesa"], c: 1 },
+      { q: "¿Quién manda cortar las cabezas en el cuento?", ops: ["La Reina de Corazones", "La Reina de Diamantes", "La Duchesa", "La Liebre"], c: 0 },
+      { q: "El cuento sirve de sátira contra:", ops: ["Los niños traviesos", "Las reglas absurdas del mundo real", "Los gatos", "Los relojes"], c: 1 }
+    ]
+  }
+);
+
+TEXTO_ORAL.push(
+  {
+    t: "Clásico · Frankenstein", g: "Clásicos universales", n: 0,
+    b: "Frankenstein fue escrito por Mary Shelley y publicado en 1818, cuando ella apenas tenía diecinueve años. Victor Frankenstein es un estudiante que consigue crear vida a partir de materia muerta. Cuando la criatura despierta, el inventor huye de su propio taller porque le asusta lo que ha hecho. La criatura, abandonada y sola, se vuelve amarga y vengativa, y le pide a su creador que le dé compañía. Como Frankenstein se niega, la criatura hiere a las personas que él más quiere. La novela plantea una pregunta que sigue abierta: hasta dónde puede llegar la ciencia y qué responsabilidad asume el que crea algo nuevo.",
+    p: [
+      { q: "¿Quién escribió Frankenstein?", ops: ["Mary Shelley", "Bram Stoker", "Jane Austen", "Emily Brontë"], c: 0 },
+      { q: "¿Qué logra hacer el protagonista?", ops: ["Crear vida a partir de materia muerta", "Construir una máquina del tiempo", "Descubrir un nuevo planeta", "Escribir un libro prohibido"], c: 0 },
+      { q: "¿Por qué huye Frankenstein al despertar la criatura?", ops: ["Porque le asusta", "Porque ella lo ataca", "Porque ya no la necesita", "Porque se muda de casa"], c: 0 },
+      { q: "La novela plantea sobre todo el tema de:", ops: ["El dinero", "Los límites de la ciencia y la responsabilidad del creador", "La velocidad", "El amor propio"], c: 1 }
+    ]
+  }
+);
+
+TEXTO_ORAL.push(
+  {
+    t: "Clásico · Moby Dick", g: "Clásicos universales", n: 0,
+    b: "Moby Dick es una novela que Herman Melville publicó en 1851. Cuenta la obsesión de un capitán de barco, Ahab, por perseguir a una ballena blanca llamada Moby Dick, que le arrancó una pierna. Aunque la tripulación sabe que la empresa es insensata, nadie se atreve a decir nada. El viaje termina en una persecución enorme en mar abierto, y el precio es muy alto: la nave se hunde y casi todos los hombres mueren. Solo sobrevive el narrador, que no tomó parte en la persecución. La novela se usa como símbolo de la obsesión: cuando un solo propósito domina a una persona, destruye todo a su alrededor.",
+    p: [
+      { q: "¿Quién escribió Moby Dick?", ops: ["Herman Melville", "Nathaniel Hawthorne", "Mark Twain", "Jack London"], c: 0 },
+      { q: "¿Cuál es el objetivo de Ahab?", ops: ["Encontrar oro", "Capturar a la ballena Moby Dick", "Descubrir una isla", "Regresar a su país"], c: 1 },
+      { q: "El capitán había perdido una pierna por culpa de:", ops: ["La ballena", "Una tormenta", "Un pirata", "Un incendio"], c: 0 },
+      { q: "La novela se usa como símbolo de:", ops: ["La vida en el mar", "La obsesión y sus consecuencias", "La guerra naval", "El comercio de ballenas"], c: 1 }
+    ]
+  }
+);
+
+TEXTO_ORAL.push(
+  {
+    t: "Poesía · Sor Juana Inés de la Cruz", g: "Poesía clásica", n: 0,
+    b: "Sor Juana Inés de la Cruz fue una monja novohispana del siglo XVII. Nació en 1648 y desde niña mostró una memoria extraordinaria. Entró al convento porque era la única forma de que una mujer pudiera estudiar. Escribió muchos poemas de tema religioso, pero también sátiras que firmaba con un nombre falso. Su poema más famoso lleva el título Hombres necios que acusáis. En él reclama que las mujeres tienen la misma capacidad de razonar que los hombres, y responde a quienes las critican sin conocerlas. Murió en 1695. Poco después, sus superioras borraron sus obras y dieron la orden de que fueran quemadas.",
+    p: [
+      { q: "¿En qué siglo vivió Sor Juana?", ops: ["En el XIV", "En el XVII", "En el XIX", "En el XXI"], c: 1 },
+      { q: "¿Por qué entró al convento?", ops: ["Para poder estudiar", "Por castigo familiar", "Para casarse", "Para viajar"], c: 0 },
+      { q: "En Hombres necios que acusáis, Sor Juana:", ops: ["Halaga a los hombres", "Reclama la razón de las mujeres", "Habla de la guerra", "Describe un jardín"], c: 1 },
+      { q: "Sus sátiras burlescas los firmaba con:", ops: ["Su nombre completo", "Un nombre falso", "Solo sus iniciales", "Un nombre en latín"], c: 1 }
+    ]
+  }
+);
+
+
+/* El conteo de palabras se calcula del propio texto, para que la meta
+   sugerida coincida siempre con el texto real que se va a leer. */
+TEXTO_ORAL.forEach(t => { t.n = t.b.trim().split(/\s+/).filter(Boolean).length; });
+
+
+const oral = { t: null, r: null, target: 0, tl: 0, run: 0, vueltas: 1, spans: [], mark: -1, custom: null };
+
+function oralSel(idx) {
+  oral.t = TEXTO_ORAL[idx];
+  el("oral-palabras").value = oral.t.n;
+  el("oral-seg").value = Math.max(20, Math.round(oral.t.n / 2));
+  el("oral-texto-desc").textContent = oral.t.n + " palabras · " +
+    (oral.t.propio ? "texto propio, sin test de comprensión" : "4 preguntas de comprensión en el banco");
+}
+
+/* Avisa antes de empezar si la meta no cabe en el texto. */
+function oralCheckMeta() {
+  if (!oral.t) return;
+  const meta = parseInt(el("oral-palabras").value, 10) || 0;
+  const d = el("oral-texto-desc");
+  if (meta > oral.t.n) {
+    const v = Math.ceil(meta / oral.t.n);
+    d.textContent = "El texto tiene " + oral.t.n + " palabras. Con meta de " + meta +
+      " se repite " + v + " vuelta" + (v > 1 ? "s" : "") + " hasta completarla.";
+  } else {
+    d.textContent = oral.t.n + " palabras · 4 preguntas de comprensión en el banco";
+  }
+}
+
+/* Si la meta pide más palabras de las que tiene el texto, el ejercicio
+   se repite en varias vueltas. Aquí se prepara el texto con una marca
+   por palabra para poder seguir la lectura con el dedo. */
+function oralBuildRef() {
+  const w = oral.t.b.trim().split(/\s+/).filter(Boolean);
+  oral.spans = w;
+  el("oral-texto-ref").innerHTML =
+    '<b>' + oral.t.t + ':</b><br>' +
+    w.map((x, i) => '<span data-o="' + i + '">' + x + "</span> ").join("");
+  oral.mark = -1;
+  oralHighlight(0);
+}
+
+function oralHighlight(count) {
+  const n = oral.spans.length;
+  if (!n) return;
+  const host = el("oral-texto-ref");
+  const pos = ((count % n) + n) % n;
+  if (pos === oral.mark) return;
+  if (oral.mark >= 0) {
+    const prev = host.querySelector('[data-o="' + oral.mark + '"]');
+    if (prev) prev.className = "";
+  }
+  const cur = host.querySelector('[data-o="' + pos + '"]');
+  if (cur) cur.className = "bg-yellow-200 rounded px-0.5 font-bold";
+  oral.mark = pos;
+}
+
+function oralFillSelect() {
+  const sel = el("oral-texto");
+  const grupos = [];
+  TEXTO_ORAL.forEach((t, i) => {
+    const g = t.g || "Textos de práctica";
+    let gr = grupos.find(x => x.g === g);
+    if (!gr) { gr = { g, items: [] }; grupos.push(gr); }
+    gr.items.push('<option value="' + i + '">' + t.t + " · " + t.n + " palabras</option>");
+  });
+  sel.innerHTML = grupos.map(gr =>
+    '<optgroup label="' + gr.g + '">' + gr.items.join("") + "</optgroup>"
+  ).join("");
+  oralSel(0);
+}
+
+async function oralStart() {
+  const note = el("oral-micnote");
+  note.classList.add("hidden");
+  if (micTestIv) { clearInterval(micTestIv); micTestIv = null; el("oral-mictest").textContent = "▶ Probar"; }
+  const run = ++oral.run;
+  const ok = await VAD.init();
+  if (run !== oral.run) return;
+  if (!ok) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      note.textContent = "⚠️ Este navegador no permite el micrófono. Abre en Chrome o Edge para medir tu voz.";
+    } else {
+      note.textContent = "⚠️ Permiso de micrófono denegado. Permite el acceso en el navegador y vuelve a intentar.";
+    }
+    note.classList.remove("hidden");
+    return;
+  }
+
+  const idx = parseInt(el("oral-texto").value, 10);
+  oralSel(idx);
+  oral.t = TEXTO_ORAL[idx];
+  oral.target = parseInt(el("oral-palabras").value, 10) || oral.t.n;
+  oral.tl = parseInt(el("oral-seg").value, 10) || 60;
+
+  // Meta mayor que el texto: se repite en vueltas y el tiempo se recalcula
+  // para que alcance, porque si no el ejercicio nunca podría cumplirse.
+  oral.vueltas = Math.max(1, Math.ceil(oral.target / oral.t.n));
+  if (oral.vueltas > 1) {
+    const necesarios = Math.ceil(oral.target / 2.0) + 10;
+    if (necesarios > oral.tl) {
+      oral.tl = necesarios;
+      el("oral-seg").value = necesarios;
+      note.textContent = "El texto tiene " + oral.t.n + " palabras, así que se repite " +
+        oral.vueltas + " vueltas para llegar a " + oral.target + ". Subí el tiempo a " +
+        necesarios + " s. Al terminar cada vuelta, vuelve a leer desde el principio.";
+      note.classList.remove("hidden");
+    }
+  }
+
+  el("oral-cfg").classList.add("hidden");
+  el("oral-run").classList.remove("hidden");
+  el("oral-res").classList.add("hidden");
+
+  el("oral-timer-seg").textContent = oral.tl;
+  el("oral-timer-bar").style.width = "100%";
+  el("oral-wordlive").textContent = "0";
+  el("oral-pace").textContent = "0";
+  el("oral-sil").textContent = "0";
+  el("oral-countmode").textContent = "palabras leídas";
+  el("oral-meter").style.width = "0%";
+  el("oral-vuelta").classList.toggle("hidden", oral.vueltas <= 1);
+  oralBuildRef();
+
+  const cd = el("oral-count");
+  cd.style.display = "block";
+  for (const n of [3, 2, 1]) {
+    if (run !== oral.run) return;
+    cd.textContent = n;
+    await sleep(700);
+  }
+  if (run !== oral.run) return;
+  cd.style.display = "none";
+
+  oral.r = createReader(tickOral, syllableRatio(oral.t.b));
+  el("oral-meter").classList.remove("bg-amber-500");
+  el("oral-meter").classList.add("bg-emerald-500");
+  oral.r.start();
+}
+
+/* Corta la lectura en curso y regresa a la configuración. */
+function oralAbort() {
+  oral.run++;
+  if (oral.r) { oral.r.stop(true); oral.r = null; }
+  el("oral-count").style.display = "none";
+  el("oral-run").classList.add("hidden");
+  el("oral-res").classList.add("hidden");
+  el("oral-cfg").classList.remove("hidden");
+  el("oral-micnote").textContent = "↺ Lectura cancelada. Puedes ajustarla y empezar de nuevo.";
+  el("oral-micnote").classList.remove("hidden");
+}
+
+function tickOral(s) {
+  const left = Math.max(0, oral.tl - s.elapsed);
+  el("oral-timer-seg").textContent = Math.ceil(left);
+  el("oral-timer-bar").style.width = (left / oral.tl) * 100 + "%";
+  const leidas = Math.max(s.words, s.est);
+  el("oral-wordlive").textContent = leidas;
+  el("oral-countmode").textContent = s.srAlive
+    ? "palabras leídas (exacto)"
+    : "palabras leídas (estimado)";
+  if (oral.vueltas > 1) {
+    const n = oral.spans.length || 1;
+    const v = Math.min(oral.vueltas, Math.floor(leidas / n) + 1);
+    const dentro = leidas < n ? leidas : leidas - (v - 1) * n;
+    el("oral-vuelta").textContent = "Vuelta " + v + " de " + oral.vueltas +
+      " · palabra " + Math.min(n, dentro + 1) + " de " + n;
+  }
+  oralHighlight(leidas);
+  el("oral-pace").textContent = s.elapsed > 1 ? Math.round(leidas / (s.elapsed / 60)) : 0;
+  el("oral-sil").textContent = s.longestSil >= 1500 ? (s.longestSil / 1000).toFixed(1) + "s" : "0";
+  const w = Math.min(100, Math.round(s.level * 220));
+  el("oral-meter").style.width = w + "%";
+  const big = el("oral-meter");
+  if (s.speaking) { big.className = "h-full bg-emerald-500 transition-all"; }
+  else if (s.silRun > 1200) { big.className = "h-full bg-amber-500 transition-all"; }
+  const doneMeta = leidas >= oral.target;
+  const doneTime = s.elapsed >= oral.tl;
+  if ((doneMeta || doneTime) && oral.r) {
+    const res = oral.r.stop(true);
+    oral.finish(res, doneMeta && s.elapsed <= oral.tl);
+  }
+}
+
+function oralFinish(res, llegaste) {
+  VAD.stop(false);
+  const met = llegaste;
+  const fluido = res.longestSil < 2500;
+  const habla = res.talk >= 0.5;
+  const v = el("oral-verdict");
+  el("oral-run").classList.add("hidden");
+  el("oral-res").classList.remove("hidden");
+  const faltan = Math.max(0, oral.target - res.usedWords);
+  const necesarias = oral.tl > 0 ? Math.round(oral.target / (oral.tl / 60)) : 0;
+
+  /* Diagnóstico: decir por qué no se alcanzó la meta. Antes siempre se
+     culpaba a la velocidad de lectura, que casi nunca era el problema. */
+  let causa, consejo;
+  if (!res.spoke || res.talk < 0.15) {
+    causa = "No detecté tu voz";
+    consejo = "El micrófono no te oyó casi nada. Pulsa <b>Probar micrófono</b> y revisa que " +
+      "no esté muteado, o habla más cerca y más fuerte.";
+  } else if (res.longestSil > 4000) {
+    causa = "Te trabaste";
+    consejo = "Hubo una pausa de <b>" + (res.longestSil / 1000).toFixed(1) + " s</b>. " +
+      "A lo mejor buscaste una palabra: prueba leer primero para adquirir velocidad.";
+  } else if (res.usedWords >= oral.target) {
+    causa = "Llegaste, pero tarde";
+    consejo = "Sí leíste las <b>" + oral.target + "</b> palabras, pero te faltó tiempo. " +
+      "Sube el tiempo en unos segundos para la próxima.";
+  } else {
+    causa = "Leíste más despacio de lo necesario";
+    consejo = "Leíste a <b>" + res.pace + " ppm</b> y la meta necesitaba unas <b>" +
+      necesarias + " ppm</b>. Faltaron " + faltan + " palabras: o lees más seguido, " +
+      "o sube el tiempo en unos " + Math.ceil(faltan / 2) + " s.";
+  }
+
+  let html, color;
+  if (met) {
+    color = "#059669";
+    html = '<div style="font-size:56px">🏆</div>' +
+      '<div class="text-3xl md:text-4xl font-extrabold mt-2" style="color:' + color + '">¡PASÓ LA META!</div>' +
+      '<p class="mt-2 text-slate-500">Llegaste a <b>' + oral.target + ' palabras</b> a tiempo. ¡Excelente ritmo!</p>';
+  } else {
+    color = "#e11d48";
+    html = '<div style="font-size:56px">⏰</div>' +
+      '<div class="text-3xl md:text-4xl font-extrabold mt-2" style="color:' + color + '">' + causa + "</div>" +
+      '<p class="mt-2 text-slate-500">Lograste <b>' + res.usedWords + "</b> de " + oral.target + " palabras. " + consejo + "</p>";
+  }
+  const chips =
+    '<div class="flex flex-wrap justify-center gap-2 mt-4 text-sm">' +
+      '<span class="rounded-full px-3 py-1 bg-slate-100 font-semibold">📖 ' + res.usedWords + " palabras</span>" +
+      '<span class="rounded-full px-3 py-1 bg-slate-100 font-semibold">⚡ ' + res.pace + " ppm</span>" +
+      '<span class="rounded-full px-3 py-1 bg-slate-100 font-semibold">⏱️ ' + res.elapsed.toFixed(1) + " s</span>" +
+      '<span class="rounded-full px-3 py-1 ' + (habla ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700") + ' font-semibold">🗣️ Voz activa ' + Math.round(res.talk * 100) + "%</span>" +
+      '<span class="rounded-full px-3 py-1 ' + (fluido ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700") + ' font-semibold">' + (fluido ? "😌 Fluido" : "🐢 Se trabó " + (res.longestSil / 1000).toFixed(1) + "s") + "</span>" +
+    "</div>";
+  v.style.border = "2px solid " + color;
+  v.style.background = "#FFFFFF";
+  v.innerHTML = html + chips;
+
+  if (oral.t.p.length && Math.random() < 0.9) {
+    renderQuiz(oral.t.p, 2, el("oral-quiz"), "Test de comprensión");
+  } else {
+    el("oral-quiz").innerHTML =
+      '<div class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm">' +
+      "<b>Reflexión rápida:</b> ¿Cuál es la idea principal del texto? ¿Qué dato recuerdas más? Contesta en voz alta o por escrito antes de continuar.</div>";
+  }
+}
+
+/* Texto pegado por el usuario: entra al banco como cualquier otro,
+   con su conteo real y sin preguntas de comprensión. */
+function oralUseCustom() {
+  const raw = el("oral-custom").value.trim();
+  if (!raw) { alert("Pega un texto primero."); return; }
+  const palabras = raw.split(/\s+/).filter(Boolean);
+  if (palabras.length < 20) {
+    alert("El texto es muy corto (mínimo 20 palabras). Tienes " + palabras.length + ".");
+    return;
+  }
+  // Si ya había un texto propio, se reemplaza para no llenar el banco.
+  if (oral.custom) {
+    const viejo = TEXTO_ORAL.indexOf(oral.custom);
+    if (viejo >= 0) TEXTO_ORAL.splice(viejo, 1);
+  }
+  oral.custom = { t: "Mi texto", g: "Mi texto", n: palabras.length, b: raw, p: [], propio: true };
+  TEXTO_ORAL.push(oral.custom);
+  oralFillSelect();
+  const i = TEXTO_ORAL.length - 1;
+  el("oral-texto").value = String(i);
+  oralSel(i);
+  el("oral-own").open = false;
+  el("oral-texto-desc").textContent = palabras.length +
+    " palabras de tu texto · sin test de comprensión";
+}
+
+/* Permite borrar el texto propio del banco sin romper los índices. */
+function oralClearCustom() {
+  el("oral-custom").value = "";
+  el("oral-custom-n").textContent = "";
+  if (oral.custom) {
+    const i = TEXTO_ORAL.indexOf(oral.custom);
+    if (i >= 0) TEXTO_ORAL.splice(i, 1);
+    oral.custom = null;
+    oralFillSelect();
+  }
+}
+
+/* Cuenta palabras mientras se escribe, para que se vea el total. */
+function oralCustomCount() {
+  const v = el("oral-custom").value.trim();
+  el("oral-custom-n").textContent = v
+    ? v.split(/\s+/).filter(Boolean).length + " palabras"
+    : "";
+}
+
+function oralInit() {
+  oralFillSelect();
+  el("oral-texto").addEventListener("change", e => oralSel(parseInt(e.target.value, 10)));
+  el("oral-palabras").addEventListener("input", oralCheckMeta);
+  el("oral-start").addEventListener("click", oralStart);
+  el("oral-retry").addEventListener("click", oralStart);
+  el("oral-abort").addEventListener("click", oralAbort);
+  el("oral-use").addEventListener("click", oralUseCustom);
+  el("oral-clear").addEventListener("click", oralClearCustom);
+  el("oral-custom").addEventListener("input", oralCustomCount);
+  el("oral-mictest").addEventListener("click", oralMicTest);
+  el("oral-back").addEventListener("click", () => {
+    VAD.stop(false);
+    el("oral-res").classList.add("hidden");
+    el("oral-run").classList.add("hidden");
+    el("oral-cfg").classList.remove("hidden");
+  });
+}
+
+/* Prueba de micrófono: muestra el nivel en vivo y avisa si no te oye. */
+let micTestIv = null;
+async function oralMicTest() {
+  const bar = el("oral-micbar");
+  const tip = el("oral-mictip");
+  if (micTestIv) { clearInterval(micTestIv); micTestIv = null; el("oral-mictest").textContent = "▶ Probar"; return; }
+
+  const ok = await VAD.init();
+  if (!ok) {
+    tip.textContent = "⚠️ No se pudo abrir el micrófono. Revisa que esté permitido en el navegador.";
+    tip.className = "text-center text-xs font-semibold text-rose-600 mt-1";
+    return;
+  }
+  el("oral-mictest").textContent = "■ Detener";
+  tip.textContent = "Te escucho. Habla en voz alta y luego pulsa Detener.";
+  tip.className = "text-center text-xs font-semibold text-emerald-600 mt-1";
+  let pico = 0;
+  micTestIv = setInterval(() => {
+    const l = VAD.level();
+    pico = Math.max(pico, l);
+    bar.style.width = Math.min(100, Math.round(l * 260)) + "%";
+    bar.className = "h-full transition-all " + (l >= VAD.thr ? "bg-emerald-500" : "bg-slate-300");
+  }, 60);
+  // Si tras 6 s el pico fue muy bajo, avisar que el micro no capta la voz.
+  setTimeout(() => {
+    if (!micTestIv) return;
+    if (pico < VAD.thr) {
+      tip.textContent = "⚠️ Casi no se oyó nada. Habla más fuerte o acércate al micrófono, o revisa que no esté muteado.";
+      tip.className = "text-center text-xs font-semibold text-amber-700 mt-1";
+    }
+  }, 6000);
+}
+
+/* =============================================================
+   MÓDULO 4 · MODO PRESENCIAL
+   ============================================================= */
+const TEXT_LARGO = {
+  t: "La lectura como hábito", n: 235,
+  b: "La lectura es uno de los hábitos que más beneficios trae a la mente. Cuando una persona lee todos los días, amplía su vocabulario y mejora su forma de escribir. También aprende a concentrarse por más tiempo, algo que ayuda en la escuela y en el trabajo. Leer no solo sirve para estudiar: un lector frecuente comprende mejor las noticias, las instrucciones de un aparato y hasta los mensajes de otras personas. Además, los libros permiten vivir aventuras sin salir de casa, conocer otros países y entender otras formas de pensar. Para crear el hábito conviene empezar con textos cortos y fáciles, elegir temas que de verdad interesen y fijar un horario fijo, por ejemplo diez minutos antes de dormir. Conforme pasa el tiempo, se pueden elegir libros más largos y difíciles. La constancia es la clave: leer veinte minutos cada día suma más de cien horas al año. Ese tiempo transforma poco a poco la manera de hablar y de razonar. Quien lee con atención también reduce el estrés, porque la mente se concentra en la historia y descansa de las preocupaciones. Por todas estas razones, la lectura es la herramienta más barata y poderosa para aprender.",
+  p: [
+    { q: "¿Qué puede mejorar una persona que lee todos los días?", ops: ["Su velocidad para correr", "Su vocabulario y su manera de escribir", "Su oído musical", "Su memoria fotográfica"], c: 1 },
+    { q: "Según el texto, ¿para qué conviene fijar un horario de lectura?", ops: ["Para leer menos", "Para crear el hábito", "Para olvidar lo aprendido", "Para ver más televisión"], c: 1 },
+    { q: "¿Cuánto suma leer veinte minutos diarios al año?", ops: ["Menos de una hora", "Diez horas", "Más de cien horas", "Mil horas"], c: 2 },
+    { q: "¿Qué efecto tiene la lectura sobre el estrés?", ops: ["Lo aumenta", "No tiene efecto", "Lo reduce", "Lo hace más intenso"], c: 2 }
+  ]
+};
+
+const ses = { n: 6, order: [], idx: -1, scores: {}, quizOn: false, prep: 20, ppm: 150, running: false, r: null, salirFlag: false };
+
+function shuffle(a) {
+  const A = a.slice();
+  for (let i = A.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = A[i]; A[i] = A[j]; A[j] = t;
+  }
+  return A;
+}
+
+async function sesStart() {
+  if (ses.running) { sesStop(true); }
+  const micOk = await VAD.init();
+  if (!micOk) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("⚠️ Este navegador no permite el micrófono. Abre en Chrome o Edge.");
+    } else {
+      alert("⚠️ Permiso de micrófono denegado. Permite el acceso del navegador al micrófono.");
+    }
+    return;
+  }
+  ses.n = Math.min(12, Math.max(2, parseInt(el("pres-n").value, 10) || 6));
+  ses.prep = Math.min(60, Math.max(5, parseInt(el("pres-prep").value, 10) || 20));
+  ses.ppm = Math.min(300, Math.max(60, parseInt(el("pres-ppm").value, 10) || 150));
+  ses.quizOn = el("pres-quiz").checked;
+  const nombres = el("pres-nombres").value.split("\n").map(s => s.trim()).filter(Boolean);
+  ses.order = shuffle(Array.from({ length: ses.n }, (_, i) => i));
+  ses.idx = -1;
+  ses.scores = {};
+  ses.salirFlag = false;
+  el("pres-cfg").classList.add("hidden");
+  el("pres-podio").classList.add("hidden");
+  el("pres-mesa").classList.remove("hidden");
+  presRenderOrder();
+  presNextTurn();
+}
+
+function presNombre(idx) {
+  const nombresList = el("pres-nombres").value.split("\n").map(s => s.trim()).filter(Boolean);
+  return nombresList[idx] || "Participante " + (idx + 1);
+}
+
+function presRenderOrder() {
+  el("pres-order").innerHTML = ses.order.map((p, i) => {
+    const actual = i === ses.idx;
+    const pts = ses.scores[p] || 0;
+    const frag = presFrag(p);
+    return '<span class="rounded-full px-3 py-1 text-sm font-bold border ' +
+      (actual ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-slate-600 border-slate-200") + '">' +
+      (i + 1) + ". " + presNombre(p) +
+      (pts ? " ✓" : "") + ' <span class="opacity-70">· ' + frag.length + " palabras</span></span>";
+  }).join("");
+}
+
+function presFrag(p) {
+  const palabras = TEXT_LARGO.b.split(/\s+/);
+  const per = Math.max(8, Math.ceil(palabras.length / ses.n));
+  const ini = p * per;
+  let fin = Math.min(ini + per, palabras.length);
+  if (p === ses.n - 1) fin = palabras.length;
+  const f = palabras.slice(ini, fin);
+  return f.length ? f : ["lee", "esto"];
+}
+
+function presfragHtml(name, frag, actualIdx) {
+  let html = "";
+  for (let i = 0; i < frag.length; i++) {
+    html += '<span class="' + (actualIdx === i ? "bg-yellow-200 rounded px-0.5 font-bold" : "") + '">' + frag[i] + "</span> ";
+  }
+  return "<b>" + name + " · tu parte:</b><br><span class='leading-loose'>" + html + "</span>";
+}
+
+async function presPhasePrep(p, frag) {
+  const ph = el("pres-phase");
+  el("pres-meter-row").classList.add("hidden");
+  const elapsed = { t: 0 };
+  ph.innerHTML =
+    '<div class="text-3xl md:text-4xl font-extrabold text-emerald-700">📖 ' + presNombre(p) + ", te toca leer</div>" +
+    '<p class="text-slate-500">Revisa tu fragmento durante la preparación. Cuando suene la cuenta, lee <b>rápido y fluido</b>.</p>' +
+    '<div class="max-w-2xl mx-auto text-left rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-slate-700">' +
+      presfragHtml(presNombre(p), frag, -1) + "</div>" +
+    '<div class="text-6xl font-extrabold font-mono text-emerald-600" id="pres-prep-count">' + ses.prep + "</div>" +
+    '<button id="pres-skip" class="bg-slate-200 hover:bg-slate-300 font-bold rounded-xl px-6 py-2 transition">Listo, empezar ahora</button>';
+
+  let secs = ses.prep;
+  ph.querySelector("#pres-skip").addEventListener("click", () => { secs = 0; });
+  while (secs > 0 && !ses.salirFlag) {
+    ph.querySelector("#pres-prep-count").textContent = secs;
+    await sleep(1000);
+    secs--;
+    if (!secs) break;
+  }
+  if (ses.salirFlag) return;
+  // cuenta regresiva 3-2-1
+  ph.removeChild(ph.querySelector("#pres-skip"));
+  ph.querySelector("#pres-prep-count").style.display = "none";
+  ph.insertAdjacentHTML("beforeend", '<div id="pres-cd" class="text-6xl font-extrabold font-mono text-slate-800"></div>');
+  for (const n of [3, 2, 1]) {
+    ph.querySelector("#pres-cd").textContent = n;
+    await sleep(700);
+  }
+  ph.querySelector("#pres-cd").textContent = "¡LEE!";
+}
+
+async function presNextTurn() {
+  if (ses.salirFlag) return;
+  ses.idx++;
+  el("pres-meter-row").classList.add("hidden");
+  el("pres-turno").textContent = "Ronda " + (ses.idx + 1) + " de " + ses.n;
+  presRenderOrder();
+  if (ses.idx >= ses.n) { presPodio(); return; }
+
+  const p = ses.order[ses.idx];
+  const frag = presFrag(p);
+  const tlimit = Math.max(12, Math.ceil(frag.length / (ses.ppm / 60)));
+  ses.running = true;
+
+  await presPhasePrep(p, frag);
+
+  if (ses.salirFlag) return;
+
+  // Fase de lectura
+  const ph = el("pres-phase");
+  el("pres-meter-row").classList.remove("hidden");
+  ph.innerHTML =
+    '<div class="text-3xl md:text-4xl font-extrabold text-slate-800">🎙️ ' + presNombre(p) + " está leyendo…</div>" +
+    '<div class="text-7xl font-extrabold font-mono" id="pres-timer">' + tlimit + "</div>" +
+    '<div class="text-sm font-semibold text-slate-500">segundos para terminar</div>' +
+    '<div class="max-w-2xl mx-auto h-3 rounded-full bg-slate-100 overflow-hidden">' +
+      '<div id="pres-tbar" class="h-full bg-emerald-500 transition-all" style="width:100%"></div></div>' +
+    '<div class="max-w-2xl mx-auto text-left rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-slate-700 leading-loose">' +
+      presfragHtml(presNombre(p), frag, -1) + "</div>";
+
+  el("pres-wordlive").textContent = "0";
+  el("pres-sil").textContent = "0";
+  el("pres-pace").textContent = "0";
+  el("pres-meter").style.width = "0%";
+
+  ses.r = createReader(t => presTick(t, p, frag, tlimit), syllableRatio(TEXT_LARGO.b));
+  ses.r.start();
+  el("pres-live").textContent = "Escuchando a " + presNombre(p) + "…";
+}
+
+function presTick(s, p, frag, tlimit) {
+  if (!ses.running && !ses.r) return;
+  const left = Math.max(0, tlimit - s.elapsed);
+  el("pres-timer").textContent = Math.ceil(left);
+  el("pres-tbar").style.width = (left / tlimit) * 100 + "%";
+  const w = Math.max(s.words, s.est);
+  el("pres-wordlive").textContent = w;
+  el("pres-pace").textContent = s.elapsed > 1 ? Math.round(w / (s.elapsed / 60)) : 0;
+  el("pres-sil").textContent = s.longestSil >= 1500 ? (s.longestSil / 1000).toFixed(1) + "s" : "0";
+  const m = el("pres-meter");
+  m.style.width = Math.min(100, Math.round(s.level * 220)) + "%";
+  m.className = "h-full " + (s.speaking ? "bg-emerald-500" : (s.silRun > 1200 ? "bg-amber-500" : "bg-emerald-400")) + " transition-all";
+
+  const meta = w >= frag.length;
+  const tiempo = s.elapsed >= tlimit;
+  if ((meta || tiempo) && ses.r) {
+    const res = ses.r.stop(true);
+    ses.r = null;
+    presVeredicto(p, frag, tlimit, res, meta);
+  }
+}
+
+function presVeredicto(p, frag, tlimit, res, meta) {
+  const ph = el("pres-phase");
+  el("pres-meter-row").classList.add("hidden");
+  const pct = Math.min(1, res.usedWords / frag.length);
+  const pase = pct >= 0.85 && res.talk >= 0.45 && res.longestSil < 3000;
+  ses.scores[p] = (ses.scores[p] || 0) + (pase ? 1 : 0);
+  const metaPpm = ses.ppm;
+
+  ph.innerHTML =
+    '<div class="text-6xl">' + (pase ? "🎉" : "😅") + "</div>" +
+    '<div class="text-3xl md:text-4xl font-extrabold ' + (pase ? "text-emerald-600" : "text-rose-600") + '">' +
+      (pase ? "¡" + presNombre(p) + " PASÓ!" : presNombre(p) + " no pasó esta vez") + "</div>" +
+    '<p class="text-slate-500">Leía a <b>' + res.pace + " ppm</b>" + (res.pace >= metaPpm ? " · ¡rápido!" : " · meta " + metaPpm + " ppm") +
+      (res.longestSil >= 3000 ? " · se trabó " + (res.longestSil / 1000).toFixed(1) + "s" : "") +
+      (res.talk < 0.45 ? " · voz activa solo " + Math.round(res.talk * 100) + "%" : " · fluida") + "</p>" +
+    '<div class="flex flex-wrap justify-center gap-2 mt-3 text-sm">' +
+      '<span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">📖 ' + res.usedWords + "/" + frag.length + " palabras</span>" +
+      '<span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">⏱️ ' + res.elapsed.toFixed(1) + " s</span>" +
+      '<span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">⚡ " + res.pace + " ppm</span>' +
+    "</div>" +
+    '<div id="pres-next" class="text-xl font-extrabold text-slate-700 mt-5">Siguiente en 5…</div>';
+
+  ses.running = false;
+
+  const continuar = async () => {
+    if (ses.salirFlag) return;
+    // test sorpresa aleatorio
+    if (ses.quizOn && Math.random() < 0.3) {
+      const cont = el("pres-next");
+      cont.outerHTML = '<div id="pres-quiz-host" class="mt-5"></div>';
+      renderQuiz(TEXT_LARGO.p, 1, el("pres-quiz-host"), "🎲 Test sorpresa para " + presNombre(p));
+      await sleep(7000);
+      if (ses.salirFlag) return;
+    }
+    presNextTurn();
+  };
+
+  const cd = el("pres-next");
+  let t = 5;
+  const iv = setInterval(() => { t--; cd.textContent = t > 0 ? "Siguiente en " + t + "…" : "¡Siguiente!"; }, 1000);
+  setTimeout(() => { clearInterval(iv); continuar(); }, 5200);
+}
+
+function presPodio() {
+  el("pres-mesa").classList.add("hidden");
+  el("pres-podio").classList.remove("hidden");
+  const rank = Object.keys(ses.scores).map(k => ({ p: parseInt(k, 10), v: ses.scores[k] }))
+    .sort((a, b) => b.v - a.v);
+  const med = ["🥇", "🥈", "🥉"];
+  el("pres-podio-list").innerHTML =
+    '<div class="mb-2 text-sm font-semibold text-emerald-700">Máximo de puntos por lector: ' + (ses.n === 1 ? 1 : 1) + "</div>" +
+    rank.map((x, i) =>
+      '<div class="flex items-center justify-between rounded-xl bg-white border border-emerald-100 px-4 py-2.5">' +
+        '<span class="font-bold">' + (med[i] || "🔹") + " " + presNombre(x.p) + "</span>" +
+        '<span class="font-mono font-extrabold">' + x.v + " ✅</span></div>"
+    ).join("");
+}
+
+function sesStop(restart) {
+  ses.salirFlag = true;
+  ses.running = false;
+  if (ses.r) { ses.r.stop(true); ses.r = null; }
+  VAD.stop(false);
+  if (!restart) {
+    el("pres-mesa").classList.add("hidden");
+    el("pres-cfg").classList.remove("hidden");
+  }
+}
+
+function presInit() {
+  el("pres-start").addEventListener("click", sesStart);
+  el("pres-salir").addEventListener("click", () => sesStop(false));
+  el("pres-salir2").addEventListener("click", () => { sesStop(false); });
+  el("pres-ronda").addEventListener("click", sesStart);
+}
+
+/* ---------------- Init general ---------------- */
+function init() {
+  if (isEmbedded) {
+    const h = document.querySelector("header");
+    if (h) h.style.display = "none";
+    const g = document.querySelector("#tabbar a[href='index.html']");
+    if (g) g.style.display = "none";
+    autoHeight();
+  }
+  initTabs();
+  retoInit();
+  velInit();
+  oralInit();
+  presInit();
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+else init();
+</script>
+</body>
+</html>

@@ -5,7 +5,23 @@ Base local de Fase 1. Proyecto Supabase: `ioikcrdxneuydylyhvwi` (staging por cre
 ## Producción
 
 - **App (GitHub Pages):** https://monetarytexas42.github.io/CursosProfeLuis/
+- **Reproductor del curso:** https://monetarytexas42.github.io/CursosProfeLuis/curso/
 - El repo es público (requisito de Pages en plan gratuito). Sin secretos versionados.
+
+## Cómo está armada
+
+| Ruta | Qué es |
+|---|---|
+| `/` | Portal: login por rol (alumno/profesor/tutor), paneles y administración |
+| `/curso/` | Reproductor del curso (la plataforma anterior): materias, unidades, tareas, planificación, taller vocacional, XP |
+| `/herramientas-lectura.html`, `/herramientas-matematicas.html` | Herramientas embebidas en el reproductor |
+
+**Integración y seguridad:**
+- El contenido del curso **ya no viaja en archivos públicos** (`data.js` quedó fuera del build): el reproductor lo descarga desde Supabase y **RLS solo se lo entrega a alumnos con sesión activa** (`0009_student_published_content.sql`).
+- `/curso/` sin sesión redirige al portal (puerta `login-gate.js`).
+- La sesión del portal se comparte con el reproductor (mismo origen).
+- Los intentos y el progreso por unidad siguen regidos por asignaciones activas.
+- El progreso local (localStorage) del reproductor se conserva como respaldo temporal, pendiente de sincronizar con Supabase (Fase 2).
 
 ### Republicar el frontend
 
