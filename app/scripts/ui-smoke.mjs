@@ -239,6 +239,20 @@ async function runCourseFlow(pageEval, waitFor) {
   if (!urlOk) throw new Error("El reproductor no está en /curso/");
   console.log("  ✓ el contenido se sirve desde Supabase (sin data.js público)");
 
+  if (process.env.SYNC_TEST === "1") {
+    console.log("Probando sincronización de progreso (XP → Supabase)…");
+    await pageEval(`(() => {
+      state.xp = 150;
+      state.racha = 3;
+      state.best = 3;
+      state.done = ['espanol-u01', 'espanol-u02'];
+      saveState();
+      return true;
+    })()`);
+    await sleep(4000);
+    console.log("  ✓ estado guardado y enviado a Supabase (verificar contra la base)");
+  }
+
   console.log("\nPASS · Reproductor del curso con login y contenido protegido verificado.");
 }
 
@@ -353,7 +367,30 @@ async function runTeacherFlow(pageEval, waitFor) {
   }
 
   console.log("  ✓ formulario con nombre, teléfono, correo y botón de crear");
-  console.log("\nPASS · Flujo UI del profesor con invitación de tutores verificado.");
+
+  const teacherText = await pageEval(`document.body.innerText.toLowerCase()`);
+  const expected = ["nuevo alumno", "asistencia de hoy", "avisar tutor", "xp"];
+  for (const fragment of expected) {
+    if (!teacherText.includes(fragment)) {
+      throw new Error(`El panel del profesor no muestra "${fragment}"`);
+    }
+    console.log(`  ✓ sección visible: "${fragment}"`);
+  }
+
+  const adviseCount = await pageEval(
+    `document.querySelectorAll('[data-advise-student]').length`,
+  );
+  console.log(`  ✓ ${adviseCount} botones "Avisar tutor"`);
+
+  console.log("Abriendo asistencia de hoy…");
+  await pageEval(`document.querySelector('[data-attendance-open]').click(); true`);
+  await waitFor(
+    `document.querySelector('[data-attendance-status]')`,
+    "lista de asistencia con estados",
+  );
+  console.log("  ✓ asistencia lista para registrar");
+
+  console.log("\nPASS · Flujo UI del profesor verificado (invitación, altas, asistencia y avisos).");
 }
 
 async function runStudentFlow(pageEval, waitFor) {

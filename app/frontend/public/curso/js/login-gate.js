@@ -116,8 +116,9 @@
     topbar.insertBefore(out, topbar.firstChild);
   }
 
-  function startPlayer(profile, supabase) {
+  function startPlayer(profile, supabase, sessionToken) {
     paintSessionBadge(profile, supabase);
+    var syncNow = setupProgressSync(supabase, sessionToken);
 
     // El reproductor ya no se auto-arranca: lo cargamos aquí y llamamos init().
     var sistema = document.createElement("script");
@@ -127,10 +128,72 @@
       app.src = "js/app.js";
       app.onload = function () {
         if (typeof init === "function") init();
+        // Ahora sí existe saveState: lo envolvemos para sincronizar tras cada guardado.
+        var originalSaveState = window.saveState;
+        if (typeof originalSaveState === "function") {
+          window.saveState = function () {
+            try { originalSaveState.apply(this, arguments); } catch (e) { /* ignorar */ }
+            syncNow();
+          };
+        }
       };
       document.body.appendChild(app);
     };
     document.body.appendChild(sistema);
+  }
+
+  function setupProgressSync(supabase, sessionToken) {
+    var lastSync = 0;
+    var syncing = false;
+
+    function syncNow() {
+      var now = Date.now();
+      if (syncing || now - lastSync < 5000) return;
+      if (typeof state !== "object" || state === null) return;
+
+      syncing = true;
+      lastSync = now;
+
+      var payload = {
+        xp: Number(state.xp) || 0,
+        racha: Number(state.racha) || 0,
+        best: Number(state.best) || 0,
+        done: Array.isArray(state.done) ? state.done : []
+      };
+
+      supabase
+        .rpc("app_sync_player_state", { p_payload: payload })
+        .then(function () { syncing = false; })
+        .catch(function () { syncing = false; });
+    }
+
+    // Sincronización periódica y al salir de la página.
+    setInterval(syncNow, 20000);
+
+    window.addEventListener("pagehide", function () {
+      if (!sessionToken) return;
+      if (typeof state !== "object" || state === null) return;
+
+      var payload = {
+        xp: Number(state.xp) || 0,
+        racha: Number(state.racha) || 0,
+        best: Number(state.best) || 0,
+        done: Array.isArray(state.done) ? state.done : []
+      };
+
+      fetch(SUPABASE_URL + "/rest/v1/rpc/app_sync_player_state", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + sessionToken
+        },
+        body: JSON.stringify({ p_payload: payload }),
+        keepalive: true
+      }).catch(function () { /* último intento: ignorar */ });
+    });
+
+    return syncNow;
   }
 
   function fail() {
@@ -145,9 +208,12 @@
         });
         window.ECOEMS_SUPABASE = supabase;
 
+        var sessionToken = null;
+
         supabase.auth.getSession().then(function (res) {
           var session = res.data && res.data.session;
           if (!session) { redirectToPortal(); return; }
+          sessionToken = session.access_token;
 
           supabase
             .from("profiles")
@@ -181,7 +247,7 @@
                   results[2].data || []
                 );
                 window.ECOEMS_STUDENT = { id: profile.id, name: profile.full_name };
-                startPlayer(profile, supabase);
+                startPlayer(profile, supabase, sessionToken);
               });
             })
             .catch(fail);

@@ -43,6 +43,13 @@ const adminTabLabels = {
   configuracion: 'Configuración'
 };
 
+const attendanceLabels = {
+  present: 'Presente',
+  late: 'Tarde',
+  excused: 'Justificado',
+  absent: 'Falta'
+};
+
 const state = {
   mode: 'student',
   session: null,
@@ -450,6 +457,8 @@ async function fetchTeacherDashboard(teacherId) {
     students = studentsRes.data || [];
   }
 
+  const studentIds = students.map((student) => student.id);
+
   const profileIds = [...new Set(students.map((student) => student.profile_id))];
   let profiles = [];
 
@@ -463,7 +472,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, subjectsRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, statsRes, linksRes, guardiansRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -481,13 +490,26 @@ async function fetchTeacherDashboard(teacherId) {
           .in('group_id', groupIds)
           .order('created_at', { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    supabase.from('subjects').select('id,name').order('name')
+    supabase.from('subjects').select('id,name').order('name'),
+    studentIds.length
+      ? supabase
+          .from('student_stats')
+          .select('student_id,xp_total,current_streak,best_streak,units_completed,last_activity_date')
+          .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase.from('student_guardians').select('student_id,guardian_id').in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('guardians').select('id,full_name,email,phone,relationship')
   ]);
 
   assertNoError(unitsRes.error);
   assertNoError(versionsRes.error);
   assertNoError(assignmentsRes.error);
   assertNoError(subjectsRes.error);
+  assertNoError(statsRes.error);
+  assertNoError(linksRes.error);
+  assertNoError(guardiansRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const subjectMap = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
@@ -510,6 +532,19 @@ async function fetchTeacherDashboard(teacherId) {
     unit_title: unitTitles.get(assignment.unit_id) || 'Unidad'
   }));
 
+  const statsByStudent = new Map((statsRes.data || []).map((stats) => [stats.student_id, stats]));
+
+  const guardiansById = new Map(
+    (guardiansRes.data || []).map((guardian) => [guardian.id, guardian])
+  );
+
+  const guardiansByStudent = new Map();
+  for (const link of linksRes.data || []) {
+    if (!guardiansByStudent.has(link.student_id)) guardiansByStudent.set(link.student_id, []);
+    const guardian = guardiansById.get(link.guardian_id);
+    if (guardian) guardiansByStudent.get(link.student_id).push(guardian);
+  }
+
   return {
     kind: 'teacher',
     groups: groups.map((group) => ({
@@ -518,7 +553,9 @@ async function fetchTeacherDashboard(teacherId) {
         .filter((student) => student.group_id === group.id)
         .map((student) => ({
           ...student,
-          full_name: names.get(student.profile_id) || 'Alumno sin nombre'
+          full_name: names.get(student.profile_id) || 'Alumno sin nombre',
+          stats: statsByStudent.get(student.id) || null,
+          guardians: guardiansByStudent.get(student.id) || []
         }))
     })),
     publishedUnits,
@@ -866,6 +903,41 @@ function adminUsersMarkup(data) {
           `).join('')}
         </ul>
       ` : '<p class="empty-state">Todavía no hay alumnos.</p>'}
+
+      <details class="admin-details">
+        <summary>Nuevo alumno</summary>
+        <form class="form" id="admin-create-student-form">
+          <label class="field">
+            <span>Grupo</span>
+            <select name="group_id" data-admin-groups required>
+              <option value="">Selecciona un grupo…</option>
+              ${data.groups.map((group) => `
+                <option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}${group.teacher_name ? ` · ${escapeHtml(group.teacher_name)}` : ''}</option>
+              `).join('')}
+            </select>
+          </label>
+          <label class="field">
+            <span>Nombre completo</span>
+            <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
+          </label>
+          <label class="field">
+            <span>Usuario (mín. 3 caracteres, sin espacios)</span>
+            <input name="username" autocomplete="off" placeholder="ana.martinez" required>
+          </label>
+          <label class="field">
+            <span>Contraseña temporal (mín. 8 caracteres)</span>
+            <input name="password" type="text" autocomplete="off" minlength="8" required>
+          </label>
+          <label class="field">
+            <span>Matrícula (opcional)</span>
+            <input name="student_code" autocomplete="off" placeholder="ECO-2027-001">
+          </label>
+          <div class="row">
+            <button class="btn primary" type="submit">Dar de alta</button>
+          </div>
+          <div class="create-student-result" data-create-result="admin"></div>
+        </form>
+      </details>
     </article>
 
     <article class="card wide">
@@ -1007,9 +1079,12 @@ function teacherGroupMarkup(group, data) {
             <li>
               <div>
                 <strong>${escapeHtml(student.full_name)}</strong>
-                <small>${escapeHtml(student.student_code)}</small>
+                <small>${escapeHtml(student.student_code)}${student.stats ? ` · ⚡ ${student.stats.xp_total} XP · 🔥 racha ${student.stats.current_streak} · ${student.stats.units_completed} unidades` : ''}</small>
               </div>
-              <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
+              <div class="row">
+                <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
+                <button class="btn ghost" data-advise-student="${escapeHtml(student.id)}" data-advise-name="${escapeHtml(student.full_name)}">Avisar tutor</button>
+              </div>
               <form class="form invite-form hidden" data-invite-form="${escapeHtml(student.id)}" data-student-code="${escapeHtml(student.student_code)}">
                 <label class="field">
                   <span>Nombre del tutor</span>
@@ -1033,10 +1108,44 @@ function teacherGroupMarkup(group, data) {
                 </div>
               </form>
               <div class="invite-result hidden" data-invite-result="${escapeHtml(student.id)}"></div>
+              <div class="advise-form hidden" data-advise-form="${escapeHtml(student.id)}"></div>
             </li>
           `).join('')}
         </ul>
       ` : '<p class="empty-state">Este grupo aún no tiene alumnos.</p>'}
+
+      <details class="admin-details">
+        <summary>Nuevo alumno</summary>
+        <form class="form" data-create-student-group="${escapeHtml(group.id)}">
+          <label class="field">
+            <span>Nombre completo</span>
+            <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
+          </label>
+          <label class="field">
+            <span>Usuario (mín. 3 caracteres, sin espacios)</span>
+            <input name="username" autocomplete="off" placeholder="ana.martinez" required>
+          </label>
+          <label class="field">
+            <span>Contraseña temporal (mín. 8 caracteres)</span>
+            <input name="password" type="text" autocomplete="off" minlength="8" required>
+          </label>
+          <label class="field">
+            <span>Matrícula (opcional; si no, se usa el usuario)</span>
+            <input name="student_code" autocomplete="off" placeholder="ECO-2027-001">
+          </label>
+          <div class="row">
+            <button class="btn primary" type="submit">Dar de alta</button>
+          </div>
+          <div class="create-student-result" data-create-result="${escapeHtml(group.id)}"></div>
+        </form>
+      </details>
+
+      <span class="card-label">Asistencia</span>
+      <div class="row">
+        <button class="btn ghost" data-attendance-open="${escapeHtml(group.id)}">Asistencia de hoy</button>
+        <button class="btn ghost" data-attendance-close="${escapeHtml(group.id)}" style="display:none">Cerrar</button>
+      </div>
+      <div class="attendance-area hidden" data-attendance-area="${escapeHtml(group.id)}"></div>
 
       <span class="card-label">Unidades del grupo</span>
       ${groupAssignments.length ? `
@@ -1851,6 +1960,36 @@ function renderDashboard() {
   appRoot.querySelectorAll('[data-save-setting]').forEach((button) => {
     button.addEventListener('click', () => saveSetting(button.dataset.saveSetting, button));
   });
+
+  appRoot.querySelectorAll('[data-create-student-group]').forEach((form) => {
+    form.addEventListener('submit', (event) => createStudent(event, form.dataset.createStudentGroup));
+  });
+
+  const adminCreateStudentForm = appRoot.querySelector('#admin-create-student-form');
+  if (adminCreateStudentForm) {
+    adminCreateStudentForm.addEventListener('submit', (event) => {
+      const select = adminCreateStudentForm.querySelector('[data-admin-groups]');
+      createStudent(event, select?.value);
+    });
+  }
+
+  appRoot.querySelectorAll('[data-advise-student]').forEach((button) => {
+    button.addEventListener('click', () => renderAdviseForm(button.dataset.adviseStudent));
+  });
+
+  appRoot.querySelectorAll('[data-attendance-open]').forEach((button) => {
+    button.addEventListener('click', () => openAttendance(button.dataset.attendanceOpen));
+  });
+
+  appRoot.querySelectorAll('[data-attendance-close]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const area = appRoot.querySelector(`[data-attendance-area="${button.dataset.attendanceClose}"]`);
+      if (area) area.classList.add('hidden');
+      button.style.display = 'none';
+      const openButton = appRoot.querySelector(`[data-attendance-open="${button.dataset.attendanceClose}"]`);
+      if (openButton) openButton.style.display = '';
+    });
+  });
 }
 
 async function createTeacher(event) {
@@ -1981,6 +2120,292 @@ async function saveSetting(key, button) {
     setError(error?.message || `No se pudo guardar ${key}.`);
     button.disabled = false;
     button.textContent = 'Guardar';
+  }
+}
+
+async function createStudent(event, groupId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const fullName = String(data.get('full_name') || '').trim();
+  const username = String(data.get('username') || '').trim().toLowerCase();
+  const password = String(data.get('password') || '');
+  const studentCode = String(data.get('student_code') || '').trim().toUpperCase();
+
+  if (!groupId) {
+    setError('Selecciona un grupo para el alumno.');
+    return;
+  }
+
+  if (!fullName || username.length < 3 || password.length < 8) {
+    setError('Completa los datos: nombre, usuario (3+ caracteres) y contraseña (8+ caracteres).');
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Dando de alta…';
+  }
+
+  state.error = '';
+  state.notice = '';
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('admin-create-student', {
+      body: {
+        full_name: fullName,
+        username,
+        password,
+        group_id: groupId,
+        student_code: studentCode || null
+      }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo dar de alta al alumno');
+
+    const resultBox = form.querySelector('[data-create-result]');
+    if (resultBox) {
+      resultBox.innerHTML = `
+        <div class="answer-box correct">
+          <strong>Alumno dado de alta</strong>
+          <p>Usuario: <b>${escapeHtml(result.access.username)}</b><br>
+          Contraseña temporal: <b>${escapeHtml(password)}</b><br>
+          <small>Entrégala una sola vez. El alumno entra con usuario + contraseña.</small></p>
+        </div>
+      `;
+    }
+
+    setNotice(`Alumno ${result.student?.student_code || username} dado de alta en el grupo.`);
+    form.reset();
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo dar de alta al alumno.');
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Dar de alta';
+    }
+  }
+}
+
+function renderAdviseForm(studentId) {
+  const box = appRoot.querySelector(`[data-advise-form="${studentId}"]`);
+  if (!box) return;
+
+  const group = (state.dashboard?.groups || []).find((item) =>
+    item.students.some((student) => student.id === studentId)
+  );
+  const student = group?.students.find((item) => item.id === studentId);
+  const guardians = student?.guardians || [];
+
+  box.classList.toggle('hidden');
+  if (box.classList.contains('hidden')) return;
+
+  if (!guardians.length) {
+    box.innerHTML = '<p class="empty-state">Este alumno no tiene tutores vinculados. Usa "Invitar tutor" primero.</p>';
+    return;
+  }
+
+  box.innerHTML = `
+    <span class="card-label">Aviso para ${escapeHtml(student?.full_name || 'el alumno')}</span>
+    <select data-advise-guardian>
+      ${guardians.map((guardian) => `
+        <option value="${escapeHtml(guardian.id)}" data-phone="${escapeHtml(guardian.phone || '')}">
+          ${escapeHtml(guardian.full_name)}${guardian.relationship ? ` (${escapeHtml(guardian.relationship)})` : ''}
+        </option>
+      `).join('')}
+    </select>
+    <textarea data-advise-body rows="3" placeholder="Escribe el aviso que quieres enviar…"></textarea>
+    <div class="row">
+      <button class="btn primary" data-advise-send="${escapeHtml(studentId)}">Enviar por WhatsApp</button>
+      <button class="btn ghost" data-advise-close="${escapeHtml(studentId)}">Cerrar</button>
+    </div>
+  `;
+
+  box.querySelector('[data-advise-send]').addEventListener('click', () => sendAdvise(studentId, student));
+  box.querySelector('[data-advise-close]').addEventListener('click', () => box.classList.add('hidden'));
+}
+
+async function sendAdvise(studentId, student) {
+  const box = appRoot.querySelector(`[data-advise-form="${studentId}"]`);
+  if (!box) return;
+
+  const select = box.querySelector('[data-advise-guardian]');
+  const textarea = box.querySelector('[data-advise-body]');
+  const option = select?.selectedOptions?.[0];
+
+  const guardianId = select?.value;
+  const phone = option?.dataset?.phone || '';
+  const guardianName = option?.textContent?.trim() || 'el tutor';
+  const body = String(textarea?.value || '').trim();
+
+  if (!body) {
+    setError('Escribe el aviso que quieres enviar.');
+    return;
+  }
+
+  if (!phone) {
+    setError('El tutor no tiene teléfono registrado. Edita su ficha o comparte el aviso por otro medio.');
+    return;
+  }
+
+  const subject = `Aviso sobre ${student?.full_name || 'el alumno'}`;
+
+  try {
+    const { error: insertError } = await supabase.from('guardian_messages').insert({
+      student_id: studentId,
+      guardian_id: guardianId,
+      channel: 'whatsapp',
+      subject,
+      body,
+      status: 'sent',
+      sent_at: new Date().toISOString()
+    });
+
+    if (insertError) throw insertError;
+
+    const waMessage = [
+      `Hola ${guardianName} 👋`,
+      subject + ':',
+      body
+    ].join('\n');
+
+    window.open(`https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(waMessage)}`, '_blank', 'noopener');
+    setNotice('Aviso registrado. Se abrió WhatsApp para enviarlo.');
+    box.classList.add('hidden');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo registrar el aviso.');
+  }
+}
+
+async function openAttendance(groupId) {
+  const area = appRoot.querySelector(`[data-attendance-area="${groupId}"]`);
+  if (!area) return;
+
+  const openButton = appRoot.querySelector(`[data-attendance-open="${groupId}"]`);
+  const closeButton = appRoot.querySelector(`[data-attendance-close="${groupId}"]`);
+
+  if (!area.classList.contains('hidden')) {
+    area.classList.add('hidden');
+    if (openButton) openButton.style.display = '';
+    if (closeButton) closeButton.style.display = 'none';
+    return;
+  }
+
+  const group = (state.dashboard?.groups || []).find((item) => item.id === groupId);
+  const students = group?.students || [];
+  if (!students.length) {
+    setError('El grupo no tiene alumnos.');
+    return;
+  }
+
+  area.classList.remove('hidden');
+  area.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
+  if (openButton) openButton.style.display = 'none';
+  if (closeButton) closeButton.style.display = '';
+
+  state.error = '';
+  state.notice = '';
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  try {
+    let { data: session, error } = await supabase
+      .from('attendance_sessions')
+      .select('id,session_date')
+      .eq('group_id', groupId)
+      .eq('session_date', today)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!session) {
+      const created = await supabase
+        .from('attendance_sessions')
+        .insert({ group_id: groupId, session_date: today, created_by: state.profile?.id ?? null })
+        .select('id,session_date')
+        .single();
+
+      if (created.error) throw created.error;
+      session = created.data;
+    }
+
+    const rows = await supabase
+      .from('attendance')
+      .select('student_id,status')
+      .eq('session_id', session.id);
+
+    if (rows.error) throw rows.error;
+
+    const statusByStudent = new Map((rows.data || []).map((row) => [row.student_id, row.status]));
+
+    area.innerHTML = `
+      <p class="muted"><small>Asistencia del ${escapeHtml(today)} · toca el estado de cada alumno y guarda.</small></p>
+      <ul class="data-list">
+        ${students.map((student) => `
+          <li>
+            <div>
+              <strong>${escapeHtml(student.full_name)}</strong>
+              <small>${escapeHtml(student.student_code)}</small>
+            </div>
+            <select data-attendance-status="${escapeHtml(student.id)}">
+              ${Object.entries(attendanceLabels).map(([value, label]) => `
+                <option value="${value}" ${statusByStudent.get(student.id) === value ? 'selected' : ''}>${escapeHtml(label)}</option>
+              `).join('')}
+            </select>
+          </li>
+        `).join('')}
+      </ul>
+      <div class="row end">
+        <button class="btn primary" data-attendance-save="${escapeHtml(session.id)}" data-attendance-group="${escapeHtml(groupId)}">Guardar asistencia</button>
+      </div>
+    `;
+
+    const saveButton = area.querySelector('[data-attendance-save]');
+    saveButton.addEventListener('click', () => saveAttendance(session.id, groupId, saveButton));
+  } catch (error) {
+    area.innerHTML = `<p class="empty-state">No se pudo cargar la asistencia: ${escapeHtml(error?.message || 'error')}</p>`;
+  }
+}
+
+async function saveAttendance(sessionId, groupId, button) {
+  const area = appRoot.querySelector(`[data-attendance-area="${groupId}"]`);
+  if (!area) return;
+
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+  state.error = '';
+  state.notice = '';
+
+  try {
+    const selects = area.querySelectorAll('[data-attendance-status]');
+    const upserts = [...selects].map((select) =>
+      supabase.from('attendance').upsert({
+        session_id: sessionId,
+        student_id: select.dataset.attendanceStatus,
+        status: select.value,
+        recorded_by: state.profile?.id ?? null
+      }, { onConflict: 'session_id,student_id' })
+    );
+
+    const results = await Promise.all(upserts);
+    const firstError = results.find((result) => result.error)?.error;
+    if (firstError) throw firstError;
+
+    setNotice(`Asistencia guardada (${selects.length} alumnos).`);
+    area.classList.add('hidden');
+    const openButton = appRoot.querySelector(`[data-attendance-open="${groupId}"]`);
+    const closeButton = appRoot.querySelector(`[data-attendance-close="${groupId}"]`);
+    if (openButton) openButton.style.display = '';
+    if (closeButton) closeButton.style.display = 'none';
+  } catch (error) {
+    setError(error?.message || 'No se pudo guardar la asistencia.');
+    button.disabled = false;
+    button.textContent = 'Guardar asistencia';
   }
 }
 

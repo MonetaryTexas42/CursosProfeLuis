@@ -834,6 +834,50 @@ pre code {
   flex: none;
 }
 
+.advise-form,
+.attendance-area {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.advise-form.hidden,
+.attendance-area.hidden {
+  display: none;
+}
+
+.advise-form select,
+.advise-form textarea,
+.attendance-area select,
+.attendance-area input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.advise-form textarea {
+  resize: vertical;
+}
+
+.attendance-area .data-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.create-student-result {
+  margin-top: 8px;
+}
+
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: 1fr;

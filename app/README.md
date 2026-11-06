@@ -70,9 +70,20 @@ app/
 - [x] Invitación de tutores **por WhatsApp** (botón en el panel del profesor;
       sin envío de correos) y consentimiento del tutor funcional E2E.
 - [x] Frontend publicado en GitHub Pages y verificado contra la URL pública
-      (flujos de alumno y profesor).
-- [ ] Proyecto staging separado (bloqueado por la API: crear desde el dashboard).
+      (flujos de alumno, curso, profesor y admin).
+- [x] Altas de alumnos desde el panel del profesor y del admin (contraseña
+      temporal entregada una vez).
+- [x] Sincronización de progreso del reproductor (XP, racha, unidades)
+      hacia `student_stats` y `xp_events` con `app_sync_player_state` (`0010`).
+- [x] Herramientas de lectura y matemáticas protegidas por sesión
+      (`tool-gate.js`): los anónimos son redirigidos al portal.
+- [x] Asistencia diaria por grupo (sesión + estados por alumno) desde el
+      panel del profesor.
+- [x] Avisos a tutores por WhatsApp (enlace `wa.me` + registro en
+      `guardian_messages`; canal `whatsapp` habilitado en `0010`).
 - [ ] Aviso de privacidad validado por un abogado antes del piloto real.
+- [ ] Mover el progreso histórico de localStorage a Supabase (opcional: el
+      reproductor ya sincroniza en tiempo real; localStorage queda de respaldo).
 
 ## Arranque local
 
