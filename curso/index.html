@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECOEMS · Preparación para el Bachillerato</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app-shell">
+  <aside id="sidebar">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+      <div class="brand-main">
+        <div class="brand-title">ECOEMS</div>
+        <div class="brand-sub">Tu bachillerato</div>
+      </div>
+      <button id="btn-side-collapse" class="brand-collapse" title="Ocultar menú">&#171;</button>
+    </div>
+    <div class="nav-label">Materias</div>
+    <nav id="side-nav"></nav>
+    <div class="side-motive">
+      <div class="motive-title">Hoy avanzas un paso más.</div>
+      <div class="side-prog-top"><span>Progreso del curso</span><b id="side-prog-pct">0%</b></div>
+      <div class="track"><div class="fill" id="side-prog-bar" style="width:0%"></div></div>
+      <button id="side-continue" class="motive-btn">Continuar donde quedaste &rarr;</button>
+    </div>
+    <div class="side-foot">
+      <button id="btn-reset" class="btn-ghost" title="Reiniciar todo el progreso">Reiniciar progreso</button>
+    </div>
+  </aside>
+  <div id="overlay" class="overlay" hidden></div>
+  <main id="main">
+    <header id="topbar">
+      <button id="btn-menu" class="menu-btn" aria-label="Menú">&#9776;</button>
+      <div id="breadcrumbs"></div>
+      <div class="topbar-stats">
+        <div class="header-prog" title="Progreso del curso">
+          <div class="track"><div class="fill" id="top-prog-bar" style="width:0%"></div></div>
+          <span id="top-prog-pct">0%</span>
+        </div>
+        <span class="stat-chip" id="stat-xp" title="Puntos de experiencia">&#9889; 0 XP</span>
+        <span class="stat-chip" id="stat-racha" title="Racha">&#128293; 0</span>
+      </div>
+    </header>
+    <div id="view"></div>
+  </main>
+</div>
+<script src="js/login-gate.js"></script>
+</body>
+</html>
