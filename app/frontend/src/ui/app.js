@@ -217,6 +217,87 @@ function renderLogin() {
   appRoot.querySelector('#login-form').addEventListener('submit', handleLogin);
 }
 
+function renderChangePassword() {
+  const name = state.profile?.full_name || '';
+
+  appRoot.innerHTML = `
+    <div class="shell">
+      ${headerMarkup()}
+      <main class="center">
+        <section class="panel login-panel">
+          <span class="kicker">Primer ingreso</span>
+          <h1>Hola, ${escapeHtml(name.split(' ')[0] || 'alumno')} 👋</h1>
+          <p class="muted">Tu contraseña actual es temporal. Crea una nueva que solo tú conozcas para continuar.</p>
+
+          ${alertMarkup()}
+
+          <form id="change-password-form" class="form">
+            <label class="field">
+              <span>Nueva contraseña (mínimo 8 caracteres)</span>
+              <input name="password" type="password" autocomplete="new-password" minlength="8" placeholder="Tu nueva contraseña" required>
+            </label>
+            <label class="field">
+              <span>Confirma tu nueva contraseña</span>
+              <input name="confirm" type="password" autocomplete="new-password" minlength="8" placeholder="Repite la contraseña" required>
+            </label>
+            <button class="btn primary" type="submit" id="change-password-btn">Guardar y continuar</button>
+          </form>
+
+          <p class="fine-print">Elige una contraseña que recuerdes: con ella entrarás a partir de ahora.</p>
+        </section>
+      </main>
+    </div>
+  `;
+
+  appRoot.querySelector('#change-password-form').addEventListener('submit', changePassword);
+}
+
+async function changePassword(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const button = appRoot.querySelector('#change-password-btn');
+
+  const password = String(data.get('password') || '');
+  const confirm = String(data.get('confirm') || '');
+
+  state.error = '';
+  state.notice = '';
+
+  if (password.length < 8) {
+    setError('La contraseña debe tener al menos 8 caracteres.');
+    renderChangePassword();
+    return;
+  }
+
+  if (password !== confirm) {
+    setError('Las contraseñas no coinciden.');
+    renderChangePassword();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+
+  try {
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) throw error;
+
+    const { error: rpcError } = await supabase.rpc('app_complete_password_change');
+
+    if (rpcError) throw rpcError;
+
+    setNotice('Contraseña actualizada. ¡Bienvenido!');
+    state.view = 'dashboard';
+    renderDashboard();
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
+    renderChangePassword();
+  }
+}
+
 async function handleLogin(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -282,7 +363,7 @@ async function handleSession(session) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, role, full_name, username, email, active')
+    .select('id, role, full_name, username, email, active, must_change_password')
     .eq('id', session.user.id)
     .maybeSingle();
 
@@ -317,6 +398,13 @@ async function handleSession(session) {
   state.unitResults = {};
   state.error = '';
   state.notice = '';
+
+  if (data.must_change_password) {
+    state.view = 'change-password';
+    renderChangePassword();
+    return;
+  }
+
   renderDashboard();
   loadDashboard(data);
 }
@@ -921,8 +1009,8 @@ function adminUsersMarkup(data) {
             <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
           </label>
           <label class="field">
-            <span>Usuario (mín. 3 caracteres, sin espacios)</span>
-            <input name="username" autocomplete="off" placeholder="ana.martinez" required>
+            <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
+            <input name="username" autocomplete="off" placeholder="ej. ana.martinez">
           </label>
           <label class="field">
             <span>Contraseña temporal (mín. 8 caracteres)</span>
@@ -1122,8 +1210,8 @@ function teacherGroupMarkup(group, data) {
             <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
           </label>
           <label class="field">
-            <span>Usuario (mín. 3 caracteres, sin espacios)</span>
-            <input name="username" autocomplete="off" placeholder="ana.martinez" required>
+            <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
+            <input name="username" autocomplete="off" placeholder="ej. ana.martinez">
           </label>
           <label class="field">
             <span>Contraseña temporal (mín. 8 caracteres)</span>
@@ -2138,8 +2226,8 @@ async function createStudent(event, groupId) {
     return;
   }
 
-  if (!fullName || username.length < 3 || password.length < 8) {
-    setError('Completa los datos: nombre, usuario (3+ caracteres) y contraseña (8+ caracteres).');
+  if (!fullName || password.length < 8) {
+    setError('Completa los datos: nombre y contraseña temporal (8+ caracteres). El usuario se genera del nombre si lo dejas vacío.');
     return;
   }
 
@@ -2156,7 +2244,7 @@ async function createStudent(event, groupId) {
     const { data: result, error } = await supabase.functions.invoke('admin-create-student', {
       body: {
         full_name: fullName,
-        username,
+        username: username || null,
         password,
         group_id: groupId,
         student_code: studentCode || null
@@ -2173,7 +2261,7 @@ async function createStudent(event, groupId) {
           <strong>Alumno dado de alta</strong>
           <p>Usuario: <b>${escapeHtml(result.access.username)}</b><br>
           Contraseña temporal: <b>${escapeHtml(password)}</b><br>
-          <small>Entrégala una sola vez. El alumno entra con usuario + contraseña.</small></p>
+          <small>Entrégaselas una vez. En su primer ingreso, el alumno deberá crear su propia contraseña.</small></p>
         </div>
       `;
     }

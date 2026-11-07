@@ -8,6 +8,7 @@ import {
   asDate,
   asString,
   asUuid,
+  defaultUsername,
   normalizeUsername,
   optionalString,
   studentEmail,
@@ -22,12 +23,42 @@ Deno.serve(async (req) => {
     const body = await readJson(req);
 
     const fullName = asString(body.full_name, "full_name", 2, 120);
-    const username = normalizeUsername(body.username);
     const password = asString(body.password, "password", 8, 72);
     const groupId = asUuid(body.group_id, "group_id");
     const phone = optionalString(body.phone, "phone", 40);
     const birthDate = asDate(body.birth_date, "birth_date");
     const enrollmentDate = asDate(body.enrollment_date, "enrollment_date");
+
+    // El usuario es opcional: si viene vacío se genera del nombre completo.
+    const requestedUsername = optionalString(body.username, "username", 32);
+    let username = requestedUsername
+      ? normalizeUsername(requestedUsername)
+      : defaultUsername(fullName);
+
+    // Resuelve colisiones: si el usuario ya existe, agrega .2, .3…
+    let attempt = 1;
+    while (attempt <= 50) {
+      const { data: taken } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .maybeSingle();
+
+      if (!taken) break;
+
+      const suffix = `.${attempt + 1}`;
+      username = username.slice(0, 32 - suffix.length) + suffix;
+      attempt += 1;
+    }
+
+    if (attempt > 50) {
+      throw new HttpError(409, "No se pudo generar un usuario libre");
+    }
+
+    if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)) {
+      throw new HttpError(400, "El usuario generado no es válido");
+    }
+
     const studentCode = (body.student_code
       ? asString(body.student_code, "student_code", 3, 32)
       : username

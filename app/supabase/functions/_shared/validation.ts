@@ -126,6 +126,27 @@ export function studentEmail(username: string): string {
   return `${username}@${configuredDomain}`;
 }
 
+/**
+ * Genera un usuario por defecto a partir del nombre completo:
+ * "Ana María Martínez" → "ana.maria.martinez".
+ * Si el resultado es inválido o está reservado, devuelve una base segura.
+ */
+export function defaultUsername(fullName: string): string {
+  const base = fullName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9._-]+/g, ".")
+    .replace(/^[._-]+|[._-]+$/g, "")
+    .replace(/\.{2,}/g, ".")
+    .slice(0, 32);
+
+  if (!base || base.length < 3) return "alumno";
+  if (RESERVED_USERNAMES.has(base)) return `${base}.1`;
+  return base;
+}
+
 export function randomPassword(length = 14): string {
   const alphabet =
     "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
