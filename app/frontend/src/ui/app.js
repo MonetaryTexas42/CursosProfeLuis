@@ -2491,9 +2491,10 @@ async function openUnit(assignmentId) {
       progress: startRes.data || item.progress,
       loading: false
     };
-  } catch {
+  } catch (error) {
     if (state.view !== 'unit' || state.unitView?.assignment.id !== item.id) return;
-    setError('No se pudo abrir la unidad. Revisa la conexión o avisa al profesor.');
+    console.error('open_unit_error', error?.message || error);
+    setError(`No se pudo abrir la unidad. ${error?.message || ''}`.trim());
     state.unitView = { ...state.unitView, loading: false };
   }
 
