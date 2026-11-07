@@ -1216,3 +1216,282 @@ pre code {
   align-items: center;
   gap: 8px;
 }
+
+/* ---------------- Layout del staff (sidebar) ---------------- */
+.staff-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.staff-sidebar {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.staff-sidebar .side-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 800;
+  padding: 8px 10px 4px;
+}
+
+.staff-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-tab-btn:hover { background: var(--panel-2); color: var(--text); }
+
+.staff-tab-btn.active {
+  background: linear-gradient(120deg, var(--brand), var(--brand-2));
+  color: #fff;
+}
+
+.staff-content {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.section-title h2 { font-size: 19px; }
+
+/* ---------------- Tarjetas de alumnos ---------------- */
+.student-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.student-card {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: grid;
+  gap: 8px;
+}
+
+.student-card .student-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.student-card .avatar-big {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 17px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  flex: none;
+}
+
+.score-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 15px;
+  flex: none;
+}
+
+.score-ring.high { background: rgba(13, 159, 110, 0.15); color: var(--good); border: 3px solid var(--good); }
+.score-ring.mid { background: rgba(217, 119, 6, 0.15); color: #fbbf24; border: 3px solid #fbbf24; }
+.score-ring.low { background: rgba(220, 59, 87, 0.15); color: var(--bad); border: 3px solid var(--bad); }
+
+.student-mini-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---------------- Ficha del alumno ---------------- */
+.student-ficha {
+  display: grid;
+  gap: 10px;
+}
+
+.ficha-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.ficha-box {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.ficha-box h4 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.subject-progress-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  font-size: 12.5px;
+}
+
+.subject-progress-item .sp-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ---------------- Materias ---------------- */
+.board-subject {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: grid;
+  gap: 10px;
+}
+
+.board-subject .board-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.board-unit {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+
+.board-unit .unit-students {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.student-chip {
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.student-chip.done { border-color: var(--good); color: var(--good); }
+.student-chip.progress { border-color: var(--brand); color: var(--brand); }
+.student-chip.todo { color: var(--muted); }
+
+/* ---------------- Evaluaciones ---------------- */
+.assessment-box {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: var(--panel-2);
+  display: grid;
+  gap: 8px;
+}
+
+.grade-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.grade-row input {
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* ---------------- Asistencia ---------------- */
+.attendance-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.attendance-history-table th,
+.attendance-history-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.attendance-history-table th {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---------------- Perfil profesional ---------------- */
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.profile-edit-grid .field textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+@media (max-width: 900px) {
+  .staff-layout { grid-template-columns: 1fr; }
+  .staff-sidebar { position: static; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}

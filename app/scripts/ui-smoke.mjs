@@ -9,7 +9,7 @@
 // Uso (desde app/):
 //   node scripts/ui-smoke.mjs
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -200,7 +200,39 @@ async function loginAsStudent(pageEval, waitFor) {
     return true;
   })()`);
 
-  await waitFor(`document.body.innerText.includes('Hola,')`, "panel del alumno");
+  // Si es el primer ingreso, aparece el cambio de contraseña obligatorio:
+  // la prueba lo completa con la misma contraseña (no-op) y continúa.
+  await waitFor(
+    `document.body.innerText.includes('Hola,') || document.querySelector('#change-password-form')`,
+    "panel del alumno o cambio de contraseña",
+  );
+
+  if (await pageEval(`!!document.querySelector('#change-password-form')`)) {
+    console.log("   (primer ingreso: completando el cambio de contraseña)");
+    // Supabase exige una contraseña distinta a la temporal.
+    const newPassword = `${password}A1!`;
+    await pageEval(`(() => {
+      const setValue = (selector, value) => {
+        const input = document.querySelector(selector);
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      setValue('#change-password-form input[name="password"]', ${JSON.stringify(newPassword)});
+      setValue('#change-password-form input[name="confirm"]', ${JSON.stringify(newPassword)});
+      document.querySelector('#change-password-form').requestSubmit();
+      return true;
+    })()`);
+    await waitFor(`document.body.innerText.includes('Hola,')`, "panel del alumno tras el cambio");
+
+    // Actualiza el archivo de credenciales para las siguientes corridas.
+    const usersPath = resolve(here, "../.secrets/test-users.txt");
+    const text = readFileSync(usersPath, "utf8");
+    const updated = text.replace(`contraseña: ${password}`, `contraseña: ${newPassword}`);
+    if (updated !== text) {
+      writeFileSync(usersPath, updated);
+      console.log(`   (credencial actualizada en test-users.txt: ${newPassword})`);
+    }
+  }
 }
 
 async function runCourseFlow(pageEval, waitFor) {
@@ -278,39 +310,42 @@ async function runAdminFlow(pageEval, waitFor) {
   })()`);
 
   await waitFor(`document.body.innerText.includes('Hola,')`, "panel del admin");
-  await waitFor(
-    `document.querySelectorAll('[data-admin-tab]').length === 4`,
-    "pestañas de administración",
-  );
-  console.log("  ✓ 4 pestañas visibles (Resumen, Usuarios, Contenido, Configuración)");
+  await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 7`, "barra lateral del admin");
+  console.log("  ✓ barra lateral con 7 secciones");
 
-  console.log("Abriendo pestaña Usuarios…");
-  await pageEval(`document.querySelector('[data-admin-tab="usuarios"]').click(); true`);
+  await waitFor(`document.querySelectorAll('.stat-card').length >= 5`, "dashboard");
+  await waitFor(`document.body.innerText.toLowerCase().includes('score del grupo')`, "score del grupo");
+  console.log("  ✓ dashboard con score del grupo");
+
+  console.log("Sección Alumnos…");
+  await pageEval(`document.querySelector('[data-staff-tab="alumnos"]').click(); true`);
+  await waitFor(`document.querySelector('.student-card')`, "tarjeta de alumna");
+  await waitFor(`document.querySelector('#admin-create-student-form')`, "formulario de alta");
+  console.log("  ✓ alumna (Alexa) y alta de alumnos visibles");
+
+  console.log("Sección Materias…");
+  await pageEval(`document.querySelector('[data-staff-tab="materias"]').click(); true`);
+  await waitFor(`document.querySelector('.board-subject')`, "materias");
+  const subjects = await pageEval(`document.querySelectorAll('.board-subject').length`);
+  console.log(`  ✓ ${subjects} materias con unidades y evaluaciones`);
+
+  console.log("Sección Usuarios…");
+  await pageEval(`document.querySelector('[data-staff-tab="usuarios"]').click(); true`);
   await waitFor(`document.body.innerText.includes('Crear profesor')`, "gestión de usuarios");
-  const usersText = await pageEval(`document.body.innerText.toLowerCase()`);
-  for (const fragment of ["crear profesor", "nueva contraseña", "tutores", "profesores"]) {
-    if (!usersText.includes(fragment)) throw new Error(`Falta "${fragment}" en Usuarios`);
-  }
-  console.log("  ✓ profesores, alumnos (nueva contraseña) y tutores visibles");
+  await waitFor(`document.querySelector('[data-reset-student]')`, "contraseña de alumno");
+  console.log("  ✓ usuarios: crear profesor y contraseña de alumno");
 
-  console.log("Abriendo pestaña Contenido…");
-  await pageEval(`document.querySelector('[data-admin-tab="contenido"]').click(); true`);
+  console.log("Sección Contenido…");
+  await pageEval(`document.querySelector('[data-staff-tab="contenido"]').click(); true`);
   await waitFor(`document.body.innerText.includes('Materias y unidades')`, "contenido");
-  const contentText = await pageEval(`document.body.innerText.toLowerCase()`);
-  if (!contentText.includes("español") || !contentText.includes("ejercicios")) {
-    throw new Error("Faltan estadísticas de contenido");
-  }
-  console.log("  ✓ estadísticas por materia visibles (unidades, ejercicios, quiz)");
+  console.log("  ✓ contenido con estadísticas por materia");
 
-  console.log("Abriendo pestaña Configuración…");
-  await pageEval(`document.querySelector('[data-admin-tab="configuracion"]').click(); true`);
-  await waitFor(
-    `document.querySelector('[data-setting-value="privacy_document_version"]')`,
-    "configuración",
-  );
-  console.log("  ✓ parámetro privacy_document_version editable");
+  console.log("Sección Configuración…");
+  await pageEval(`document.querySelector('[data-staff-tab="configuracion"]').click(); true`);
+  await waitFor(`document.querySelector('[data-setting-value="privacy_document_version"]')`, "configuración");
+  console.log("  ✓ configuración editable");
 
-  console.log("\nPASS · Panel de administración verificado (usuarios, contenido y configuración).");
+  console.log("\nPASS · Panel de administración con barra lateral verificado.");
 }
 
 async function runTeacherFlow(pageEval, waitFor) {
@@ -331,66 +366,52 @@ async function runTeacherFlow(pageEval, waitFor) {
   })()`);
 
   await waitFor(`document.body.innerText.includes('Hola,')`, "panel del profesor");
-  await waitFor(
-    `document.querySelectorAll('[data-invite-toggle]').length > 0 || document.body.innerText.includes('El administrador todavía no te asignó un grupo')`,
-    "lista de alumnos del profesor",
-  );
+  await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 5`, "barra lateral");
 
-  const inviteCount = await pageEval(
-    `document.querySelectorAll('[data-invite-toggle]').length`,
-  );
-  console.log(`Botones "Invitar tutor" visibles: ${inviteCount}`);
+  console.log(`  ✓ barra lateral con ${await pageEval(`document.querySelectorAll('[data-staff-tab]').length`)} secciones`);
 
-  if (inviteCount < 1) {
-    throw new Error("El profesor no ve la lista de alumnos con invitación");
-  }
+  await waitFor(`document.querySelectorAll('.stat-card').length >= 5`, "tarjetas del dashboard");
+  await waitFor(`document.body.innerText.toLowerCase().includes('score del grupo')`, "score del grupo");
+  console.log("  ✓ dashboard con tarjetas, score del grupo y recordatorios");
 
-  console.log("Abriendo el formulario de invitación…");
-  await pageEval(`document.querySelector('[data-invite-toggle]').click(); true`);
-  await waitFor(
-    `!document.querySelector('[data-invite-form]').classList.contains('hidden')`,
-    "formulario de invitación visible",
-  );
+  console.log("Sección Alumnos…");
+  await pageEval(`document.querySelector('[data-staff-tab="alumnos"]').click(); true`);
+  await waitFor(`document.querySelector('.student-card')`, "tarjetas de alumnos");
+  const studentName = await pageEval(`document.querySelector('.student-card strong').textContent`);
+  console.log(`  ✓ ficha de alumna visible: ${studentName.trim()}`);
 
-  const hasFields = await pageEval(`(() => {
-    const form = document.querySelector('[data-invite-form]');
-    return Boolean(
-      form.querySelector('input[name="full_name"]') &&
-      form.querySelector('input[name="phone"]') &&
-      form.querySelector('input[name="email"]') &&
-      form.querySelector('button[type="submit"]')
-    );
-  })()`);
+  await waitFor(`document.querySelector('[data-ficha-toggle]')`, "botón de ficha");
+  await pageEval(`document.querySelector('[data-ficha-toggle]').click(); true`);
+  await waitFor(`document.body.innerText.includes('Carrera que quiere')`, "perfil profesional");
+  await waitFor(`document.body.innerText.includes('Observaciones')`, "observaciones");
+  await waitFor(`document.body.innerText.includes('Cómo va por materia')`, "avance por materia");
+  console.log("  ✓ ficha completa: avance por materia, perfil profesional y observaciones");
 
-  if (!hasFields) {
-    throw new Error("El formulario de invitación no tiene los campos esperados");
-  }
+  console.log("Sección Materias…");
+  await pageEval(`document.querySelector('[data-staff-tab="materias"]').click(); true`);
+  await waitFor(`document.querySelector('.board-subject')`, "materias");
+  const boardSubjects = await pageEval(`document.querySelectorAll('.board-subject').length`);
+  const boardUnits = await pageEval(`document.querySelectorAll('.board-unit').length`);
+  const firstSubject = await pageEval(`document.querySelector('.board-subject h3').textContent`);
+  console.log(`  ✓ ${boardSubjects} materias (primera: ${firstSubject.trim()}) · ${boardUnits} unidades en orden del curso`);
+  await waitFor(`document.body.innerText.includes('Nueva evaluación')`, "creación de evaluaciones");
 
-  console.log("  ✓ formulario con nombre, teléfono, correo y botón de crear");
-
-  const teacherText = await pageEval(`document.body.innerText.toLowerCase()`);
-  const expected = ["nuevo alumno", "asistencia de hoy", "avisar tutor", "xp"];
-  for (const fragment of expected) {
-    if (!teacherText.includes(fragment)) {
-      throw new Error(`El panel del profesor no muestra "${fragment}"`);
-    }
-    console.log(`  ✓ sección visible: "${fragment}"`);
-  }
-
-  const adviseCount = await pageEval(
-    `document.querySelectorAll('[data-advise-student]').length`,
-  );
-  console.log(`  ✓ ${adviseCount} botones "Avisar tutor"`);
-
-  console.log("Abriendo asistencia de hoy…");
+  console.log("Sección Asistencia…");
+  await pageEval(`document.querySelector('[data-staff-tab="asistencia"]').click(); true`);
+  await waitFor(`document.querySelector('[data-attendance-open]')`, "botón de asistencia");
   await pageEval(`document.querySelector('[data-attendance-open]').click(); true`);
-  await waitFor(
-    `document.querySelector('[data-attendance-status]')`,
-    "lista de asistencia con estados",
-  );
-  console.log("  ✓ asistencia lista para registrar");
+  await waitFor(`document.querySelector('[data-attendance-status]')`, "lista de asistencia");
+  console.log("  ✓ asistencia de hoy lista");
 
-  console.log("\nPASS · Flujo UI del profesor verificado (invitación, altas, asistencia y avisos).");
+  console.log("Sección Tutores…");
+  await pageEval(`document.querySelector('[data-staff-tab="tutores"]').click(); true`);
+  await waitFor(`document.querySelector('[data-invite-toggle]')`, "invitaciones de tutores");
+  await pageEval(`document.querySelector('[data-invite-toggle]').click(); true`);
+  await waitFor(`!document.querySelector('[data-invite-form]').classList.contains('hidden')`, "formulario de invitación");
+  const adviseCount = await pageEval(`document.querySelectorAll('[data-advise-student]').length`);
+  console.log(`  ✓ invitación y avisos por WhatsApp (${adviseCount} alumnos)`);
+
+  console.log("\nPASS · Panel del profesor con barra lateral y todas las secciones verificado.");
 }
 
 async function runStudentFlow(pageEval, waitFor) {

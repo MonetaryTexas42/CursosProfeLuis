@@ -36,11 +36,15 @@ const assignmentStatusLabels = {
 // Debe coincidir con settings.privacy_document_version de la base.
 const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
 
-const adminTabLabels = {
-  resumen: 'Resumen',
-  usuarios: 'Usuarios',
-  contenido: 'Contenido',
-  configuracion: 'Configuración'
+const staffTabLabels = {
+  dashboard: '📊 Dashboard',
+  alumnos: '👥 Alumnos',
+  materias: '📚 Materias',
+  asistencia: '📅 Asistencia',
+  tutores: '💬 Tutores',
+  usuarios: '🛠️ Usuarios',
+  contenido: '🗂️ Contenido',
+  configuracion: '⚙️ Configuración'
 };
 
 const attendanceLabels = {
@@ -48,6 +52,15 @@ const attendanceLabels = {
   late: 'Tarde',
   excused: 'Justificado',
   absent: 'Falta'
+};
+
+const assessmentTypeLabels = {
+  diagnostic: 'Diagnóstico',
+  quiz: 'Examen corto',
+  exam: 'Examen',
+  project: 'Tarea / Proyecto',
+  participation: 'Participación',
+  other: 'Otra'
 };
 
 const state = {
@@ -61,7 +74,7 @@ const state = {
   unitResults: {},
   error: '',
   notice: '',
-  adminTab: 'resumen',
+  staffTab: 'dashboard',
   loading: true
 };
 
@@ -441,10 +454,11 @@ async function loadDashboard(profile) {
     if (state.profile?.id !== profile.id) return;
     state.dashboard = data;
     state.dashboardError = '';
-  } catch {
+  } catch (error) {
     if (state.profile?.id !== profile.id) return;
+    console.error('dashboard_error', error?.message || error);
     state.dashboard = null;
-    state.dashboardError = 'No se pudieron cargar los datos de tu panel.';
+    state.dashboardError = `No se pudieron cargar los datos de tu panel. ${error?.message || ''}`;
   }
 
   renderDashboard();
@@ -464,7 +478,7 @@ async function fetchDashboardData(profile) {
 async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
-    settingsRes, statsRes, unitsRes, overviewRes
+    settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -482,7 +496,11 @@ async function fetchAdminDashboard() {
     supabase.from('settings').select('key,value,updated_at,updated_by').order('key'),
     supabase.rpc('app_admin_content_stats'),
     supabase.from('units').select('id,subject_id,num,title,status').order('num'),
-    supabase.rpc('app_staff_dashboard')
+    supabase.rpc('app_staff_dashboard'),
+    supabase.rpc('app_subject_board'),
+    supabase.from('student_profiles').select('*'),
+    supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on'),
+    supabase.from('unit_assignments').select('id,group_id,unit_id,unit_version_id,status,visible,opens_at,closes_at')
   ]);
 
   assertNoError(yearRes.error);
@@ -495,6 +513,10 @@ async function fetchAdminDashboard() {
   assertNoError(statsRes.error);
   assertNoError(unitsRes.error);
   assertNoError(overviewRes.error);
+  assertNoError(boardRes.error);
+  assertNoError(studentProfilesRes.error);
+  assertNoError(termsRes.error);
+  assertNoError(assignmentsRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -539,6 +561,12 @@ async function fetchAdminDashboard() {
     stats: statsRes.data || [],
     units,
     overview: overviewRes.data || null,
+    board: (boardRes.data || {}).subjects || [],
+    assignments: assignmentsRes.data || [],
+    studentProfiles: new Map(
+      (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
+    ),
+    terms: termsRes.data || [],
     subjectNames: new Map(
       (statsRes.data || []).map((row) => [row.subject_id, row.subject_name])
     ),
@@ -589,7 +617,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -618,7 +646,12 @@ async function fetchTeacherDashboard(teacherId) {
     studentIds.length
       ? supabase.from('student_guardians').select('student_id,guardian_id').in('student_id', studentIds)
       : Promise.resolve({ data: [], error: null }),
-    supabase.from('guardians').select('id,full_name,email,phone,relationship')
+    supabase.from('guardians').select('id,full_name,email,phone,relationship'),
+    supabase.rpc('app_subject_board'),
+    studentIds.length
+      ? supabase.from('student_profiles').select('*').in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on')
   ]);
 
   assertNoError(unitsRes.error);
@@ -629,6 +662,9 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(statsRes.error);
   assertNoError(linksRes.error);
   assertNoError(guardiansRes.error);
+  assertNoError(boardRes.error);
+  assertNoError(studentProfilesRes.error);
+  assertNoError(termsRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const subjectMap = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
@@ -667,6 +703,11 @@ async function fetchTeacherDashboard(teacherId) {
   return {
     kind: 'teacher',
     overview: overviewRes.data || null,
+    board: (boardRes.data || {}).subjects || [],
+    studentProfiles: new Map(
+      (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
+    ),
+    terms: termsRes.data || [],
     groups: groups.map((group) => ({
       ...group,
       students: students
@@ -678,6 +719,20 @@ async function fetchTeacherDashboard(teacherId) {
           guardians: guardiansByStudent.get(student.id) || []
         }))
     })),
+    students: groups
+      .map((group) => ({
+        ...group,
+        students: students
+          .filter((student) => student.group_id === group.id)
+          .map((student) => ({
+            ...student,
+            full_name: names.get(student.profile_id) || 'Alumno sin nombre',
+            stats: statsByStudent.get(student.id) || null,
+            guardians: guardiansByStudent.get(student.id) || [],
+            group_name: group.name
+          }))
+      }))
+      .flatMap((group) => group.students),
     publishedUnits,
     assignments
   };
@@ -873,43 +928,8 @@ function countLabel(count, singular, plural) {
 }
 
 function adminDashboardMarkup(data) {
-  const counts = data.counts;
-  const year = data.year;
-  const tab = state.adminTab || 'resumen';
-
-  return `
-    <article class="card wide">
-      <div class="card-heading">
-        <div>
-          <span class="card-label">Piloto</span>
-          <h2>${year ? escapeHtml(year.name) : 'Sin ciclo activo'}</h2>
-        </div>
-        <span class="pill ${year ? 'success' : ''}">${year ? 'Activo' : 'Pendiente'}</span>
-      </div>
-      <p>${year ? `${escapeHtml(formatDate(year.starts_on))} – ${escapeHtml(formatDate(year.ends_on))}` : 'Crea el ciclo escolar para empezar.'}</p>
-      <div class="row">
-        <span class="pill">${countLabel(counts.profiles, 'perfil', 'perfiles')}</span>
-        <span class="pill">${countLabel(counts.teacher || 0, 'profesor', 'profesores')}</span>
-        <span class="pill">${countLabel(counts.student || 0, 'alumno', 'alumnos')}</span>
-        <span class="pill">${countLabel(counts.guardian || 0, 'tutor', 'tutores')}</span>
-      </div>
-    </article>
-
-    <nav class="card wide admin-tabs" aria-label="Administración">
-      ${Object.entries(adminTabLabels).map(([key, label]) => `
-        <button class="mode-tab ${tab === key ? 'active' : ''}" data-admin-tab="${key}">
-          ${escapeHtml(label)}
-        </button>
-      `).join('')}
-    </nav>
-
-    ${tab === 'usuarios' ? adminUsersMarkup(data)
-      : tab === 'contenido' ? adminContentMarkup(data)
-      : tab === 'configuracion' ? adminSettingsMarkup(data)
-      : adminResumenMarkup(data)}
-  `;
+  return staffShellMarkup(data);
 }
-
 function adminResumenMarkup(data) {
   return `
     ${staffOverviewMarkup(data.overview)}
@@ -1009,41 +1029,6 @@ function adminUsersMarkup(data) {
           `).join('')}
         </ul>
       ` : '<p class="empty-state">Todavía no hay alumnos.</p>'}
-
-      <details class="admin-details">
-        <summary>Nuevo alumno</summary>
-        <form class="form" id="admin-create-student-form">
-          <label class="field">
-            <span>Grupo</span>
-            <select name="group_id" data-admin-groups required>
-              <option value="">Selecciona un grupo…</option>
-              ${data.groups.map((group) => `
-                <option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}${group.teacher_name ? ` · ${escapeHtml(group.teacher_name)}` : ''}</option>
-              `).join('')}
-            </select>
-          </label>
-          <label class="field">
-            <span>Nombre completo</span>
-            <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
-          </label>
-          <label class="field">
-            <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
-            <input name="username" autocomplete="off" placeholder="ej. ana.martinez">
-          </label>
-          <label class="field">
-            <span>Contraseña temporal (mín. 8 caracteres)</span>
-            <input name="password" type="text" autocomplete="off" minlength="8" required>
-          </label>
-          <label class="field">
-            <span>Matrícula (opcional)</span>
-            <input name="student_code" autocomplete="off" placeholder="ECO-2027-001">
-          </label>
-          <div class="row">
-            <button class="btn primary" type="submit">Dar de alta</button>
-          </div>
-          <div class="create-student-result" data-create-result="admin"></div>
-        </form>
-      </details>
     </article>
 
     <article class="card wide">
@@ -1518,21 +1503,439 @@ function unitActivationMarkup(group, data) {
   `).join('');
 }
 
-function teacherDashboardMarkup(data) {
-  const totalStudents = data.groups.reduce((total, group) => total + group.students.length, 0);
+function staffShellMarkup(data) {
+  const isAdmin = data.kind === 'admin';
+  const tab = state.staffTab || 'dashboard';
+
+  const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tutores'];
+  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'usuarios', 'contenido', 'configuracion'];
+  const tabs = isAdmin ? adminTabs : teacherTabs;
+
+  const students = data.students || [];
+  const totalStudents = students.length;
 
   return `
+    <div class="shell">
+      ${headerMarkup()}
+      <main class="dashboard staff-layout">
+        <aside class="staff-sidebar" aria-label="Secciones">
+          <span class="side-label">${isAdmin ? 'Administración' : 'Mi espacio'}</span>
+          ${tabs.map((key) => `
+            <button class="staff-tab-btn ${tab === key ? 'active' : ''}" data-staff-tab="${key}">
+              ${escapeHtml(staffTabLabels[key])}
+            </button>
+          `).join('')}
+          <span class="side-label">Cuenta</span>
+          <button class="staff-tab-btn" id="logout-btn">🚪 Cerrar sesión</button>
+        </aside>
+
+        <section class="staff-content">
+          ${staffTabContentMarkup(data, tab)}
+        </section>
+      </main>
+    </div>
+  `;
+}
+
+function staffTabContentMarkup(data, tab) {
+  if (tab === 'alumnos') return staffStudentsTabMarkup(data);
+  if (tab === 'materias') return staffSubjectsTabMarkup(data);
+  if (tab === 'asistencia') return staffAttendanceTabMarkup(data);
+  if (tab === 'tutores') return staffTutoresTabMarkup(data);
+  if (tab === 'usuarios') return adminUsersMarkup(data);
+  if (tab === 'contenido') return adminContentMarkup(data);
+  if (tab === 'configuracion') return adminSettingsMarkup(data);
+  return staffDashboardTabMarkup(data);
+}
+
+function staffDashboardTabMarkup(data) {
+  const scores = data.overview?.scores || {};
+  const students = Array.isArray(scores.students) ? scores.students : [];
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Panel de control</span>
+        <h2>¿Cómo va el grupo?</h2>
+      </div>
+      <span class="pill">${escapeHtml(data.kind === 'admin' ? 'Vista global' : 'Tu grupo')}</span>
+    </div>
+
     ${staffOverviewMarkup(data.overview)}
 
     <article class="card wide">
       <div class="card-heading">
         <div>
-          <span class="card-label">Mi grupo</span>
-          <h2>${data.groups.length ? escapeHtml(data.groups.map((group) => group.name).join(' · ')) : 'Sin grupo asignado'}</h2>
+          <span class="card-label">Score del grupo</span>
+          <h2>${scores.group ?? 0} / 100</h2>
         </div>
-        <span class="pill">${countLabel(totalStudents, 'alumno', 'alumnos')}</span>
       </div>
-      ${data.groups.length ? data.groups.map((group) => teacherGroupMarkup(group, data)).join('') : '<p class="empty-state">El administrador todavía no te asignó un grupo.</p>'}
+      <p class="muted">Promedio del grupo: 50 % avance de unidades + 50 % precisión en ejercicios.</p>
+      ${students.length ? `
+        <div class="feed-list">
+          ${students.map((student) => `
+            <div class="feed-item">
+              <span class="feed-emoji">${student.score >= 80 ? '🏆' : student.score >= 50 ? '📈' : '🌱'}</span>
+              <div>
+                <strong>${escapeHtml(student.name)}</strong>
+                <div><small>${escapeHtml(student.code)} · ⚡ ${student.xp} XP · 📚 ${student.units_done}/${student.units_total} unidades · ${student.accuracy != null ? `🎯 ${Math.round(student.accuracy)}%` : 'sin precisión'} · faltas: ${student.absences}</small></div>
+              </div>
+              <span class="score-num">${student.score}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p class="empty-state">Aún no hay alumnos en el grupo.</p>'}
+    </article>
+  `;
+}
+
+function scoreRingClass(score) {
+  if (score >= 80) return 'high';
+  if (score >= 50) return 'mid';
+  return 'low';
+}
+
+function subjectProgressForStudent(data, studentId) {
+  // board.subjects[].units[].students[] → por materia: completadas/totales y precisión
+  const result = [];
+  for (const subject of data.board || []) {
+    let done = 0;
+    let total = 0;
+    let accuracySum = 0;
+    let accuracyCount = 0;
+    for (const unit of subject.units || []) {
+      total += 1;
+      const row = (unit.students || []).find((item) => item.code === studentId || item.id === studentId);
+      if (row && (row.status === 'completed' || row.status === 'mastered')) done += 1;
+      if (row && row.accuracy != null) {
+        accuracySum += Number(row.accuracy);
+        accuracyCount += 1;
+      }
+    }
+    if (total > 0) {
+      result.push({
+        subject: subject.name,
+        color: subject.color,
+        done,
+        total,
+        accuracy: accuracyCount ? Math.round(accuracySum / accuracyCount) : null
+      });
+    }
+  }
+  return result;
+}
+
+function nextUnitMissing(data, studentId) {
+  for (const subject of data.board || []) {
+    for (const unit of subject.units || []) {
+      const row = (unit.students || []).find((item) => item.code === studentId || item.id === studentId);
+      if (!row || row.status === 'not_started') {
+        return `${subject.name} · ${unit.title}`;
+      }
+    }
+  }
+  return null;
+}
+
+function staffStudentsTabMarkup(data) {
+  const students = data.students || [];
+  const scoreStudents = new Map(
+    (data.overview?.scores?.students || []).map((item) => [item.code, item])
+  );
+
+  if (!students.length) {
+    return `
+      <div class="section-title"><div><span class="card-label">Alumnos</span><h2>Grupo</h2></div></div>
+      <article class="card wide"><p class="empty-state">Todavía no hay alumnos. Da de alta al primero aquí abajo.</p></article>
+      ${staffCreateStudentMarkup(data)}
+    `;
+  }
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Alumnos</span>
+        <h2>${students.length} ${students.length === 1 ? 'alumna inscrita' : 'alumnos inscritos'}</h2>
+      </div>
+    </div>
+
+    <div class="student-cards">
+      ${students.map((student) => {
+        const scoreRow = scoreStudents.get(student.student_code) || {};
+        const score = scoreRow.score ?? 0;
+        return `
+          <article class="student-card">
+            <div class="student-card-head">
+              <div class="avatar-big">${escapeHtml((student.full_name || 'A').slice(0, 1).toUpperCase())}</div>
+              <span class="score-ring ${scoreRingClass(score)}" title="Score general">${score}</span>
+            </div>
+            <div>
+              <strong>${escapeHtml(student.full_name)}</strong>
+              <div class="muted"><small>${escapeHtml(student.student_code)} · ${escapeHtml(student.group_name || 'Sin grupo')}</small></div>
+            </div>
+            <div class="student-mini-stats">
+              <span class="pill pill-pink">⚡ ${scoreRow.xp ?? 0} XP</span>
+              <span class="pill pill-green">📚 ${scoreRow.units_done ?? 0}/${scoreRow.units_total ?? '—'}</span>
+              ${scoreRow.accuracy != null ? `<span class="pill pill-blue">🎯 ${Math.round(scoreRow.accuracy)}%</span>` : ''}
+              <span class="pill ${(scoreRow.absences ?? 0) > 0 ? 'pill-red' : ''}">Faltas: ${scoreRow.absences ?? 0}</span>
+            </div>
+            <button class="btn ghost" data-ficha-toggle="${escapeHtml(student.id)}">Ver ficha completa</button>
+            <div class="student-ficha hidden" data-ficha-box="${escapeHtml(student.id)}"></div>
+          </article>
+        `;
+      }).join('')}
+    </div>
+
+    ${staffCreateStudentMarkup(data)}
+  `;
+}
+
+function staffCreateStudentMarkup(data) {
+  const groups = data.groups || [];
+  const isAdmin = data.kind === 'admin';
+
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div><span class="card-label">Alta</span><h2>Nuevo alumno</h2></div>
+      </div>
+      <form class="form" ${isAdmin ? 'id="admin-create-student-form"' : ''} ${!isAdmin ? `data-create-student-group="${escapeHtml(groups[0]?.id || '')}"` : ''}>
+        ${isAdmin ? `
+          <label class="field">
+            <span>Grupo</span>
+            <select name="group_id" data-admin-groups required>
+              <option value="">Selecciona un grupo…</option>
+              ${groups.map((group) => `
+                <option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}${group.teacher_name ? ` · ${escapeHtml(group.teacher_name)}` : ''}</option>
+              `).join('')}
+            </select>
+          </label>
+        ` : ''}
+        <label class="field">
+          <span>Nombre completo</span>
+          <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
+        </label>
+        <label class="field">
+          <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
+          <input name="username" autocomplete="off" placeholder="ej. alexa.mandujano">
+        </label>
+        <label class="field">
+          <span>Contraseña temporal (mín. 8 caracteres)</span>
+          <input name="password" type="text" autocomplete="off" minlength="8" required>
+        </label>
+        <label class="field">
+          <span>Matrícula (opcional)</span>
+          <input name="student_code" autocomplete="off" placeholder="ECO-2027-001">
+        </label>
+        <div class="row">
+          <button class="btn primary" type="submit">Dar de alta</button>
+        </div>
+        <div class="create-student-result" data-create-result="${isAdmin ? 'admin' : 'teacher'}"></div>
+      </form>
+    </article>
+  `;
+}
+
+function staffSubjectsTabMarkup(data) {
+  const subjects = data.board || [];
+  const groups = data.groups || [];
+  const groupId = groups[0]?.id || null;
+  const students = data.students || [];
+  const assignmentsByUnit = new Map();
+  for (const assignment of data.assignments || []) {
+    assignmentsByUnit.set(assignment.unit_id, assignment);
+  }
+
+  const termOptions = data.terms || [];
+
+  if (!subjects.length) {
+    return `
+      <div class="section-title"><div><span class="card-label">Materias</span><h2>Contenido</h2></div></div>
+      <article class="card wide"><p class="empty-state">Aún no hay materias activas con contenido.</p></article>
+    `;
+  }
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Materias</span>
+        <h2>Unidades, exámenes y calificaciones</h2>
+      </div>
+      <span class="pill">${subjects.length} materias</span>
+    </div>
+
+    ${subjects.map((subject) => {
+      const assignments = [];
+      for (const unit of subject.units || []) {
+        const assignment = assignmentsByUnit.get(unit.id);
+        if (assignment) assignments.push(assignment);
+      }
+      return `
+        <article class="board-subject" style="border-left: 5px solid ${escapeHtml(subject.color || '#5b8cff')}">
+          <div class="board-head">
+            <h3 style="margin:0">${escapeHtml(subject.name)}</h3>
+            <span class="pill">${(subject.units || []).length} unidades</span>
+            <span class="pill">${(subject.assessments || []).length} evaluaciones</span>
+          </div>
+
+          <span class="card-label">Unidades (orden del curso)</span>
+          ${(subject.units || []).map((unit) => {
+            const assignment = assignmentsByUnit.get(unit.id);
+            const unitStudents = unit.students || [];
+            return `
+              <div class="board-unit">
+                <span class="pill pill-blue">U${String(unit.num).padStart(2, '0')}</span>
+                <div>
+                  <strong>${escapeHtml(unit.title)}</strong>
+                  <div class="muted"><small>${unit.estimated ? `${unit.estimated} min` : ''}</small></div>
+                </div>
+                <div class="row">
+                  ${assignment && assignment.status === 'active'
+                    ? `<span class="pill success">Activa</span>${data.kind === 'teacher' ? `<button class="btn-mini danger" data-close-assignment="${escapeHtml(assignment.id)}">Cerrar</button>` : ''}`
+                    : assignment && assignment.status === 'closed'
+                      ? `<span class="pill pill-red">Cerrada</span>${data.kind === 'teacher' ? `<button class="btn-mini" data-reopen-assignment="${escapeHtml(assignment.id)}">Reabrir</button>` : ''}`
+                      : data.kind === 'teacher' && groupId
+                        ? `<button class="btn-mini primary" data-activate-unit="${escapeHtml(unit.id)}:${escapeHtml((data.publishedUnits?.find((u) => u.id === unit.id)?.versions || [])[0]?.id || '')}">Activar</button>`
+                        : '<span class="pill">Sin activar</span>'
+                  }
+                </div>
+                <div class="unit-students">
+                  ${unitStudents.length ? unitStudents.map((row) => `
+                    <span class="student-chip ${row.status === 'completed' || row.status === 'mastered' ? 'done' : row.status === 'in_progress' ? 'progress' : 'todo'}">
+                      ${escapeHtml(row.name || row.code)} ${row.status === 'completed' || row.status === 'mastered' ? '✓' : row.status === 'in_progress' ? '…' : '·'}${row.accuracy != null ? ` ${Math.round(row.accuracy)}%` : ''}
+                    </span>
+                  `).join('') : '<span class="muted"><small>Sin avance registrado</small></span>'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+
+          <span class="card-label">Exámenes y tareas</span>
+          ${(subject.assessments || []).map((assessment) => `
+            <div class="assessment-box" data-assessment-box="${escapeHtml(assessment.id)}">
+              <div class="section-title">
+                <div>
+                  <strong>${escapeHtml(assessment.title)}</strong>
+                  <div class="muted"><small>${escapeHtml(assessmentTypeLabels[assessment.type] || assessment.type)} · sobre ${assessment.max} · ${escapeHtml(assessment.date ? formatDate(String(assessment.date).slice(0, 10)) : 'sin fecha')}</small></div>
+                </div>
+                <button class="btn-mini" data-toggle-grades="${escapeHtml(assessment.id)}">Calificar</button>
+              </div>
+              <div class="grades-editor hidden" data-grades-editor="${escapeHtml(assessment.id)}">
+                ${students.map((student) => {
+                  const grade = (assessment.grades || []).find((item) => item.student === student.student_code);
+                  return `
+                    <div class="grade-row">
+                      <span>${escapeHtml(student.full_name)}</span>
+                      <input type="number" step="0.1" min="0" max="${escapeHtml(assessment.max)}" value="${grade ? escapeHtml(grade.score ?? '') : ''}" data-grade-student="${escapeHtml(student.id)}" placeholder="—">
+                      <button class="btn-mini primary" data-save-grade="${escapeHtml(assessment.id)}" data-student="${escapeHtml(student.id)}">Guardar</button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `).join('') || '<p class="empty-state">Sin exámenes ni tareas en esta materia.</p>'}
+
+          ${groupId ? `
+            <details class="admin-details">
+              <summary>Nueva evaluación (examen, tarea, proyecto…)</summary>
+              <form class="form" data-create-assessment="${escapeHtml(subject.id)}" data-group="${escapeHtml(groupId)}">
+                <label class="field"><span>Nombre</span><input name="name" required placeholder="Examen parcial 1"></label>
+                <label class="field">
+                  <span>Tipo</span>
+                  <select name="type">
+                    ${Object.entries(assessmentTypeLabels).map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join('')}
+                  </select>
+                </label>
+                <div class="row">
+                  <label class="field"><span>Puntaje máximo</span><input name="max_score" type="number" step="0.1" value="10" required></label>
+                  <label class="field"><span>Fecha</span><input name="assessment_date" type="date"></label>
+                  <label class="field"><span>Trimestre</span>
+                    <select name="term_id">${termOptions.map((term) => `<option value="${escapeHtml(term.id)}">${escapeHtml(term.name)}</option>`).join('')}</select>
+                  </label>
+                </div>
+                <button class="btn primary" type="submit">Crear evaluación</button>
+              </form>
+            </details>
+          ` : ''}
+        </article>
+      `;
+    }).join('')}
+  `;
+}
+
+function staffAttendanceTabMarkup(data) {
+  const groups = data.groups || [];
+  if (!groups.length) {
+    return `
+      <div class="section-title"><div><span class="card-label">Asistencia</span><h2>Grupos</h2></div></div>
+      <article class="card wide"><p class="empty-state">No tienes grupos asignados.</p></article>
+    `;
+  }
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Asistencia</span>
+        <h2>Tomar lista y justificar</h2>
+      </div>
+      <span class="pill">Las faltas no afectan calificaciones; solo son informativas</span>
+    </div>
+    ${groups.map((group) => `
+      <article class="card wide">
+        <div class="card-heading">
+          <div><span class="card-label">Grupo</span><h2>${escapeHtml(group.name)}</h2></div>
+        </div>
+        <div class="row">
+          <button class="btn primary" data-attendance-open="${escapeHtml(group.id)}">Asistencia de hoy</button>
+          <button class="btn ghost" data-history-open="${escapeHtml(group.id)}">Ver historial</button>
+        </div>
+        <div class="attendance-area hidden" data-attendance-area="${escapeHtml(group.id)}"></div>
+        <div class="attendance-history hidden" data-history-box="${escapeHtml(group.id)}"></div>
+      </article>
+    `).join('')}
+  `;
+}
+
+function staffTutoresTabMarkup(data) {
+  const students = data.students || [];
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Tutores</span>
+        <h2>Invitaciones y avisos por WhatsApp</h2>
+      </div>
+    </div>
+    <article class="card wide">
+      <div class="card-heading"><div><span class="card-label">Alumnos</span><h2>Vínculos con tutores</h2></div></div>
+      ${students.length ? `
+        <ul class="data-list invite-list">
+          ${students.map((student) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(student.full_name)}</strong>
+                <small>${escapeHtml(student.student_code)} · ${(student.guardians || []).length} ${(student.guardians || []).length === 1 ? 'tutor' : 'tutores'} vinculado(s)</small>
+              </div>
+              <div class="row">
+                <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
+                <button class="btn ghost" data-advise-student="${escapeHtml(student.id)}">Avisar tutor</button>
+              </div>
+              <form class="form invite-form hidden" data-invite-form="${escapeHtml(student.id)}" data-student-code="${escapeHtml(student.student_code)}">
+                <label class="field"><span>Nombre del tutor</span><input name="full_name" required placeholder="Nombre completo"></label>
+                <label class="field"><span>Teléfono (WhatsApp)</span><input name="phone" type="tel" placeholder="52 1 55 1234 5678"></label>
+                <label class="field"><span>Parentesco (opcional)</span><input name="relationship" placeholder="madre, padre…"></label>
+                <label class="field"><span>Correo (opcional — si no tiene, se genera uno interno)</span><input name="email" type="email"></label>
+                <div class="row">
+                  <button class="btn primary" type="submit">Crear invitación</button>
+                  <button class="btn ghost" type="button" data-invite-cancel="${escapeHtml(student.id)}">Cancelar</button>
+                </div>
+              </form>
+              <div class="invite-result hidden" data-invite-result="${escapeHtml(student.id)}"></div>
+              <div class="advise-form hidden" data-advise-form="${escapeHtml(student.id)}"></div>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">No hay alumnos. Da de alta primero.</p>'}
     </article>
   `;
 }
@@ -1634,7 +2037,7 @@ function dashboardDataMarkup(profile) {
   }
 
   if (state.dashboard.kind === 'admin') return adminDashboardMarkup(state.dashboard);
-  if (state.dashboard.kind === 'teacher') return teacherDashboardMarkup(state.dashboard);
+  if (state.dashboard.kind === 'teacher') return staffShellMarkup(state.dashboard);
   if (state.dashboard.kind === 'guardian') return guardianDashboardMarkup(state.dashboard);
   return studentDashboardMarkup(state.dashboard);
 }
@@ -2300,6 +2703,393 @@ async function openStudentDetail(studentId, button) {
   }
 }
 
+/* ---------------- Ficha completa del alumno ---------------- */
+
+function studentFichaMarkup(data, student) {
+  const profile = data.studentProfiles?.get(student.id) || {};
+  const perSubject = subjectProgressForStudent(data, student.student_code);
+  const missing = nextUnitMissing(data, student.student_code);
+  const scoreRow = (data.overview?.scores?.students || []).find((item) => item.code === student.student_code) || {};
+
+  const csv = (value) => (Array.isArray(value) ? value.join(', ') : '');
+  const json = (value) => (value && typeof value === 'object' ? JSON.stringify(value, null, 1) : (typeof value === 'string' && value ? value : ''));
+
+  return `
+    <div class="ficha-grid">
+      <div class="ficha-box">
+        <h4>📚 Cómo va por materia</h4>
+        ${perSubject.length ? perSubject.map((item) => `
+          <div class="subject-progress-item">
+            <span><strong>${escapeHtml(item.subject)}</strong></span>
+            <span>${item.done}/${item.total} ${item.accuracy != null ? `· 🎯 ${item.accuracy}%` : ''}</span>
+            <div class="progress-track" style="grid-column:1/-1">
+              <div class="progress-fill" style="width:${item.total ? Math.round((item.done / item.total) * 100) : 0}%"></div>
+            </div>
+          </div>
+        `).join('') : '<p class="empty-state">Sin avance registrado.</p>'}
+        <div class="sp-meta">
+          ${missing ? `⏭️ Le falta: <strong>${escapeHtml(missing)}</strong>` : '🎉 No le falta ninguna unidad por empezar.'}
+        </div>
+      </div>
+
+      <div class="ficha-box">
+        <h4>🎯 Resumen</h4>
+        <div class="student-mini-stats">
+          <span class="pill pill-pink">⚡ ${scoreRow.xp ?? 0} XP</span>
+          <span class="pill pill-amber">🔥 racha ${scoreRow?.xp ? (data.overview?.scores?.students || []).find((item) => item.code === student.student_code)?.xp : 0}</span>
+          <span class="pill ${(scoreRow.absences ?? 0) > 0 ? 'pill-red' : 'pill-green'}">Faltas: ${scoreRow.absences ?? 0}</span>
+          ${scoreRow.accuracy != null ? `<span class="pill pill-blue">🎯 ${Math.round(scoreRow.accuracy)}% precisión</span>` : ''}
+        </div>
+        <h4>🧭 Perfil profesional</h4>
+        <form class="form profile-edit-grid" data-save-profile="${escapeHtml(student.id)}">
+          <label class="field"><span>Carrera que quiere</span><input name="career_choice" value="${escapeHtml(profile.career_choice || '')}" placeholder="ej. Medicina"></label>
+          <label class="field"><span>Carreras sugeridas (separadas por coma)</span><input name="career_suggestions" value="${escapeHtml(csv(profile.career_suggestions))}" placeholder="ej. Enfermería, Biología"></label>
+          <label class="field"><span>Intereses (separados por coma)</span><input name="interests" value="${escapeHtml(csv(profile.interests))}" placeholder="ciencia, música…"></label>
+          <label class="field"><span>Aptitudes (separadas por coma)</span><input name="aptitudes" value="${escapeHtml(csv(profile.aptitudes))}" placeholder="razonamiento, lectura…"></label>
+          <label class="field"><span>Fortalezas (separadas por coma)</span><input name="strengths" value="${escapeHtml(csv(profile.strengths))}"></label>
+          <label class="field"><span>Áreas a trabajar (separadas por coma)</span><input name="weaknesses" value="${escapeHtml(csv(profile.weaknesses))}"></label>
+          <label class="field"><span>Test de personalidad (resultados)</span><textarea name="personality" placeholder="Resultado del test…">${escapeHtml(json(profile.personality))}</textarea></label>
+          <label class="field"><span>Test de aptitudes (resultados)</span><textarea name="aptitude" placeholder="Resultado del test…">${escapeHtml(json(profile.aptitude))}</textarea></label>
+          <label class="field"><span>Notas de orientación vocacional</span><textarea name="vocational_notes">${escapeHtml(profile.vocational_notes || '')}</textarea></label>
+          <button class="btn primary" type="submit">Guardar perfil profesional</button>
+        </form>
+      </div>
+
+      <div class="ficha-box">
+        <h4>📝 Observaciones</h4>
+        <div data-observations-list="${escapeHtml(student.id)}"><div class="spinner" aria-hidden="true"></div></div>
+        <form class="form" data-add-observation="${escapeHtml(student.id)}">
+          <label class="field"><span>Categoría (opcional)</span><input name="category" placeholder="conducta, académico…"></label>
+          <label class="field"><span>Observación</span><textarea name="body" required></textarea></label>
+          <label class="field"><span>Visible para</span>
+            <select name="visibility">
+              <option value="internal">Solo personal</option>
+              <option value="family">Personal y tutor</option>
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Agregar observación</button>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+async function openStudentFicha(studentId, button) {
+  const box = appRoot.querySelector(`[data-ficha-box="${studentId}"]`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) {
+    box.classList.add('hidden');
+    button.textContent = 'Ver ficha completa';
+    return;
+  }
+
+  const data = state.dashboard;
+  const student = (data.students || []).find((item) => item.id === studentId);
+  if (!student) return;
+
+  box.classList.remove('hidden');
+  button.textContent = 'Cerrar ficha';
+  box.innerHTML = studentFichaMarkup(data, student);
+
+  const profileForm = box.querySelector(`[data-save-profile="${studentId}"]`);
+  if (profileForm) profileForm.addEventListener('submit', (event) => saveStudentProfile(event, studentId));
+
+  const observationForm = box.querySelector(`[data-add-observation="${studentId}"]`);
+  if (observationForm) observationForm.addEventListener('submit', (event) => addObservation(event, studentId));
+
+  loadObservations(studentId);
+}
+
+async function saveStudentProfile(event, studentId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const split = (value) => String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const parseJson = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return {};
+    try {
+      const parsed = JSON.parse(text);
+      return parsed && typeof parsed === 'object' ? parsed : { nota: text };
+    } catch {
+      return { nota: text };
+    }
+  };
+
+  const payload = {
+    student_id: studentId,
+    career_choice: String(data.get('career_choice') || '').trim() || null,
+    career_suggestions: split(data.get('career_suggestions')),
+    interests: split(data.get('interests')),
+    aptitudes: split(data.get('aptitudes')),
+    strengths: split(data.get('strengths')),
+    weaknesses: split(data.get('weaknesses')),
+    personality: parseJson(data.get('personality')),
+    aptitude: parseJson(data.get('aptitude')),
+    vocational_notes: String(data.get('vocational_notes') || '').trim() || null,
+    updated_at: new Date().toISOString()
+  };
+
+  state.error = '';
+  state.notice = '';
+
+  const { error } = await supabase.from('student_profiles').upsert(payload, { onConflict: 'student_id' });
+
+  if (error) {
+    setError(error?.message || 'No se pudo guardar el perfil profesional.');
+    return;
+  }
+
+  setNotice('Perfil profesional guardado.');
+  await loadDashboard(state.profile);
+}
+
+async function loadObservations(studentId) {
+  const list = appRoot.querySelector(`[data-observations-list="${studentId}"]`);
+  if (!list) return;
+
+  const { data, error } = await supabase
+    .from('observations')
+    .select('id,category,body,visibility,created_at,author_id')
+    .eq('student_id', studentId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error || !data?.length) {
+    list.innerHTML = '<p class="empty-state">Sin observaciones todavía.</p>';
+    return;
+  }
+
+  list.innerHTML = `
+    <div class="feed-list">
+      ${data.map((item) => `
+        <div class="feed-item">
+          <span class="feed-emoji">${item.visibility === 'family' ? '👨‍👩‍👧' : '🔒'}</span>
+          <div>
+            ${item.category ? `<strong>${escapeHtml(item.category)}</strong> · ` : ''}${escapeHtml(item.body)}
+            <div><small>${escapeHtml(formatRelative(item.created_at))} · ${item.visibility === 'family' ? 'visible al tutor' : 'solo personal'}</small></div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function addObservation(event, studentId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const category = String(data.get('category') || '').trim();
+  const body = String(data.get('body') || '').trim();
+  const visibility = String(data.get('visibility') || 'internal');
+
+  if (!body) return;
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+
+  state.error = '';
+  state.notice = '';
+
+  const { error } = await supabase.from('observations').insert({
+    student_id: studentId,
+    author_id: state.profile?.id ?? null,
+    category: category || null,
+    body,
+    visibility
+  });
+
+  if (error) {
+    setError(error?.message || 'No se pudo guardar la observación.');
+    if (submitButton) submitButton.disabled = false;
+    return;
+  }
+
+  form.reset();
+  if (submitButton) submitButton.disabled = false;
+  await loadObservations(studentId);
+  setNotice('Observación guardada.');
+}
+
+async function saveGrade(button) {
+  const assessmentId = button.dataset.saveGrade;
+  const studentId = button.dataset.student;
+  const box = button.closest('.assessment-box');
+  const input = box?.querySelector(`[data-grade-student="${studentId}"]`);
+
+  if (!assessmentId || !studentId || !input || button.disabled) return;
+
+  const raw = input.value.trim();
+  const score = raw === '' ? null : Number(raw);
+
+  if (score !== null && (Number.isNaN(score) || score < 0)) {
+    setError('El puntaje debe ser un número válido.');
+    return;
+  }
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = '…';
+
+  const { error } = await supabase.from('grades').upsert({
+    assessment_id: assessmentId,
+    student_id: studentId,
+    score,
+    status: score === null ? 'pending' : 'recorded',
+    recorded_by: state.profile?.id ?? null,
+    recorded_at: new Date().toISOString()
+  }, { onConflict: 'assessment_id,student_id' });
+
+  if (error) {
+    setError(error?.message || 'No se pudo guardar la calificación.');
+    button.disabled = false;
+    button.textContent = 'Guardar';
+    return;
+  }
+
+  setNotice('Calificación guardada.');
+  button.disabled = false;
+  button.textContent = 'Guardar';
+}
+
+async function createAssessment(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const subjectId = form.dataset.createAssessment;
+  const groupId = form.dataset.group;
+  const name = String(data.get('name') || '').trim();
+  const type = String(data.get('type') || 'other');
+  const maxScore = Number(data.get('max_score') || 0);
+  const assessmentDate = String(data.get('assessment_date') || '').trim() || null;
+  let termId = String(data.get('term_id') || '');
+
+  if (!name || !maxScore || maxScore <= 0 || !groupId) {
+    setError('Completa nombre, puntaje máximo y grupo.');
+    return;
+  }
+
+  if (!termId) {
+    termId = state.dashboard?.terms?.[0]?.id;
+  }
+
+  if (!termId) {
+    setError('No hay un trimestre configurado para esta evaluación.');
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+
+  state.error = '';
+  state.notice = '';
+
+  const { error } = await supabase.from('assessments').insert({
+    group_id: groupId,
+    subject_id: subjectId,
+    term_id: termId,
+    name,
+    type,
+    max_score: maxScore,
+    assessment_date: assessmentDate,
+    created_by: state.profile?.id ?? null
+  });
+
+  if (error) {
+    setError(error?.message?.includes('duplicate') || error?.code === '23505'
+      ? 'Ya existe una evaluación con ese nombre en la materia.'
+      : error?.message || 'No se pudo crear la evaluación.');
+    if (submitButton) submitButton.disabled = false;
+    return;
+  }
+
+  setNotice('Evaluación creada. Ahora puedes calificar a cada alumno.');
+  await loadDashboard(state.profile);
+}
+
+async function openAttendanceHistory(groupId, button) {
+  const box = appRoot.querySelector(`[data-history-box="${groupId}"]`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) {
+    box.classList.add('hidden');
+    button.textContent = 'Ver historial';
+    return;
+  }
+
+  box.classList.remove('hidden');
+  button.textContent = 'Ocultar historial';
+  box.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
+
+  const students = (state.dashboard?.groups || []).find((group) => group.id === groupId)?.students || [];
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('attendance_sessions')
+    .select('id,session_date')
+    .eq('group_id', groupId)
+    .order('session_date', { ascending: false })
+    .limit(12);
+
+  if (sessionsError || !sessions?.length) {
+    box.innerHTML = '<p class="empty-state">Todavía no hay sesiones de asistencia registradas.</p>';
+    return;
+  }
+
+  const sessionIds = sessions.map((session) => session.id);
+  const { data: rows, error: rowsError } = await supabase
+    .from('attendance')
+    .select('session_id,student_id,status')
+    .in('session_id', sessionIds);
+
+  if (rowsError) {
+    box.innerHTML = '<p class="empty-state">No se pudo cargar el historial.</p>';
+    return;
+  }
+
+  const statusEmoji = { present: '✅', late: '⏰', excused: '✳️', absent: '❌' };
+  const byStudent = new Map();
+  for (const student of students) {
+    byStudent.set(student.id, { name: student.full_name, code: student.student_code, cells: new Map(), absences: 0 });
+  }
+  for (const row of rows || []) {
+    const entry = byStudent.get(row.student_id);
+    if (!entry) continue;
+    entry.cells.set(row.session_id, row.status);
+    if (row.status === 'absent') entry.absences += 1;
+  }
+
+  box.innerHTML = `
+    <table class="attendance-history-table">
+      <thead>
+        <tr>
+          <th>Alumno</th>
+          ${sessions.map((session) => `<th>${escapeHtml(formatDate(String(session.session_date).slice(0, 10)))}</th>`).join('')}
+          <th>Faltas</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${[...byStudent.values()].map((entry) => `
+          <tr>
+            <td><strong>${escapeHtml(entry.name)}</strong><div class="muted"><small>${escapeHtml(entry.code)}</small></div></td>
+            ${sessions.map((session) => `<td>${statusEmoji[entry.cells.get(session.id)] || '·'}</td>`).join('')}
+            <td>${entry.absences}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <p class="muted"><small>✅ presente · ⏰ tarde · ✳️ justificado · ❌ falta · · sin registro</small></p>
+  `;
+}
+
 function renderDashboard() {
   appRoot.innerHTML = dashboardMarkup(state.profile);
 
@@ -2331,13 +3121,36 @@ function renderDashboard() {
     form.addEventListener('submit', inviteGuardian);
   });
 
-  appRoot.querySelectorAll('[data-admin-tab]').forEach((button) => {
+  appRoot.querySelectorAll('[data-staff-tab]').forEach((button) => {
     button.addEventListener('click', () => {
-      state.adminTab = button.dataset.adminTab;
+      state.staffTab = button.dataset.staffTab;
       state.error = '';
       state.notice = '';
       renderDashboard();
     });
+  });
+
+  appRoot.querySelectorAll('[data-ficha-toggle]').forEach((button) => {
+    button.addEventListener('click', () => openStudentFicha(button.dataset.fichaToggle, button));
+  });
+
+  appRoot.querySelectorAll('[data-toggle-grades]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const editor = appRoot.querySelector(`[data-grades-editor="${button.dataset.toggleGrades}"]`);
+      if (editor) editor.classList.toggle('hidden');
+    });
+  });
+
+  appRoot.querySelectorAll('[data-save-grade]').forEach((button) => {
+    button.addEventListener('click', () => saveGrade(button));
+  });
+
+  appRoot.querySelectorAll('[data-create-assessment]').forEach((form) => {
+    form.addEventListener('submit', createAssessment);
+  });
+
+  appRoot.querySelectorAll('[data-history-open]').forEach((button) => {
+    button.addEventListener('click', () => openAttendanceHistory(button.dataset.historyOpen, button));
   });
 
   const createTeacherForm = appRoot.querySelector('#create-teacher-form');

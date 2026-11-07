@@ -7,7 +7,7 @@ select
   s.profile_id as student_profile_id,
   gp.id as guardian_profile_id
 from public.groups g
-join public.students s on s.group_id = g.id and s.student_code = 'PIL-001'
+join public.students s on s.group_id = g.id and s.student_code = 'ALEXA.GUADALUPE.MONTOYA.MANUDUJA'
 join public.profiles gp on gp.email = 'tutor1@ecoems.local'
 where g.name = 'Piloto A'
 limit 1;

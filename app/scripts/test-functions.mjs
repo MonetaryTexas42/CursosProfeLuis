@@ -100,14 +100,14 @@ async function main() {
   console.log("1) Login del profesor…");
   const teacherToken = await login(teacher.email, teacher.password);
 
-  console.log("2) Obteniendo el alumno PIL-001…");
+  console.log("2) Obteniendo el alumno ALEXA.GUADALUPE.MONTOYA.MANUDUJA…");
   const studentsRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/students?student_code=eq.PIL-001&select=id`,
+    `${SUPABASE_URL}/rest/v1/students?student_code=eq.ALEXA.GUADALUPE.MONTOYA.MANUDUJA&select=id`,
     { headers: { apikey: ANON_KEY, Authorization: `Bearer ${teacherToken}` } },
   );
   const students = await studentsRes.json();
   const studentId = students?.[0]?.id;
-  if (!studentId) throw new Error("No se pudo obtener PIL-001");
+  if (!studentId) throw new Error("No se pudo obtener ALEXA.GUADALUPE.MONTOYA.MANUDUJA");
   console.log("   student_id:", studentId);
 
   console.log("3) invite-guardian (profesor)…");
@@ -169,16 +169,8 @@ async function main() {
   }
   console.log("   ✓ versión incorrecta rechazada");
 
-  console.log("8) guardian-consent correcto (tutor1 para PIL-001)…");
-  const consent = await callFunction("guardian-consent", guardianToken, {
-    student_id: studentId,
-    document_version: "v1-2026",
-    accepted: true,
-  });
-  if (consent.status !== 200 || consent.data?.status !== "accepted") {
-    throw new Error(`consent falló: ${JSON.stringify(consent)}`);
-  }
-  console.log("   ✓ consentimiento registrado:", consent.data.status);
+  console.log("8) guardian-consent correcto (requiere admin para el vínculo; se corre tras el login admin)…");
+  let guardianLinkId = null;
 
   // ---- Funciones de administración (requieren ADMIN_PASSWORD) ----
   if (process.env.ADMIN_PASSWORD) {
@@ -187,6 +179,41 @@ async function main() {
 
     console.log("9) Login del admin…");
     const adminToken = await login(adminEmail, process.env.ADMIN_PASSWORD);
+
+    console.log("8b) Vínculo temporal tutor1 → Alexa y consentimiento…");
+    const guardiansRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/guardians?select=id&email=eq.${encodeURIComponent(guardian.email)}`,
+      { headers: { apikey: ANON_KEY, Authorization: `Bearer ${adminToken}` } },
+    );
+    const guardians = await guardiansRes.json();
+    const guardianId = guardians?.[0]?.id;
+
+    if (guardianId) {
+      const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/student_guardians`, {
+        method: "POST",
+        headers: { ...authHeaders, Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ student_id: studentId, guardian_id: guardianId, can_receive_email: true }),
+      });
+      if (linkRes.ok) console.log("   (vínculo temporal creado)");
+    }
+
+    const consent = await callFunction("guardian-consent", guardianToken, {
+      student_id: studentId,
+      document_version: "v1-2026",
+      accepted: true,
+    });
+    if (consent.status !== 200 || consent.data?.status !== "accepted") {
+      throw new Error(`consent falló: ${JSON.stringify(consent)}`);
+    }
+    console.log("   ✓ consentimiento registrado:", consent.data.status);
+
+    if (guardianId) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/student_guardians?student_id=eq.${studentId}&guardian_id=eq.${guardianId}`,
+        { method: "DELETE", headers: { apikey: ANON_KEY, Authorization: `Bearer ${adminToken}` } },
+      );
+      console.log("   (vínculo temporal eliminado)");
+    }
 
     console.log("10) admin-create-teacher…");
     const created = await callFunction("admin-create-teacher", adminToken, {
