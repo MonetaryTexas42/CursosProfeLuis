@@ -81,6 +81,14 @@ app/
       panel del profesor.
 - [x] Avisos a tutores por WhatsApp (enlace `wa.me` + registro en
       `guardian_messages`; canal `whatsapp` habilitado en `0010`).
+- [x] Dashboard del staff (`0012`): tarjetas de estadísticas, actividad de
+      los últimos 7 días, recordatorios automáticos (consentimientos
+      pendientes, alumnos inactivos, asistencia sin registrar, unidades por
+      activar/cerrar) y feed de actividad reciente.
+- [x] Detalle por alumno (avance por unidad, intentos, precisión y actividad).
+- [x] Activación de unidades por tarjetas (activar con cierre opcional,
+      cerrar y reabrir desde la tarjeta).
+- [x] Modo claro/oscuro con persistencia.
 - [ ] Aviso de privacidad validado por un abogado antes del piloto real.
 - [ ] Mover el progreso histórico de localStorage a Supabase (opcional: el
       reproductor ya sincroniza en tiempo real; localStorage queda de respaldo).

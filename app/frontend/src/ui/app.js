@@ -101,9 +101,33 @@ function headerMarkup() {
         <span class="brand-mark">E</span>
         <span>ECOEMS <small>Plataforma</small></span>
       </a>
-      <span class="env-pill">${escapeHtml(appEnv)}</span>
+      <div class="top-actions">
+        <span class="env-pill">${escapeHtml(appEnv)}</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema" title="Cambiar entre modo oscuro y claro">🌓</button>
+      </div>
     </header>
   `;
+}
+
+function applyTheme() {
+  const saved = localStorage.getItem('ecoems_theme');
+  document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('ecoems_theme', next);
+  const button = appRoot.querySelector('#theme-toggle');
+  if (button) button.textContent = next === 'light' ? '☀️' : '🌙';
+}
+
+function wireThemeToggle() {
+  const button = appRoot.querySelector('#theme-toggle');
+  if (!button) return;
+  button.textContent = document.documentElement.getAttribute('data-theme') === 'light' ? '☀️' : '🌙';
+  button.addEventListener('click', toggleTheme);
 }
 
 function renderLoading() {
@@ -215,6 +239,7 @@ function renderLogin() {
   });
 
   appRoot.querySelector('#login-form').addEventListener('submit', handleLogin);
+  wireThemeToggle();
 }
 
 function renderChangePassword() {
@@ -250,6 +275,7 @@ function renderChangePassword() {
   `;
 
   appRoot.querySelector('#change-password-form').addEventListener('submit', changePassword);
+  wireThemeToggle();
 }
 
 async function changePassword(event) {
@@ -438,7 +464,7 @@ async function fetchDashboardData(profile) {
 async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
-    settingsRes, statsRes, unitsRes
+    settingsRes, statsRes, unitsRes, overviewRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -455,7 +481,8 @@ async function fetchAdminDashboard() {
     supabase.from('student_guardians').select('student_id,guardian_id'),
     supabase.from('settings').select('key,value,updated_at,updated_by').order('key'),
     supabase.rpc('app_admin_content_stats'),
-    supabase.from('units').select('id,subject_id,num,title,status').order('num')
+    supabase.from('units').select('id,subject_id,num,title,status').order('num'),
+    supabase.rpc('app_staff_dashboard')
   ]);
 
   assertNoError(yearRes.error);
@@ -467,6 +494,7 @@ async function fetchAdminDashboard() {
   assertNoError(settingsRes.error);
   assertNoError(statsRes.error);
   assertNoError(unitsRes.error);
+  assertNoError(overviewRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -510,6 +538,7 @@ async function fetchAdminDashboard() {
     settings: settingsRes.data || [],
     stats: statsRes.data || [],
     units,
+    overview: overviewRes.data || null,
     subjectNames: new Map(
       (statsRes.data || []).map((row) => [row.subject_id, row.subject_name])
     ),
@@ -560,7 +589,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, statsRes, linksRes, guardiansRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -579,6 +608,7 @@ async function fetchTeacherDashboard(teacherId) {
           .order('created_at', { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     supabase.from('subjects').select('id,name').order('name'),
+    supabase.rpc('app_staff_dashboard'),
     studentIds.length
       ? supabase
           .from('student_stats')
@@ -595,6 +625,7 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(versionsRes.error);
   assertNoError(assignmentsRes.error);
   assertNoError(subjectsRes.error);
+  assertNoError(overviewRes.error);
   assertNoError(statsRes.error);
   assertNoError(linksRes.error);
   assertNoError(guardiansRes.error);
@@ -635,6 +666,7 @@ async function fetchTeacherDashboard(teacherId) {
 
   return {
     kind: 'teacher',
+    overview: overviewRes.data || null,
     groups: groups.map((group) => ({
       ...group,
       students: students
@@ -879,9 +911,9 @@ function adminDashboardMarkup(data) {
 }
 
 function adminResumenMarkup(data) {
-  const activeStudents = data.students.filter((student) => student.status === 'active').length;
-
   return `
+    ${staffOverviewMarkup(data.overview)}
+
     <article class="card wide">
       <div class="card-heading">
         <div>
@@ -901,20 +933,6 @@ function adminResumenMarkup(data) {
           `).join('')}
         </ul>
       ` : '<p class="empty-state">Todavía no hay grupos. Crea el primero para iniciar el piloto.</p>'}
-    </article>
-
-    <article class="card wide">
-      <div class="card-heading">
-        <div>
-          <span class="card-label">Piloto en números</span>
-          <h2>Contenido y avance</h2>
-        </div>
-      </div>
-      <div class="row">
-        <span class="pill">${data.stats.filter((row) => row.subject_active).length} materias activas</span>
-        <span class="pill">${countLabel(data.units.filter((unit) => unit.status === 'published').length, 'unidad publicada', 'unidades publicadas')}</span>
-        <span class="pill">${countLabel(activeStudents, 'alumno activo', 'alumnos activos')}</span>
-      </div>
     </article>
   `;
 }
@@ -1143,19 +1161,213 @@ function projectUrlLabel() {
   return 'ioikcrdxneuydylyhvwi.supabase.co';
 }
 
-function teacherGroupMarkup(group, data) {
-  const groupAssignments = data.assignments.filter((assignment) => assignment.group_id === group.id);
-  const activeVersionIds = new Set(
-    groupAssignments
-      .filter((assignment) => assignment.status === 'active')
-      .map((assignment) => assignment.unit_version_id)
-  );
-  const available = data.publishedUnits.flatMap((unit) =>
-    unit.versions
-      .filter((version) => !activeVersionIds.has(version.id))
-      .map((version) => ({ unit, version }))
-  );
+function formatDayShort(iso) {
+  if (!iso) return '';
+  const date = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' });
+}
 
+function formatRelative(iso) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 60) return 'ahora';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return 'ayer';
+  if (days < 30) return `hace ${days} días`;
+  return date.toLocaleDateString('es-MX');
+}
+
+function attentionMarkup(attention) {
+  const items = [];
+  const consent = attention?.pending_consent || [];
+  const inactive = attention?.inactive_students || [];
+  const ending = attention?.assignments_ending_soon || [];
+
+  if (consent.length) {
+    items.push(`
+      <div class="attention-item">
+        <span class="dot dot-amber"></span>
+        <div><strong>${consent.length} ${consent.length === 1 ? 'tutor sin consentimiento' : 'tutores sin consentimiento'}</strong>
+        <div class="muted"><small>${consent.slice(0, 4).map((item) => `${escapeHtml(item.student)} · ${escapeHtml(item.guardian)}`).join(' · ')}${consent.length > 4 ? '…' : ''}</small></div></div>
+      </div>
+    `);
+  }
+
+  for (const item of inactive.slice(0, 3)) {
+    items.push(`
+      <div class="attention-item">
+        <span class="dot dot-red"></span>
+        <div><strong>${escapeHtml(item.name || item.student)}</strong> sin actividad reciente
+        <div class="muted"><small>${item.days ? `última actividad hace ${item.days} días` : 'sin actividad registrada'} · ${escapeHtml(item.student)}</small></div></div>
+      </div>
+    `);
+  }
+  if (inactive.length > 3) {
+    items.push(`
+      <div class="attention-item"><span class="dot dot-red"></span>
+      <div><strong>${inactive.length - 3} alumnos más</strong> sin actividad reciente.</div></div>
+    `);
+  }
+
+  if (attention?.attendance_missing_today) {
+    items.push(`
+      <div class="attention-item"><span class="dot dot-blue"></span>
+      <div><strong>Asistencia de hoy sin registrar</strong>
+      <div class="muted"><small>Pásala en la sección de asistencia del grupo.</small></div></div></div>
+    `);
+  }
+
+  if (attention?.units_without_assignments > 0) {
+    items.push(`
+      <div class="attention-item"><span class="dot dot-blue"></span>
+      <div><strong>${attention.units_without_assignments} unidades publicadas sin activar</strong>
+      <div class="muted"><small>Actívalas desde la sección de unidades del grupo.</small></div></div></div>
+    `);
+  }
+
+  for (const item of ending.slice(0, 3)) {
+    items.push(`
+      <div class="attention-item"><span class="dot dot-amber"></span>
+      <div><strong>«${escapeHtml(item.unit)}» por cerrar</strong>
+      <div class="muted"><small>${escapeHtml(item.group)} · cierra ${escapeHtml(formatDate(String(item.closes).slice(0, 10)))}</small></div></div>
+    `);
+  }
+
+  if (!items.length) {
+    return '<div class="attention-item"><span class="dot dot-green"></span><div><strong>Todo en orden 🎉</strong><div class="muted"><small>No hay pendientes que requieran tu atención.</small></div></div></div>';
+  }
+
+  return items.join('');
+}
+
+function recentFeedMarkup(recent) {
+  const list = Array.isArray(recent) ? recent : [];
+  if (!list.length) {
+    return '<p class="empty-state">Todavía no hay actividad reciente. Cuando los alumnos trabajen, aparecerá aquí.</p>';
+  }
+
+  return `
+    <div class="feed-list">
+      ${list.map((item) => `
+        <div class="feed-item">
+          <span class="feed-emoji">${item.kind === 'completed' ? '🏆' : '✏️'}</span>
+          <div>
+            <strong>${escapeHtml(item.name || item.student)}</strong> ${escapeHtml(item.text)}
+            <div><small>${escapeHtml(item.student)} · ${escapeHtml(formatRelative(item.ts))}</small></div>
+          </div>
+          <span class="${item.ok ? 'feed-ok' : 'feed-bad'}">${item.ok ? '✓' : '✗'}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function staffOverviewMarkup(overview) {
+  if (!overview) {
+    return '<article class="card wide"><p class="empty-state">Cargando resumen…</p></article>';
+  }
+
+  const counts = overview.counts || {};
+  const activity = overview.activity || {};
+  const series = Array.isArray(activity.series) ? activity.series : [];
+  const max = Math.max(1, ...series.map((day) => Math.max(day.attempts || 0, day.completions || 0)));
+
+  return `
+    <div class="dash-stats">
+      <div class="stat-card stat-blue"><span class="stat-num">${counts.students ?? 0}</span><span class="stat-label">Alumnos activos</span></div>
+      <div class="stat-card stat-violet"><span class="stat-num">${counts.published_units ?? 0}</span><span class="stat-label">Unidades publicadas</span></div>
+      <div class="stat-card stat-green"><span class="stat-num">${activity.today_attempts ?? 0}</span><span class="stat-label">Intentos hoy</span></div>
+      <div class="stat-card stat-amber"><span class="stat-num">${activity.week_completions ?? 0}</span><span class="stat-label">Completadas · 7 días</span></div>
+      <div class="stat-card stat-pink"><span class="stat-num">${activity.xp_total ?? 0}</span><span class="stat-label">XP del grupo</span></div>
+    </div>
+
+    <div class="dash-grid">
+      <article class="card wide">
+        <div class="card-heading">
+          <div><span class="card-label">Actividad</span><h2>Últimos 7 días</h2></div>
+          <span class="pill pill-blue">${activity.week_attempts ?? 0} intentos</span>
+        </div>
+        <div class="mini-chart">
+          ${series.map((day) => `
+            <div class="bar-wrap">
+              <span class="bar-count">${day.attempts || 0}</span>
+              <div class="bar" style="height:${Math.max(3, Math.round(((day.attempts || 0) / max) * 100))}%"></div>
+              <span class="bar-label">${escapeHtml(formatDayShort(day.day))}</span>
+            </div>
+          `).join('')}
+        </div>
+      </article>
+
+      <article class="card wide">
+        <div class="card-heading">
+          <div><span class="card-label">Recordatorios</span><h2>Requiere tu atención</h2></div>
+        </div>
+        <div class="attention-list">${attentionMarkup(overview.attention)}</div>
+      </article>
+    </div>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div><span class="card-label">En vivo</span><h2>Actividad reciente</h2></div>
+      </div>
+      ${recentFeedMarkup(overview.recent)}
+    </article>
+  `;
+}
+
+function studentDetailMarkup(detail) {
+  if (!detail) return '<p class="empty-state">No se pudo cargar el detalle del alumno.</p>';
+
+  const stats = detail.stats || {};
+  const units = Array.isArray(detail.units) ? detail.units : [];
+  const recent = Array.isArray(detail.recent) ? detail.recent : [];
+
+  return `
+    <div class="detail-head">
+      <span class="pill pill-green">⚡ ${stats.xp ?? 0} XP</span>
+      <span class="pill pill-amber">🔥 racha ${stats.streak ?? 0}</span>
+      <span class="pill pill-blue">${stats.units ?? 0} unidades completadas</span>
+      ${stats.accuracy != null ? `<span class="pill pill-violet">🎯 ${Math.round(stats.accuracy)}% precisión</span>` : ''}
+      <span class="pill">🕐 ${stats.last ? `última actividad ${escapeHtml(formatRelative(stats.last))}` : 'sin actividad'}</span>
+    </div>
+
+    ${units.length ? `
+      <span class="card-label">Unidades asignadas</span>
+      ${units.map((unit) => `
+        <div class="progress-row">
+          <div>
+            <strong>${escapeHtml(unit.unit)}</strong>
+            <div class="muted"><small>${escapeHtml(unit.subject)} · ${unit.attempts} intentos${unit.accuracy != null ? ` · ${Math.round(unit.accuracy)}% precisión` : ''}</small></div>
+          </div>
+          <span class="pill ${unit.status === 'completed' ? 'success' : unit.status === 'in_progress' ? 'pill-blue' : ''}">${escapeHtml(progressLabels[unit.status] || unit.status)}</span>
+          ${unit.last ? `<span class="muted"><small>${escapeHtml(formatRelative(unit.last))}</small></span>` : ''}
+        </div>
+      `).join('')}
+    ` : '<p class="empty-state">Este alumno no tiene unidades asignadas.</p>'}
+
+    ${recent.length ? `
+      <span class="card-label">Última actividad</span>
+      <div class="feed-list">
+        ${recent.slice(0, 6).map((item) => `
+          <div class="feed-item">
+            <span class="feed-emoji">${item.kind === 'quiz' ? '🧠' : '✏️'}</span>
+            <div><strong>${escapeHtml(item.text)}</strong><div><small>${escapeHtml(formatRelative(item.ts))}</small></div></div>
+            <span class="${item.ok ? 'feed-ok' : 'feed-bad'}">${item.ok ? '✓' : '✗'}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  `;
+}
+
+function teacherGroupMarkup(group, data) {
   return `
     <div class="teacher-group">
       <p>${escapeHtml([group.level, group.schedule].filter(Boolean).join(' · ') || 'Sin horario')}</p>
@@ -1170,6 +1382,7 @@ function teacherGroupMarkup(group, data) {
                 <small>${escapeHtml(student.student_code)}${student.stats ? ` · ⚡ ${student.stats.xp_total} XP · 🔥 racha ${student.stats.current_streak} · ${student.stats.units_completed} unidades` : ''}</small>
               </div>
               <div class="row">
+                <button class="btn ghost" data-student-detail="${escapeHtml(student.id)}">Detalle</button>
                 <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
                 <button class="btn ghost" data-advise-student="${escapeHtml(student.id)}" data-advise-name="${escapeHtml(student.full_name)}">Avisar tutor</button>
               </div>
@@ -1197,6 +1410,7 @@ function teacherGroupMarkup(group, data) {
               </form>
               <div class="invite-result hidden" data-invite-result="${escapeHtml(student.id)}"></div>
               <div class="advise-form hidden" data-advise-form="${escapeHtml(student.id)}"></div>
+              <div class="student-detail hidden" data-student-detail-box="${escapeHtml(student.id)}"></div>
             </li>
           `).join('')}
         </ul>
@@ -1236,42 +1450,80 @@ function teacherGroupMarkup(group, data) {
       <div class="attendance-area hidden" data-attendance-area="${escapeHtml(group.id)}"></div>
 
       <span class="card-label">Unidades del grupo</span>
-      ${groupAssignments.length ? `
-        <ul class="data-list">
-          ${groupAssignments.map((assignment) => `
-            <li>
-              <div>
-                <strong>${escapeHtml(assignment.unit_title)}</strong>
-                <small>${escapeHtml(assignmentStatusLabels[assignment.status] || assignment.status)}${assignment.opens_at ? ` · ${escapeHtml(formatDate(assignment.opens_at.slice(0, 10)))}` : ''}</small>
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      ` : '<p class="empty-state">Este grupo todavía no tiene unidades.</p>'}
-
-      ${available.length ? `
-        <form class="form activation-form" data-activate-group="${escapeHtml(group.id)}">
-          <label class="field">
-            <span>Activar una unidad publicada</span>
-            <select name="version" required>
-              ${available.map(({ unit, version }) => `
-                <option value="${escapeHtml(unit.id)}:${escapeHtml(version.id)}">${escapeHtml(unit.title)} · v${version.version}</option>
-              `).join('')}
-            </select>
-          </label>
-          <button class="btn primary" type="submit">Activar ahora</button>
-        </form>
-      ` : data.publishedUnits.length
-        ? '<p class="empty-state">Todas las versiones publicadas ya están activas en este grupo.</p>'
-        : '<p class="empty-state">Aún no hay unidades publicadas. Primero carga contenido.</p>'}
+      <div data-group-id="${escapeHtml(group.id)}">
+        ${unitActivationMarkup(group, data)}
+      </div>
     </div>
   `;
+}
+
+function unitActivationMarkup(group, data) {
+  const groupAssignments = data.assignments.filter((assignment) => assignment.group_id === group.id);
+  const assignmentByUnit = new Map(groupAssignments.map((assignment) => [assignment.unit_id, assignment]));
+
+  const bySubject = new Map();
+  for (const unit of data.publishedUnits) {
+    const subjectKey = unit.subject_name || unit.subject_id || 'Materia';
+    if (!bySubject.has(subjectKey)) bySubject.set(subjectKey, []);
+    bySubject.get(subjectKey).push(unit);
+  }
+
+  if (!bySubject.size) {
+    return '<p class="empty-state">Aún no hay unidades publicadas. Primero carga contenido.</p>';
+  }
+
+  return [...bySubject.entries()].map(([subjectName, units]) => `
+    <div class="subject-block">
+      <div class="subject-head">📘 ${escapeHtml(subjectName)}</div>
+      ${units.map((unit) => {
+        const assignment = assignmentByUnit.get(unit.id);
+        const version = unit.versions[0];
+
+        let actions = '';
+        let meta = '';
+
+        if (!assignment || assignment.status === 'draft') {
+          meta = '<span class="pill">Sin activar</span>';
+          actions = version ? `
+            <input type="date" data-closes-date="${escapeHtml(unit.id)}" aria-label="Fecha de cierre opcional" title="Fecha de cierre opcional">
+            <button class="btn-mini primary" data-activate-unit="${escapeHtml(unit.id)}:${escapeHtml(version.id)}">Activar</button>
+          ` : '<span class="muted"><small>Sin versión publicada</small></span>';
+        } else if (assignment.status === 'active') {
+          meta = `
+            <span class="pill pill-green">Activa</span>
+            ${assignment.opens_at ? `<span>desde ${escapeHtml(formatDate(String(assignment.opens_at).slice(0, 10)))}</span>` : ''}
+            ${assignment.closes_at ? `<span>hasta ${escapeHtml(formatDate(String(assignment.closes_at).slice(0, 10)))}</span>` : '<span>sin cierre</span>'}
+          `;
+          actions = `<button class="btn-mini danger" data-close-assignment="${escapeHtml(assignment.id)}">Cerrar</button>`;
+        } else {
+          meta = `
+            <span class="pill pill-red">Cerrada</span>
+            ${assignment.closes_at ? `<span>hasta ${escapeHtml(formatDate(String(assignment.closes_at).slice(0, 10)))}</span>` : ''}
+          `;
+          actions = `<button class="btn-mini" data-reopen-assignment="${escapeHtml(assignment.id)}">Reabrir</button>`;
+        }
+
+        return `
+          <div class="unit-card">
+            <div>
+              <strong>${escapeHtml(unit.title)}</strong>
+              <div class="muted"><small>${unit.estimated_minutes ? `${unit.estimated_minutes} min` : ''}${version ? ` · v${version.version}` : ''}</small></div>
+            </div>
+            <div class="unit-actions">${actions}</div>
+            <div class="unit-meta">${meta}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `).join('');
 }
 
 function teacherDashboardMarkup(data) {
   const totalStudents = data.groups.reduce((total, group) => total + group.students.length, 0);
 
   return `
+    ${staffOverviewMarkup(data.overview)}
+
     <article class="card wide">
       <div class="card-heading">
         <div>
@@ -1784,6 +2036,8 @@ function renderUnit() {
       }
     });
   });
+
+  wireThemeToggle();
 }
 
 function closeUnit() {
@@ -1948,46 +2202,102 @@ async function completeUnit() {
   renderUnit();
 }
 
-async function activateUnit(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const groupId = form.dataset.activateGroup;
-  const value = String(new FormData(form).get('version') || '');
-  const [unitId, versionId] = value.split(':');
+async function activateUnitCard(button) {
+  const [unitId, versionId] = String(button.dataset.activateUnit || '').split(':');
+  if (!unitId || !versionId || button.disabled) return;
 
-  if (!groupId || !unitId || !versionId) {
-    setError('Selecciona una unidad publicada.');
-    renderDashboard();
-    return;
-  }
+  const container = button.closest('[data-group-id]');
+  const groupId = container?.dataset.groupId;
+  if (!groupId) return;
 
-  const button = form.querySelector('button[type="submit"]');
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Activando…';
-  }
+  const dateInput = container.querySelector(`[data-closes-date="${unitId}"]`);
+  const closesDate = dateInput?.value || '';
+  const closesAt = closesDate ? `${closesDate}T23:59:59` : null;
 
   state.error = '';
   state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Activando…';
 
-  const { error } = await supabase.from('unit_assignments').insert({
-    group_id: groupId,
-    unit_id: unitId,
-    unit_version_id: versionId,
-    status: 'active',
-    visible: true,
-    opens_at: new Date().toISOString(),
-    created_by: state.profile.id
-  });
+  try {
+    const { error } = await supabase.from('unit_assignments').insert({
+      group_id: groupId,
+      unit_id: unitId,
+      unit_version_id: versionId,
+      status: 'active',
+      visible: true,
+      opens_at: new Date().toISOString(),
+      closes_at: closesAt,
+      created_by: state.profile?.id ?? null
+    });
 
-  if (error) {
-    setError('No se pudo activar la unidad. Revisa la conexión e intenta de nuevo.');
-    renderDashboard();
+    if (error) throw error;
+
+    setNotice(closesAt ? 'Unidad activada con fecha de cierre.' : 'Unidad activada. Quedará abierta hasta que la cierres.');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo activar la unidad.');
+    button.disabled = false;
+    button.textContent = 'Activar';
+  }
+}
+
+async function setAssignmentStatus(button, status) {
+  const assignmentId = button.dataset.closeAssignment || button.dataset.reopenAssignment;
+  if (!assignmentId || button.disabled) return;
+
+  const isReopen = status === 'active';
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = isReopen ? 'Reabriendo…' : 'Cerrando…';
+
+  try {
+    const { error } = await supabase
+      .from('unit_assignments')
+      .update({
+        status,
+        ...(isReopen ? { closes_at: null, opens_at: new Date().toISOString() } : {})
+      })
+      .eq('id', assignmentId);
+
+    if (error) throw error;
+
+    setNotice(isReopen ? 'Unidad reabierta. Los alumnos pueden continuar.' : 'Unidad cerrada. El progreso de los alumnos se conserva.');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || `No se pudo ${isReopen ? 'reabrir' : 'cerrar'} la unidad.`);
+    button.disabled = false;
+    button.textContent = isReopen ? 'Reabrir' : 'Cerrar';
+  }
+}
+
+async function openStudentDetail(studentId, button) {
+  const box = appRoot.querySelector(`[data-student-detail-box="${studentId}"]`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) {
+    box.classList.add('hidden');
     return;
   }
 
-  setNotice('Unidad activada para el grupo.');
-  await loadDashboard(state.profile);
+  if (!box.dataset.loaded) {
+    box.classList.remove('hidden');
+    box.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
+
+    const { data, error } = await supabase.rpc('app_student_detail', { p_student_id: studentId });
+
+    if (error || !data) {
+      box.innerHTML = `<p class="empty-state">No se pudo cargar el detalle: ${escapeHtml(error?.message || 'error')}</p>`;
+      return;
+    }
+
+    box.innerHTML = studentDetailMarkup(data);
+    box.dataset.loaded = '1';
+  } else {
+    box.classList.remove('hidden');
+  }
 }
 
 function renderDashboard() {
@@ -1997,10 +2307,6 @@ function renderDashboard() {
 
   appRoot.querySelectorAll('[data-open-unit]').forEach((button) => {
     button.addEventListener('click', () => openUnit(button.dataset.openUnit));
-  });
-
-  appRoot.querySelectorAll('[data-activate-group]').forEach((form) => {
-    form.addEventListener('submit', activateUnit);
   });
 
   appRoot.querySelectorAll('[data-consent-student]').forEach((button) => {
@@ -2078,6 +2384,24 @@ function renderDashboard() {
       if (openButton) openButton.style.display = '';
     });
   });
+
+  appRoot.querySelectorAll('[data-student-detail]').forEach((button) => {
+    button.addEventListener('click', () => openStudentDetail(button.dataset.studentDetail, button));
+  });
+
+  appRoot.querySelectorAll('[data-activate-unit]').forEach((button) => {
+    button.addEventListener('click', () => activateUnitCard(button));
+  });
+
+  appRoot.querySelectorAll('[data-close-assignment]').forEach((button) => {
+    button.addEventListener('click', () => setAssignmentStatus(button, 'closed'));
+  });
+
+  appRoot.querySelectorAll('[data-reopen-assignment]').forEach((button) => {
+    button.addEventListener('click', () => setAssignmentStatus(button, 'active'));
+  });
+
+  wireThemeToggle();
 }
 
 async function createTeacher(event) {
@@ -2616,6 +2940,8 @@ async function signOut() {
 export function initApp(root) {
   if (!root) return;
   appRoot = root;
+
+  applyTheme();
 
   if (!isConfigured) {
     renderConfig();
