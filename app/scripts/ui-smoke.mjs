@@ -311,6 +311,13 @@ async function runAdminFlow(pageEval, waitFor) {
 
   await waitFor(`document.body.innerText.includes('Hola,')`, "panel del admin");
   await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 7`, "barra lateral del admin");
+
+  const adminTopHeaders = await pageEval(`document.querySelectorAll('header.top').length`);
+  if (adminTopHeaders !== 0) {
+    throw new Error(`Hay ${adminTopHeaders} cabecera(s) duplicada(s) en el panel del admin`);
+  }
+  await waitFor(`document.querySelector('.staff-app .staff-brand')`, "marca dentro de la barra lateral");
+  console.log("  ✓ una sola página: sin cabeceras duplicadas y marca en la barra lateral");
   console.log("  ✓ barra lateral con 7 secciones");
 
   await waitFor(`document.querySelectorAll('.stat-card').length >= 5`, "dashboard");
@@ -367,6 +374,13 @@ async function runTeacherFlow(pageEval, waitFor) {
 
   await waitFor(`document.body.innerText.includes('Hola,')`, "panel del profesor");
   await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 5`, "barra lateral");
+
+  const topHeaders = await pageEval(`document.querySelectorAll('header.top').length`);
+  if (topHeaders !== 0) {
+    throw new Error(`Hay ${topHeaders} cabecera(s) duplicada(s); el panel debe tener una sola`);
+  }
+  await waitFor(`document.querySelector('.staff-app .staff-brand')`, "marca dentro de la barra lateral");
+  console.log("  ✓ una sola página: sin cabeceras duplicadas y marca en la barra lateral");
 
   console.log(`  ✓ barra lateral con ${await pageEval(`document.querySelectorAll('[data-staff-tab]').length`)} secciones`);
 

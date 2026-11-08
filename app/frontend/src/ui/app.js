@@ -1254,15 +1254,11 @@ function recentFeedMarkup(recent) {
   `;
 }
 
-function staffOverviewMarkup(overview) {
-  if (!overview) {
-    return '<article class="card wide"><p class="empty-state">Cargando resumen…</p></article>';
-  }
+function staffStatsMarkup(overview) {
+  if (!overview) return '';
 
   const counts = overview.counts || {};
   const activity = overview.activity || {};
-  const series = Array.isArray(activity.series) ? activity.series : [];
-  const max = Math.max(1, ...series.map((day) => Math.max(day.attempts || 0, day.completions || 0)));
 
   return `
     <div class="dash-stats">
@@ -1272,7 +1268,17 @@ function staffOverviewMarkup(overview) {
       <div class="stat-card stat-amber"><span class="stat-num">${activity.week_completions ?? 0}</span><span class="stat-label">Completadas · 7 días</span></div>
       <div class="stat-card stat-pink"><span class="stat-num">${activity.xp_total ?? 0}</span><span class="stat-label">XP del grupo</span></div>
     </div>
+  `;
+}
 
+function staffActivityPanelsMarkup(overview) {
+  if (!overview) return '';
+
+  const activity = overview.activity || {};
+  const series = Array.isArray(activity.series) ? activity.series : [];
+  const max = Math.max(1, ...series.map((day) => Math.max(day.attempts || 0, day.completions || 0)));
+
+  return `
     <div class="dash-grid">
       <article class="card wide">
         <div class="card-heading">
@@ -1297,7 +1303,17 @@ function staffOverviewMarkup(overview) {
         <div class="attention-list">${attentionMarkup(overview.attention)}</div>
       </article>
     </div>
+  `;
+}
 
+function staffOverviewMarkup(overview) {
+  if (!overview) {
+    return '<article class="card wide"><p class="empty-state">Cargando resumen…</p></article>';
+  }
+
+  return `
+    ${staffStatsMarkup(overview)}
+    ${staffActivityPanelsMarkup(overview)}
     <article class="card wide">
       <div class="card-heading">
         <div><span class="card-label">En vivo</span><h2>Actividad reciente</h2></div>
@@ -1504,40 +1520,66 @@ function unitActivationMarkup(group, data) {
 }
 
 function staffShellMarkup(data) {
-  const isAdmin = data.kind === 'admin';
+  const isAdmin = state.profile?.role === 'admin';
   const tab = state.staffTab || 'dashboard';
 
   const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tutores'];
   const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'usuarios', 'contenido', 'configuracion'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
-  const students = data.students || [];
-  const totalStudents = students.length;
-
   return `
-    <div class="shell">
-      ${headerMarkup()}
-      <main class="dashboard staff-layout">
-        <aside class="staff-sidebar" aria-label="Secciones">
+    <div class="staff-app">
+      <aside class="staff-sidebar" aria-label="Secciones">
+        <a class="brand staff-brand" href="/" aria-label="ECOEMS inicio">
+          <span class="brand-mark">E</span>
+          <span>ECOEMS <small>Plataforma</small></span>
+        </a>
+
+        <nav class="staff-nav">
           <span class="side-label">${isAdmin ? 'Administración' : 'Mi espacio'}</span>
           ${tabs.map((key) => `
             <button class="staff-tab-btn ${tab === key ? 'active' : ''}" data-staff-tab="${key}">
               ${escapeHtml(staffTabLabels[key])}
             </button>
           `).join('')}
-          <span class="side-label">Cuenta</span>
-          <button class="staff-tab-btn" id="logout-btn">🚪 Cerrar sesión</button>
-        </aside>
+        </nav>
 
-        <section class="staff-content">
+        <div class="staff-sidebar-footer">
+          <button class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema" title="Cambiar entre modo oscuro y claro">🌓</button>
+          <button class="staff-tab-btn" id="logout-btn">🚪 Cerrar sesión</button>
+        </div>
+      </aside>
+
+      <div class="staff-main">
+        <main class="staff-content">
+          ${alertMarkup()}
           ${staffTabContentMarkup(data, tab)}
-        </section>
-      </main>
+        </main>
+      </div>
     </div>
   `;
 }
 
 function staffTabContentMarkup(data, tab) {
+  if (!data) {
+    if (state.dashboardError) {
+      return `
+        <article class="card wide">
+          <span class="card-label">Panel</span>
+          <h2>No se pudo cargar</h2>
+          <p>${escapeHtml(state.dashboardError)}</p>
+        </article>
+      `;
+    }
+    return `
+      <article class="card wide">
+        <span class="card-label">Panel</span>
+        <h2>Cargando datos…</h2>
+        <p>Estamos consultando tu grupo y tu avance.</p>
+      </article>
+    `;
+  }
+
   if (tab === 'alumnos') return staffStudentsTabMarkup(data);
   if (tab === 'materias') return staffSubjectsTabMarkup(data);
   if (tab === 'asistencia') return staffAttendanceTabMarkup(data);
@@ -1548,11 +1590,41 @@ function staffTabContentMarkup(data, tab) {
   return staffDashboardTabMarkup(data);
 }
 
+function staffGreetingMarkup() {
+  const profile = state.profile;
+  if (!profile) return '';
+
+  const role = roleLabels[profile.role] || 'Usuario';
+  const name = profile.full_name || profile.username || profile.email || 'Sin nombre';
+  const identifier = profile.username
+    ? `@${profile.username}`
+    : profile.email || 'Sin identificador';
+
+  return `
+    <section class="welcome">
+      <div>
+        <span class="kicker">Sesión activa</span>
+        <h1>Hola, ${escapeHtml(name.split(' ')[0])} 👋</h1>
+        <p class="muted">${escapeHtml(roleCopy[profile.role] || 'Tu cuenta está conectada.')}</p>
+      </div>
+      <div class="identity">
+        <span class="avatar">${escapeHtml(name.slice(0, 1).toUpperCase())}</span>
+        <div>
+          <strong>${escapeHtml(name)}</strong>
+          <small>${escapeHtml(role)} · ${escapeHtml(identifier)}</small>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function staffDashboardTabMarkup(data) {
   const scores = data.overview?.scores || {};
   const students = Array.isArray(scores.students) ? scores.students : [];
 
   return `
+    ${staffGreetingMarkup()}
+
     <div class="section-title">
       <div>
         <span class="card-label">Panel de control</span>
@@ -1561,31 +1633,41 @@ function staffDashboardTabMarkup(data) {
       <span class="pill">${escapeHtml(data.kind === 'admin' ? 'Vista global' : 'Tu grupo')}</span>
     </div>
 
-    ${staffOverviewMarkup(data.overview)}
+    ${staffStatsMarkup(data.overview)}
+    ${staffActivityPanelsMarkup(data.overview)}
 
-    <article class="card wide">
-      <div class="card-heading">
-        <div>
-          <span class="card-label">Score del grupo</span>
-          <h2>${scores.group ?? 0} / 100</h2>
+    <div class="dash-grid">
+      <article class="card wide">
+        <div class="card-heading">
+          <div>
+            <span class="card-label">Score del grupo</span>
+            <h2>${scores.group ?? 0} / 100</h2>
+          </div>
         </div>
-      </div>
-      <p class="muted">Promedio del grupo: 50 % avance de unidades + 50 % precisión en ejercicios.</p>
-      ${students.length ? `
-        <div class="feed-list">
-          ${students.map((student) => `
-            <div class="feed-item">
-              <span class="feed-emoji">${student.score >= 80 ? '🏆' : student.score >= 50 ? '📈' : '🌱'}</span>
-              <div>
-                <strong>${escapeHtml(student.name)}</strong>
-                <div><small>${escapeHtml(student.code)} · ⚡ ${student.xp} XP · 📚 ${student.units_done}/${student.units_total} unidades · ${student.accuracy != null ? `🎯 ${Math.round(student.accuracy)}%` : 'sin precisión'} · faltas: ${student.absences}</small></div>
+        <p class="muted">Promedio del grupo: 50 % avance de unidades + 50 % precisión en ejercicios.</p>
+        ${students.length ? `
+          <div class="feed-list">
+            ${students.map((student) => `
+              <div class="feed-item">
+                <span class="feed-emoji">${student.score >= 80 ? '🏆' : student.score >= 50 ? '📈' : '🌱'}</span>
+                <div>
+                  <strong>${escapeHtml(student.name)}</strong>
+                  <div><small>${escapeHtml(student.code)} · ⚡ ${student.xp} XP · 📚 ${student.units_done}/${student.units_total} unidades · ${student.accuracy != null ? `🎯 ${Math.round(student.accuracy)}%` : 'sin precisión'} · faltas: ${student.absences}</small></div>
+                </div>
+                <span class="score-num">${student.score}</span>
               </div>
-              <span class="score-num">${student.score}</span>
-            </div>
-          `).join('')}
+            `).join('')}
+          </div>
+        ` : '<p class="empty-state">Aún no hay alumnos en el grupo.</p>'}
+      </article>
+
+      <article class="card wide">
+        <div class="card-heading">
+          <div><span class="card-label">En vivo</span><h2>Actividad reciente</h2></div>
         </div>
-      ` : '<p class="empty-state">Aún no hay alumnos en el grupo.</p>'}
-    </article>
+        ${recentFeedMarkup(data.overview?.recent)}
+      </article>
+    </div>
   `;
 }
 
@@ -2043,6 +2125,12 @@ function dashboardDataMarkup(profile) {
 }
 
 function dashboardMarkup(profile) {
+  // Para el personal, el panel del staff ES el dashboard completo:
+  // un solo header, la barra lateral de página y el contenido por sección.
+  if (profile.role === 'admin' || profile.role === 'teacher') {
+    return staffShellMarkup(state.dashboard);
+  }
+
   const role = roleLabels[profile.role] || 'Usuario';
   const name = profile.full_name || profile.username || profile.email || 'Sin nombre';
   const identifier = profile.username

@@ -1217,23 +1217,65 @@ pre code {
   gap: 8px;
 }
 
-/* ---------------- Layout del staff (sidebar) ---------------- */
-.staff-layout {
+/* ---------------- Layout del staff: una sola página con sidebar ---------------- */
+.staff-app {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100vh;
 }
 
 .staff-sidebar {
   position: sticky;
-  top: 18px;
+  top: 0;
+  height: 100vh;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 16px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+
+.staff-brand {
+  padding: 4px 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.staff-nav {
   display: grid;
   gap: 4px;
-  padding: 12px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  border: 1px solid var(--line);
+  align-content: start;
+  overflow-y: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.staff-sidebar-footer {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.staff-sidebar-footer .theme-toggle {
+  justify-self: start;
+}
+
+.staff-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.staff-content {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 32px 56px;
+  display: grid;
+  gap: 20px;
+  align-content: start;
 }
 
 .staff-sidebar .side-label {
@@ -1491,25 +1533,14 @@ pre code {
   resize: vertical;
 }
 
-/* ---------------- Diseño responsivo del staff (pasada 2) ---------------- */
-.staff-layout {
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 24px;
-}
-
-.staff-sidebar {
-  gap: 5px;
-  padding: 14px;
+/* ---------------- Ajustes finos del staff ---------------- */
+.staff-content .welcome {
+  margin-bottom: 0;
 }
 
 .staff-tab-btn {
   padding: 11px 14px;
   font-size: 14px;
-}
-
-.staff-content {
-  gap: 18px;
-  min-width: 0;
 }
 
 .dash-stats {
@@ -1518,7 +1549,7 @@ pre code {
 }
 
 .dash-grid {
-  gap: 18px;
+  gap: 20px;
 }
 
 .student-cards {
@@ -1547,20 +1578,37 @@ pre code {
   gap: 10px 14px;
 }
 
-/* Tablet: la barra lateral se vuelve pestañas horizontales arriba */
+/* Tablet: la barra lateral pasa a ser una barra superior */
 @media (max-width: 1040px) {
-  .staff-layout {
+  .staff-app {
     grid-template-columns: 1fr;
-    gap: 16px;
   }
 
   .staff-sidebar {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .staff-brand {
+    padding: 0 12px 0 0;
+    border-bottom: none;
+    border-right: 1px solid var(--line);
+    flex: none;
+  }
+
+  .staff-nav {
     display: flex;
     gap: 6px;
     overflow-x: auto;
-    padding: 10px;
-    border-radius: 14px;
+    padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1575,15 +1623,60 @@ pre code {
     font-size: 13px;
   }
 
+  .staff-sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 0;
+    border-top: none;
+    flex: none;
+  }
+
+  .staff-sidebar-footer .staff-tab-btn {
+    padding: 9px 12px;
+  }
+
+  .staff-content {
+    padding: 22px 22px 48px;
+  }
+
   .dash-grid {
     grid-template-columns: 1fr;
   }
 }
 
-/* Móvil: detalles compactos */
+/* Móvil: una columna, detalles compactos */
 @media (max-width: 640px) {
   .shell {
     width: calc(100% - 20px);
+  }
+
+  .staff-sidebar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .staff-brand {
+    padding-right: 10px;
+  }
+
+  .staff-brand span:last-child {
+    display: none;
+  }
+
+  .staff-sidebar-footer .staff-tab-btn {
+    font-size: 0;
+    padding: 9px 10px;
+  }
+
+  .staff-sidebar-footer .staff-tab-btn::before {
+    content: "🚪";
+    font-size: 15px;
+  }
+
+  .staff-content {
+    padding: 16px 14px 40px;
+    gap: 14px;
   }
 
   .board-unit {
