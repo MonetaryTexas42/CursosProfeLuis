@@ -310,15 +310,16 @@ async function runAdminFlow(pageEval, waitFor) {
   })()`);
 
   await waitFor(`document.body.innerText.includes('Hola,')`, "panel del admin");
-  await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 7`, "barra lateral del admin");
+  await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 9`, "barra lateral del admin");
 
   const adminTopHeaders = await pageEval(`document.querySelectorAll('header.top').length`);
   if (adminTopHeaders !== 0) {
     throw new Error(`Hay ${adminTopHeaders} cabecera(s) duplicada(s) en el panel del admin`);
   }
   await waitFor(`document.querySelector('.staff-app .staff-brand')`, "marca dentro de la barra lateral");
+  const adminTabCount = await pageEval(`document.querySelectorAll('[data-staff-tab]').length`);
   console.log("  ✓ una sola página: sin cabeceras duplicadas y marca en la barra lateral");
-  console.log("  ✓ barra lateral con 7 secciones");
+  console.log(`  ✓ barra lateral con ${adminTabCount} secciones`);
 
   await waitFor(`document.querySelectorAll('.stat-card').length >= 5`, "dashboard");
   await waitFor(`document.body.innerText.toLowerCase().includes('score del grupo')`, "score del grupo");
@@ -335,6 +336,16 @@ async function runAdminFlow(pageEval, waitFor) {
   await waitFor(`document.querySelector('.board-subject')`, "materias");
   const subjects = await pageEval(`document.querySelectorAll('.board-subject').length`);
   console.log(`  ✓ ${subjects} materias con unidades y evaluaciones`);
+
+  console.log("Sección Tareas…");
+  await pageEval(`document.querySelector('[data-staff-tab="tareas"]').click(); true`);
+  await waitFor(`document.querySelector('#create-task-form')`, "formulario de tareas");
+  console.log("  ✓ tareas disponibles para el admin");
+
+  console.log("Sección Actividad…");
+  await pageEval(`document.querySelector('[data-staff-tab="actividad"]').click(); true`);
+  await waitFor(`document.querySelector('[data-activity-filter]')`, "registro de actividad");
+  console.log("  ✓ registro de actividad disponible para el admin");
 
   console.log("Sección Usuarios…");
   await pageEval(`document.querySelector('[data-staff-tab="usuarios"]').click(); true`);
@@ -373,7 +384,7 @@ async function runTeacherFlow(pageEval, waitFor) {
   })()`);
 
   await waitFor(`document.body.innerText.includes('Hola,')`, "panel del profesor");
-  await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 5`, "barra lateral");
+  await waitFor(`document.querySelectorAll('[data-staff-tab]').length >= 7`, "barra lateral");
 
   const topHeaders = await pageEval(`document.querySelectorAll('header.top').length`);
   if (topHeaders !== 0) {
@@ -410,12 +421,48 @@ async function runTeacherFlow(pageEval, waitFor) {
   console.log(`  ✓ ${boardSubjects} materias (primera: ${firstSubject.trim()}) · ${boardUnits} unidades en orden del curso`);
   await waitFor(`document.body.innerText.includes('Nueva evaluación')`, "creación de evaluaciones");
 
+  console.log("Materias plegables…");
+  await pageEval(`document.querySelector('[data-subject-toggle]').click(); true`);
+  await waitFor(`document.querySelector('.board-subject').classList.contains('collapsed')`, "materia colapsada");
+  await pageEval(`document.querySelector('[data-subject-toggle]').click(); true`);
+  await waitFor(`!document.querySelector('.board-subject').classList.contains('collapsed')`, "materia expandida");
+  console.log("  ✓ las materias se pueden colapsar y expandir");
+
+  console.log("Barra lateral colapsable…");
+  await pageEval(`document.querySelector('#sidebar-toggle').click(); true`);
+  await waitFor(`document.querySelector('.staff-app').classList.contains('collapsed')`, "barra lateral colapsada");
+  await pageEval(`document.querySelector('#sidebar-toggle').click(); true`);
+  await waitFor(`!document.querySelector('.staff-app').classList.contains('collapsed')`, "barra lateral expandida");
+  console.log("  ✓ la barra lateral se puede ocultar y mostrar");
+
   console.log("Sección Asistencia…");
   await pageEval(`document.querySelector('[data-staff-tab="asistencia"]').click(); true`);
   await waitFor(`document.querySelector('[data-attendance-open]')`, "botón de asistencia");
   await pageEval(`document.querySelector('[data-attendance-open]').click(); true`);
-  await waitFor(`document.querySelector('[data-attendance-status]')`, "lista de asistencia");
-  console.log("  ✓ asistencia de hoy lista");
+  await waitFor(`document.querySelector('[data-att-status]')`, "lista de asistencia");
+  await waitFor(`document.querySelector('[data-attendance-summary]')`, "resumen de asistencia");
+  const attendanceRows = await pageEval(`document.querySelectorAll('[data-attendance-row]').length`);
+  console.log(`  ✓ asistencia dinámica lista (${attendanceRows} alumnos, estados por botón y contadores)`);
+
+  console.log("Sección Tareas…");
+  await pageEval(`document.querySelector('[data-staff-tab="tareas"]').click(); true`);
+  await waitFor(`document.querySelector('#create-task-form')`, "formulario de tareas");
+  await waitFor(`document.body.innerText.includes('Asignar al grupo')`, "crear tarea");
+  console.log("  ✓ tareas: asignación por grupo, materia y fecha de entrega");
+
+  console.log("Sección Actividad…");
+  await pageEval(`document.querySelector('[data-staff-tab="actividad"]').click(); true`);
+  await waitFor(`document.querySelector('[data-activity-filter]')`, "filtros de actividad");
+  const activityEvents = await pageEval(`document.querySelectorAll('[data-activity-kind]').length`);
+  if (activityEvents < 1) {
+    throw new Error("El registro de actividad no muestra eventos");
+  }
+  await pageEval(`document.querySelector('[data-activity-filter="ejercicio"]').click(); true`);
+  await waitFor(
+    `document.querySelectorAll('[data-activity-kind="ejercicio"]:not(.hidden)').length >= 1`,
+    "filtro de ejercicios",
+  );
+  console.log(`  ✓ registro de actividad con ${activityEvents} eventos y filtros por tipo`);
 
   console.log("Sección Tutores…");
   await pageEval(`document.querySelector('[data-staff-tab="tutores"]').click(); true`);

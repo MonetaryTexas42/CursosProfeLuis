@@ -41,6 +41,8 @@ const staffTabLabels = {
   alumnos: '👥 Alumnos',
   materias: '📚 Materias',
   asistencia: '📅 Asistencia',
+  tareas: '📝 Tareas',
+  actividad: '📈 Actividad',
   tutores: '💬 Tutores',
   usuarios: '🛠️ Usuarios',
   contenido: '🗂️ Contenido',
@@ -75,6 +77,8 @@ const state = {
   error: '',
   notice: '',
   staffTab: 'dashboard',
+  sidebarCollapsed: localStorage.getItem('ecoems_sidebar') === 'collapsed',
+  collapsedSubjects: readCollapsedSubjects(),
   loading: true
 };
 
@@ -88,6 +92,36 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function readCollapsedSubjects() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('ecoems_collapsed_subjects') || '[]');
+    return new Set(Array.isArray(raw) ? raw : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistCollapsedSubjects() {
+  localStorage.setItem(
+    'ecoems_collapsed_subjects',
+    JSON.stringify([...state.collapsedSubjects])
+  );
+}
+
+function toggleCollapsedSubject(subjectId) {
+  if (state.collapsedSubjects.has(subjectId)) {
+    state.collapsedSubjects.delete(subjectId);
+  } else {
+    state.collapsedSubjects.add(subjectId);
+  }
+  persistCollapsedSubjects();
+}
+
+function tabParts(label) {
+  const [emoji, ...rest] = String(label).split(' ');
+  return { emoji, text: rest.join(' ') };
 }
 
 function setError(message) {
@@ -478,7 +512,8 @@ async function fetchDashboardData(profile) {
 async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
-    settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes
+    settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
+    tasksRes, activityRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -500,7 +535,9 @@ async function fetchAdminDashboard() {
     supabase.rpc('app_subject_board'),
     supabase.from('student_profiles').select('*'),
     supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on'),
-    supabase.from('unit_assignments').select('id,group_id,unit_id,unit_version_id,status,visible,opens_at,closes_at')
+    supabase.from('unit_assignments').select('id,group_id,unit_id,unit_version_id,status,visible,opens_at,closes_at'),
+    supabase.rpc('app_staff_tasks'),
+    supabase.rpc('app_activity_log', { p_limit: 80 })
   ]);
 
   assertNoError(yearRes.error);
@@ -517,6 +554,8 @@ async function fetchAdminDashboard() {
   assertNoError(studentProfilesRes.error);
   assertNoError(termsRes.error);
   assertNoError(assignmentsRes.error);
+  assertNoError(tasksRes.error);
+  assertNoError(activityRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -563,6 +602,8 @@ async function fetchAdminDashboard() {
     overview: overviewRes.data || null,
     board: (boardRes.data || {}).subjects || [],
     assignments: assignmentsRes.data || [],
+    tasks: (tasksRes.data || {}).tasks || [],
+    activity: (activityRes.data || {}).entries || [],
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -617,7 +658,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -651,7 +692,9 @@ async function fetchTeacherDashboard(teacherId) {
     studentIds.length
       ? supabase.from('student_profiles').select('*').in('student_id', studentIds)
       : Promise.resolve({ data: [], error: null }),
-    supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on')
+    supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on'),
+    supabase.rpc('app_staff_tasks'),
+    supabase.rpc('app_activity_log', { p_limit: 80 })
   ]);
 
   assertNoError(unitsRes.error);
@@ -665,6 +708,8 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(boardRes.error);
   assertNoError(studentProfilesRes.error);
   assertNoError(termsRes.error);
+  assertNoError(tasksRes.error);
+  assertNoError(activityRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const subjectMap = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
@@ -704,6 +749,8 @@ async function fetchTeacherDashboard(teacherId) {
     kind: 'teacher',
     overview: overviewRes.data || null,
     board: (boardRes.data || {}).subjects || [],
+    tasks: (tasksRes.data || {}).tasks || [],
+    activity: (activityRes.data || {}).entries || [],
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1522,31 +1569,43 @@ function unitActivationMarkup(group, data) {
 function staffShellMarkup(data) {
   const isAdmin = state.profile?.role === 'admin';
   const tab = state.staffTab || 'dashboard';
+  const collapsed = Boolean(state.sidebarCollapsed);
 
-  const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tutores'];
-  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'usuarios', 'contenido', 'configuracion'];
+  const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tareas', 'actividad', 'tutores'];
+  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tareas', 'actividad', 'usuarios', 'contenido', 'configuracion'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
   return `
-    <div class="staff-app">
+    <div class="staff-app ${collapsed ? 'collapsed' : ''}">
       <aside class="staff-sidebar" aria-label="Secciones">
         <a class="brand staff-brand" href="/" aria-label="ECOEMS inicio">
           <span class="brand-mark">E</span>
-          <span>ECOEMS <small>Plataforma</small></span>
+          <span class="brand-copy">ECOEMS <small>Plataforma</small></span>
         </a>
 
         <nav class="staff-nav">
           <span class="side-label">${isAdmin ? 'Administración' : 'Mi espacio'}</span>
-          ${tabs.map((key) => `
-            <button class="staff-tab-btn ${tab === key ? 'active' : ''}" data-staff-tab="${key}">
-              ${escapeHtml(staffTabLabels[key])}
-            </button>
-          `).join('')}
+          ${tabs.map((key) => {
+            const parts = tabParts(staffTabLabels[key]);
+            return `
+              <button class="staff-tab-btn ${tab === key ? 'active' : ''}" data-staff-tab="${key}" title="${escapeHtml(parts.text)}">
+                <span class="nav-emoji" aria-hidden="true">${escapeHtml(parts.emoji)}</span>
+                <span class="nav-text">${escapeHtml(parts.text)}</span>
+              </button>
+            `;
+          }).join('')}
         </nav>
 
         <div class="staff-sidebar-footer">
+          <button class="staff-tab-btn sidebar-toggle" id="sidebar-toggle" title="${collapsed ? 'Mostrar menú' : 'Ocultar menú'}" aria-label="${collapsed ? 'Mostrar menú' : 'Ocultar menú'}" aria-expanded="${collapsed ? 'false' : 'true'}">
+            <span class="nav-emoji" aria-hidden="true">${collapsed ? '»' : '«'}</span>
+            <span class="nav-text">${collapsed ? 'Mostrar menú' : 'Ocultar menú'}</span>
+          </button>
           <button class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema" title="Cambiar entre modo oscuro y claro">🌓</button>
-          <button class="staff-tab-btn" id="logout-btn">🚪 Cerrar sesión</button>
+          <button class="staff-tab-btn" id="logout-btn" title="Cerrar sesión">
+            <span class="nav-emoji" aria-hidden="true">🚪</span>
+            <span class="nav-text">Cerrar sesión</span>
+          </button>
         </div>
       </aside>
 
@@ -1583,6 +1642,8 @@ function staffTabContentMarkup(data, tab) {
   if (tab === 'alumnos') return staffStudentsTabMarkup(data);
   if (tab === 'materias') return staffSubjectsTabMarkup(data);
   if (tab === 'asistencia') return staffAttendanceTabMarkup(data);
+  if (tab === 'tareas') return staffTasksTabMarkup(data);
+  if (tab === 'actividad') return staffActivityTabMarkup(data);
   if (tab === 'tutores') return staffTutoresTabMarkup(data);
   if (tab === 'usuarios') return adminUsersMarkup(data);
   if (tab === 'contenido') return adminContentMarkup(data);
@@ -1852,14 +1913,19 @@ function staffSubjectsTabMarkup(data) {
         const assignment = assignmentsByUnit.get(unit.id);
         if (assignment) assignments.push(assignment);
       }
+      const collapsed = state.collapsedSubjects.has(subject.id);
       return `
-        <article class="board-subject" style="border-left: 5px solid ${escapeHtml(subject.color || '#5b8cff')}">
+        <article class="board-subject ${collapsed ? 'collapsed' : ''}" style="border-left: 5px solid ${escapeHtml(subject.color || '#5b8cff')}">
           <div class="board-head">
-            <h3 style="margin:0">${escapeHtml(subject.name)}</h3>
+            <button class="board-toggle" data-subject-toggle="${escapeHtml(subject.id)}" aria-expanded="${collapsed ? 'false' : 'true'}" title="${collapsed ? 'Mostrar' : 'Ocultar'} ${escapeHtml(subject.name)}">
+              <span class="chev" aria-hidden="true">▾</span>
+              <h3 style="margin:0">${escapeHtml(subject.name)}</h3>
+            </button>
             <span class="pill">${(subject.units || []).length} unidades</span>
             <span class="pill">${(subject.assessments || []).length} evaluaciones</span>
           </div>
 
+          <div class="board-body" data-subject-body="${escapeHtml(subject.id)}">
           <span class="card-label">Unidades (orden del curso)</span>
           ${(subject.units || []).map((unit) => {
             const assignment = assignmentsByUnit.get(unit.id);
@@ -1939,6 +2005,7 @@ function staffSubjectsTabMarkup(data) {
               </form>
             </details>
           ` : ''}
+          </div>
         </article>
       `;
     }).join('')}
@@ -1968,13 +2035,163 @@ function staffAttendanceTabMarkup(data) {
           <div><span class="card-label">Grupo</span><h2>${escapeHtml(group.name)}</h2></div>
         </div>
         <div class="row">
-          <button class="btn primary" data-attendance-open="${escapeHtml(group.id)}">Asistencia de hoy</button>
+          <button class="btn primary" data-attendance-open="${escapeHtml(group.id)}">Tomar asistencia</button>
           <button class="btn ghost" data-history-open="${escapeHtml(group.id)}">Ver historial</button>
         </div>
         <div class="attendance-area hidden" data-attendance-area="${escapeHtml(group.id)}"></div>
         <div class="attendance-history hidden" data-history-box="${escapeHtml(group.id)}"></div>
       </article>
     `).join('')}
+  `;
+}
+
+function staffTasksTabMarkup(data) {
+  const tasks = data.tasks || [];
+  const groups = data.groups || [];
+  const subjects = data.board || [];
+  const units = data.publishedUnits || data.units || [];
+  const taskStatusLabels = {
+    pending: 'Pendiente',
+    submitted: 'Entregada',
+    late: 'Tarde'
+  };
+
+  const dueLabel = (task) => {
+    if (!task.due_at) return 'Sin fecha';
+    const due = new Date(task.due_at);
+    const late = due.getTime() < Date.now() && (task.submissions || []).some((sub) => sub.status === 'pending');
+    const formatted = due.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+    return late ? `Venció ${formatted}` : `Entrega ${formatted}`;
+  };
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Tareas</span>
+        <h2>Asignar, revisar y calificar</h2>
+      </div>
+      <span class="pill">${tasks.length} ${tasks.length === 1 ? 'tarea activa' : 'tareas activas'}</span>
+    </div>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div><span class="card-label">Nueva tarea</span><h2>Asignar al grupo</h2></div>
+      </div>
+      <form class="form task-form" id="create-task-form">
+        <label class="field"><span>Título</span><input name="title" required placeholder="Investigación sobre figuras literarias"></label>
+        <div class="task-form-grid">
+          <label class="field"><span>Grupo</span>
+            <select name="group_id" required>
+              ${groups.map((group) => `<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="field"><span>Materia</span>
+            <select name="subject_id" required>
+              ${subjects.map((subject) => `<option value="${escapeHtml(subject.id)}">${escapeHtml(subject.name)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="field"><span>Tipo</span>
+            <select name="task_type">
+              ${Object.entries(assessmentTypeLabels).map(([value, label]) => `<option value="${value}" ${value === 'project' ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="field"><span>Unidad (opcional)</span>
+            <select name="unit_id">
+              <option value="">Sin unidad</option>
+              ${units.map((unit) => `<option value="${escapeHtml(unit.id)}">${escapeHtml(unit.subject_name || unit.subject_id || '')} · ${escapeHtml(unit.title)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="field"><span>Fecha de entrega</span><input name="due_at" type="datetime-local"></label>
+          <label class="field"><span>Puntaje máximo</span><input name="max_score" type="number" min="0.1" step="0.1" value="10" required></label>
+        </div>
+        <label class="field"><span>Instrucciones</span><textarea name="instructions" rows="3" placeholder="Qué debe entregar el alumno, formato y criterios."></textarea></label>
+        <button class="btn primary" type="submit">Crear tarea</button>
+      </form>
+    </article>
+
+    ${tasks.length ? tasks.map((task) => {
+      const submissions = task.submissions || [];
+      const done = submissions.filter((sub) => sub.status === 'submitted' || sub.status === 'late').length;
+      return `
+        <article class="task-card" data-task-card="${escapeHtml(task.id)}">
+          <div class="task-head">
+            <div>
+              <span class="card-label" style="color:${escapeHtml(task.subject_color || 'var(--brand)')}">${escapeHtml(task.subject_name || 'Materia')}</span>
+              <h3>${escapeHtml(task.title)}</h3>
+              <div class="task-meta">
+                <span class="pill pill-blue">${escapeHtml(task.group_name || 'Grupo')}</span>
+                <span class="pill ${task.due_at && new Date(task.due_at) < new Date() ? 'pill-red' : 'pill-green'}">${escapeHtml(dueLabel(task))}</span>
+                <span class="pill">${escapeHtml(task.max_score)} pts</span>
+                <span class="pill" data-task-count="${escapeHtml(task.id)}">${done}/${submissions.length} entregadas</span>
+                ${task.unit_title ? `<span class="pill">${escapeHtml(task.unit_title)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          ${task.instructions ? `<p class="muted task-instructions">${escapeHtml(task.instructions)}</p>` : ''}
+          <div class="task-students">
+            ${submissions.length ? submissions.map((sub) => `
+              <div class="task-student" data-task-row data-task-id="${escapeHtml(task.id)}" data-student-id="${escapeHtml(sub.student_id)}" data-status="${escapeHtml(sub.status || 'pending')}">
+                <div class="attendance-who">
+                  <span class="avatar small">${escapeHtml((sub.name || '?').slice(0, 1).toUpperCase())}</span>
+                  <div>
+                    <strong>${escapeHtml(sub.name)}</strong>
+                    <small>${escapeHtml(sub.code)}</small>
+                  </div>
+                </div>
+                <div class="status-seg" role="group" aria-label="Entrega de ${escapeHtml(sub.name)}">
+                  ${Object.entries(taskStatusLabels).map(([value, label]) => `
+                    <button class="status-btn ${((sub.status || 'pending') === value) ? 'active' : ''}" type="button" data-task-status="${value}">${escapeHtml(label)}</button>
+                  `).join('')}
+                </div>
+                <input class="task-score" type="number" min="0" max="${escapeHtml(task.max_score)}" step="0.1" value="${sub.score ?? ''}" placeholder="Pts" data-task-score aria-label="Puntaje de ${escapeHtml(sub.name)}">
+                <button class="btn-mini primary" type="button" data-save-task-submission>Guardar</button>
+              </div>
+            `).join('') : '<p class="empty-state">Este grupo no tiene alumnos activos.</p>'}
+          </div>
+        </article>
+      `;
+    }).join('') : '<article class="card wide"><p class="empty-state">Aún no hay tareas. Crea la primera arriba.</p></article>'}
+  `;
+}
+
+function staffActivityTabMarkup(data) {
+  const entries = data.activity || [];
+  const filters = [
+    ['todo', 'Todo'],
+    ['ejercicio', 'Ejercicios'],
+    ['unidad', 'Unidades'],
+    ['tarea', 'Tareas'],
+    ['calificacion', 'Calificaciones'],
+    ['observacion', 'Observaciones']
+  ];
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Actividad</span>
+        <h2>Registro de actividades</h2>
+      </div>
+      <span class="pill">${entries.length} eventos recientes</span>
+    </div>
+    <article class="card wide">
+      <div class="activity-filters" data-activity-filters>
+        ${filters.map(([key, label], index) => `
+          <button class="filter-chip ${index === 0 ? 'active' : ''}" type="button" data-activity-filter="${key}">${escapeHtml(label)}</button>
+        `).join('')}
+      </div>
+      <div class="activity-feed" data-activity-feed>
+        ${entries.length ? entries.map((entry) => `
+          <div class="activity-item" data-activity-kind="${escapeHtml(entry.kind)}">
+            <span class="activity-emoji" aria-hidden="true">${escapeHtml(entry.emoji || '•')}</span>
+            <div class="activity-body">
+              <strong>${escapeHtml(entry.title || 'Actividad')}</strong>
+              <span>${escapeHtml(entry.detail || '')}</span>
+              <small>${escapeHtml(entry.name || '')}${entry.student ? ` · ${escapeHtml(entry.student)}` : ''} · ${escapeHtml(formatRelative(entry.ts))}</small>
+            </div>
+          </div>
+        `).join('') : '<p class="empty-state">Todavía no hay actividad registrada. En cuanto haya ejercicios, entregas o calificaciones aparecerán aquí.</p>'}
+      </div>
+    </article>
   `;
 }
 
@@ -3105,6 +3322,142 @@ async function createAssessment(event) {
   await loadDashboard(state.profile);
 }
 
+async function createTask(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const groupId = String(data.get('group_id') || '');
+  const subjectId = String(data.get('subject_id') || '');
+  const unitId = String(data.get('unit_id') || '').trim();
+  const title = String(data.get('title') || '').trim();
+  const instructions = String(data.get('instructions') || '').trim();
+  const taskType = String(data.get('task_type') || 'project');
+  const maxScore = Number(data.get('max_score') || 0);
+  const dueRaw = String(data.get('due_at') || '').trim();
+
+  if (!groupId || !subjectId || !title || !maxScore || maxScore <= 0) {
+    setError('Completa grupo, materia, título y puntaje máximo.');
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Creando…';
+  }
+
+  state.error = '';
+  state.notice = '';
+
+  const { error } = await supabase.from('tasks').insert({
+    group_id: groupId,
+    subject_id: subjectId,
+    unit_id: unitId || null,
+    title,
+    instructions: instructions || null,
+    task_type: taskType,
+    due_at: dueRaw ? new Date(dueRaw).toISOString() : null,
+    max_score: maxScore,
+    created_by: state.profile?.id ?? null
+  });
+
+  if (error) {
+    setError(error?.message || 'No se pudo crear la tarea.');
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Crear tarea';
+    }
+    return;
+  }
+
+  setNotice('Tarea creada. Ya puedes registrar entregas y calificaciones.');
+  await refreshStaffTasks();
+  await refreshStaffActivity().catch(() => {});
+  renderDashboard();
+}
+
+async function refreshStaffTasks() {
+  const { data, error } = await supabase.rpc('app_staff_tasks');
+  if (error) throw error;
+  if (state.dashboard) state.dashboard.tasks = (data || {}).tasks || [];
+}
+
+async function refreshStaffActivity() {
+  const { data, error } = await supabase.rpc('app_activity_log', { p_limit: 80 });
+  if (error) throw error;
+  if (state.dashboard) state.dashboard.activity = (data || {}).entries || [];
+}
+
+async function saveTaskSubmission(button) {
+  const row = button.closest('[data-task-row]');
+  if (!row) return;
+
+  const taskId = row.dataset.taskId;
+  const studentId = row.dataset.studentId;
+  const status = row.dataset.status || 'pending';
+  const scoreInput = row.querySelector('[data-task-score]');
+  const rawScore = String(scoreInput?.value || '').trim();
+  const score = rawScore === '' ? null : Number(rawScore);
+  const maxScore = Number(scoreInput?.max || 0);
+
+  if (score !== null && Number.isNaN(score)) {
+    setError('El puntaje debe ser un número.');
+    return;
+  }
+  if (score !== null && maxScore && score > maxScore) {
+    setError(`El puntaje no puede superar ${maxScore}.`);
+    return;
+  }
+
+  button.disabled = true;
+  const original = button.textContent;
+  button.textContent = '…';
+  state.error = '';
+  state.notice = '';
+
+  const submittedAt = status === 'pending' ? null : new Date().toISOString();
+
+  const { error } = await supabase.from('task_submissions').upsert({
+    task_id: taskId,
+    student_id: studentId,
+    status,
+    score,
+    submitted_at: submittedAt,
+    recorded_by: state.profile?.id ?? null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'task_id,student_id' });
+
+  if (error) {
+    setError(error?.message || 'No se pudo guardar la entrega.');
+    button.disabled = false;
+    button.textContent = original;
+    return;
+  }
+
+  const task = (state.dashboard?.tasks || []).find((item) => item.id === taskId);
+  if (task) {
+    const submission = (task.submissions || []).find((item) => item.student_id === studentId);
+    if (submission) {
+      submission.status = status;
+      submission.score = score;
+      submission.submitted_at = submittedAt;
+      submission.updated_at = new Date().toISOString();
+    }
+    const done = (task.submissions || []).filter((item) => item.status === 'submitted' || item.status === 'late').length;
+    const counter = appRoot.querySelector(`[data-task-count="${taskId}"]`);
+    if (counter) counter.textContent = `${done}/${(task.submissions || []).length} entregadas`;
+  }
+
+  await refreshStaffActivity().catch(() => {});
+
+  button.disabled = false;
+  button.textContent = '✓ Guardado';
+  window.setTimeout(() => {
+    button.textContent = original;
+  }, 1600);
+}
+
 async function openAttendanceHistory(groupId, button) {
   const box = appRoot.querySelector(`[data-history-box="${groupId}"]`);
   if (!box) return;
@@ -3301,6 +3654,65 @@ function renderDashboard() {
 
   appRoot.querySelectorAll('[data-reopen-assignment]').forEach((button) => {
     button.addEventListener('click', () => setAssignmentStatus(button, 'active'));
+  });
+
+  const sidebarToggle = appRoot.querySelector('#sidebar-toggle');
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+      state.sidebarCollapsed = !state.sidebarCollapsed;
+      localStorage.setItem('ecoems_sidebar', state.sidebarCollapsed ? 'collapsed' : 'open');
+      const shell = appRoot.querySelector('.staff-app');
+      if (shell) shell.classList.toggle('collapsed', state.sidebarCollapsed);
+      const expanded = !state.sidebarCollapsed;
+      sidebarToggle.setAttribute('aria-expanded', String(expanded));
+      sidebarToggle.title = expanded ? 'Ocultar menú' : 'Mostrar menú';
+      const emoji = sidebarToggle.querySelector('.nav-emoji');
+      const text = sidebarToggle.querySelector('.nav-text');
+      if (emoji) emoji.textContent = expanded ? '«' : '»';
+      if (text) text.textContent = expanded ? 'Ocultar menú' : 'Mostrar menú';
+    });
+  }
+
+  appRoot.querySelectorAll('[data-subject-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const subjectId = button.dataset.subjectToggle;
+      toggleCollapsedSubject(subjectId);
+      const card = button.closest('.board-subject');
+      if (!card) return;
+      const collapsed = state.collapsedSubjects.has(subjectId);
+      card.classList.toggle('collapsed', collapsed);
+      button.setAttribute('aria-expanded', String(!collapsed));
+    });
+  });
+
+  appRoot.querySelectorAll('[data-activity-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.activityFilter;
+      appRoot.querySelectorAll('[data-activity-filter]').forEach((item) => {
+        item.classList.toggle('active', item === button);
+      });
+      appRoot.querySelectorAll('[data-activity-kind]').forEach((item) => {
+        item.classList.toggle('hidden', filter !== 'todo' && item.dataset.activityKind !== filter);
+      });
+    });
+  });
+
+  const createTaskForm = appRoot.querySelector('#create-task-form');
+  if (createTaskForm) createTaskForm.addEventListener('submit', createTask);
+
+  appRoot.querySelectorAll('[data-task-status]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest('[data-task-row]');
+      if (!row) return;
+      row.dataset.status = button.dataset.taskStatus;
+      row.querySelectorAll('[data-task-status]').forEach((item) => {
+        item.classList.toggle('active', item === button);
+      });
+    });
+  });
+
+  appRoot.querySelectorAll('[data-save-task-submission]').forEach((button) => {
+    button.addEventListener('click', () => saveTaskSubmission(button));
   });
 
   wireThemeToggle();
@@ -3595,17 +4007,16 @@ async function sendAdvise(studentId, student) {
   }
 }
 
-async function openAttendance(groupId) {
+async function openAttendance(groupId, dateValue) {
   const area = appRoot.querySelector(`[data-attendance-area="${groupId}"]`);
   if (!area) return;
 
   const openButton = appRoot.querySelector(`[data-attendance-open="${groupId}"]`);
-  const closeButton = appRoot.querySelector(`[data-attendance-close="${groupId}"]`);
 
-  if (!area.classList.contains('hidden')) {
+  if (!area.classList.contains('hidden') && !dateValue) {
     area.classList.add('hidden');
+    area.innerHTML = '';
     if (openButton) openButton.style.display = '';
-    if (closeButton) closeButton.style.display = 'none';
     return;
   }
 
@@ -3619,19 +4030,22 @@ async function openAttendance(groupId) {
   area.classList.remove('hidden');
   area.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
   if (openButton) openButton.style.display = 'none';
-  if (closeButton) closeButton.style.display = '';
 
   state.error = '';
   state.notice = '';
 
   const today = new Date().toISOString().slice(0, 10);
+  await loadAttendanceArea(groupId, students, area, dateValue || today);
+}
 
+async function loadAttendanceArea(groupId, students, area, date) {
   try {
     let { data: session, error } = await supabase
       .from('attendance_sessions')
       .select('id,session_date')
       .eq('group_id', groupId)
-      .eq('session_date', today)
+      .eq('session_date', date)
+      .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle();
 
@@ -3640,7 +4054,7 @@ async function openAttendance(groupId) {
     if (!session) {
       const created = await supabase
         .from('attendance_sessions')
-        .insert({ group_id: groupId, session_date: today, created_by: state.profile?.id ?? null })
+        .insert({ group_id: groupId, session_date: date, created_by: state.profile?.id ?? null })
         .select('id,session_date')
         .single();
 
@@ -3656,38 +4070,125 @@ async function openAttendance(groupId) {
     if (rows.error) throw rows.error;
 
     const statusByStudent = new Map((rows.data || []).map((row) => [row.student_id, row.status]));
+    const today = new Date().toISOString().slice(0, 10);
 
     area.innerHTML = `
-      <p class="muted"><small>Asistencia del ${escapeHtml(today)} · toca el estado de cada alumno y guarda.</small></p>
-      <ul class="data-list">
-        ${students.map((student) => `
-          <li>
-            <div>
-              <strong>${escapeHtml(student.full_name)}</strong>
-              <small>${escapeHtml(student.student_code)}</small>
-            </div>
-            <select data-attendance-status="${escapeHtml(student.id)}">
-              ${Object.entries(attendanceLabels).map(([value, label]) => `
-                <option value="${value}" ${statusByStudent.get(student.id) === value ? 'selected' : ''}>${escapeHtml(label)}</option>
-              `).join('')}
-            </select>
-          </li>
-        `).join('')}
+      <div class="attendance-toolbar">
+        <label class="attendance-date">
+          <span>Fecha</span>
+          <input type="date" value="${escapeHtml(date)}" max="${escapeHtml(today)}" data-attendance-date>
+        </label>
+        <div class="attendance-bulk">
+          <button class="btn-mini" type="button" data-attendance-all="present">Todos presentes</button>
+          <button class="btn-mini" type="button" data-attendance-all="absent">Todos ausentes</button>
+        </div>
+        <button class="btn-mini ghost" type="button" data-attendance-dismiss>Listo</button>
+      </div>
+      <div class="attendance-summary" data-attendance-summary></div>
+      <ul class="attendance-list">
+        ${students.map((student) => {
+          const status = statusByStudent.get(student.id) || 'present';
+          return `
+            <li class="attendance-row" data-attendance-row data-student-id="${escapeHtml(student.id)}" data-status="${escapeHtml(status)}">
+              <div class="attendance-who">
+                <span class="avatar small">${escapeHtml((student.full_name || '?').slice(0, 1).toUpperCase())}</span>
+                <div>
+                  <strong>${escapeHtml(student.full_name)}</strong>
+                  <small>${escapeHtml(student.student_code)}</small>
+                </div>
+              </div>
+              <div class="status-seg" role="group" aria-label="Estado de ${escapeHtml(student.full_name)}">
+                ${Object.entries(attendanceLabels).map(([value, label]) => `
+                  <button class="status-btn ${status === value ? 'active' : ''}" type="button" data-att-status="${value}">${escapeHtml(label)}</button>
+                `).join('')}
+              </div>
+            </li>
+          `;
+        }).join('')}
       </ul>
-      <div class="row end">
+      <div class="row end attendance-actions">
+        <span class="muted" data-attendance-save-note><small>Los cambios se guardan por fecha.</small></span>
         <button class="btn primary" data-attendance-save="${escapeHtml(session.id)}" data-attendance-group="${escapeHtml(groupId)}">Guardar asistencia</button>
       </div>
     `;
 
-    const saveButton = area.querySelector('[data-attendance-save]');
-    saveButton.addEventListener('click', () => saveAttendance(session.id, groupId, saveButton));
+    wireAttendanceArea(area, groupId, students);
+    updateAttendanceSummary(area);
   } catch (error) {
     area.innerHTML = `<p class="empty-state">No se pudo cargar la asistencia: ${escapeHtml(error?.message || 'error')}</p>`;
   }
 }
 
-async function saveAttendance(sessionId, groupId, button) {
-  const area = appRoot.querySelector(`[data-attendance-area="${groupId}"]`);
+function wireAttendanceArea(area, groupId, students) {
+  const dateInput = area.querySelector('[data-attendance-date]');
+  if (dateInput) {
+    dateInput.addEventListener('change', () => {
+      const date = dateInput.value || new Date().toISOString().slice(0, 10);
+      area.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
+      loadAttendanceArea(groupId, students, area, date);
+    });
+  }
+
+  area.querySelectorAll('[data-att-status]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest('[data-attendance-row]');
+      if (!row) return;
+      row.dataset.status = button.dataset.attStatus;
+      row.querySelectorAll('[data-att-status]').forEach((item) => {
+        item.classList.toggle('active', item === button);
+      });
+      updateAttendanceSummary(area);
+    });
+  });
+
+  area.querySelectorAll('[data-attendance-all]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const status = button.dataset.attendanceAll;
+      area.querySelectorAll('[data-attendance-row]').forEach((row) => {
+        row.dataset.status = status;
+        row.querySelectorAll('[data-att-status]').forEach((item) => {
+          item.classList.toggle('active', item.dataset.attStatus === status);
+        });
+      });
+      updateAttendanceSummary(area);
+    });
+  });
+
+  const dismiss = area.querySelector('[data-attendance-dismiss]');
+  if (dismiss) {
+    dismiss.addEventListener('click', () => {
+      area.classList.add('hidden');
+      area.innerHTML = '';
+      const openButton = appRoot.querySelector(`[data-attendance-open="${groupId}"]`);
+      if (openButton) openButton.style.display = '';
+    });
+  }
+
+  const saveButton = area.querySelector('[data-attendance-save]');
+  if (saveButton) {
+    saveButton.addEventListener('click', () => saveAttendance(saveButton.dataset.attendanceSave, groupId, saveButton, area));
+  }
+}
+
+function updateAttendanceSummary(area) {
+  const summary = area.querySelector('[data-attendance-summary]');
+  if (!summary) return;
+  const counts = { present: 0, late: 0, excused: 0, absent: 0 };
+  area.querySelectorAll('[data-attendance-row]').forEach((row) => {
+    const status = row.dataset.status || 'present';
+    if (counts[status] != null) counts[status] += 1;
+  });
+  const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  summary.innerHTML = `
+    <span class="pill pill-green">${counts.present} presentes</span>
+    <span class="pill pill-amber">${counts.late} tarde</span>
+    <span class="pill">${counts.excused} justificados</span>
+    <span class="pill pill-red">${counts.absent} faltas</span>
+    <span class="pill pill-blue">${total} alumnos</span>
+  `;
+}
+
+async function saveAttendance(sessionId, groupId, button, area) {
   if (!area) return;
 
   button.disabled = true;
@@ -3696,12 +4197,12 @@ async function saveAttendance(sessionId, groupId, button) {
   state.notice = '';
 
   try {
-    const selects = area.querySelectorAll('[data-attendance-status]');
-    const upserts = [...selects].map((select) =>
+    const rows = [...area.querySelectorAll('[data-attendance-row]')];
+    const upserts = rows.map((row) =>
       supabase.from('attendance').upsert({
         session_id: sessionId,
-        student_id: select.dataset.attendanceStatus,
-        status: select.value,
+        student_id: row.dataset.studentId,
+        status: row.dataset.status || 'present',
         recorded_by: state.profile?.id ?? null
       }, { onConflict: 'session_id,student_id' })
     );
@@ -3710,12 +4211,13 @@ async function saveAttendance(sessionId, groupId, button) {
     const firstError = results.find((result) => result.error)?.error;
     if (firstError) throw firstError;
 
-    setNotice(`Asistencia guardada (${selects.length} alumnos).`);
-    area.classList.add('hidden');
-    const openButton = appRoot.querySelector(`[data-attendance-open="${groupId}"]`);
-    const closeButton = appRoot.querySelector(`[data-attendance-close="${groupId}"]`);
-    if (openButton) openButton.style.display = '';
-    if (closeButton) closeButton.style.display = 'none';
+    const note = area.querySelector('[data-attendance-save-note]');
+    if (note) {
+      const time = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      note.innerHTML = `<small>Guardado a las ${escapeHtml(time)} · ${rows.length} alumnos.</small>`;
+    }
+    button.disabled = false;
+    button.textContent = 'Guardar asistencia';
   } catch (error) {
     setError(error?.message || 'No se pudo guardar la asistencia.');
     button.disabled = false;

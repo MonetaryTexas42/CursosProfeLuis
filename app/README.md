@@ -89,6 +89,15 @@ app/
 - [x] Activación de unidades por tarjetas (activar con cierre opcional,
       cerrar y reabrir desde la tarjeta).
 - [x] Modo claro/oscuro con persistencia.
+- [x] Panel del staff de una sola página: barra lateral colapsable (se
+      recuerda en el navegador), materias plegables y asistencia dinámica
+      por fecha con "todos presentes", botones de estado y contadores.
+- [x] Tareas reales (`0015`): creación por grupo/materia/unidad, fecha de
+      entrega, puntaje, entregas por alumno (pendiente/entregada/tarde) y
+      calificación con retroalimentación.
+- [x] Registro de actividades (`0015`): línea de tiempo de ejercicios,
+      unidades completadas, entregas, calificaciones y observaciones, con
+      filtros por tipo.
 - [ ] Aviso de privacidad validado por un abogado antes del piloto real.
 - [ ] Mover el progreso histórico de localStorage a Supabase (opcional: el
       reproductor ya sincroniza en tiempo real; localStorage queda de respaldo).
@@ -123,7 +132,9 @@ DATABASE_URL="$(cat .secrets/database-url)" node scripts/backup-db.mjs
 
 # Prueba UI con Chrome headless (requiere la app servida en :5173)
 node scripts/ui-smoke.mjs               # flujo del alumno
-MODE=teacher node scripts/ui-smoke.mjs  # flujo del profesor (invitación de tutores)
+MODE=teacher node scripts/ui-smoke.mjs  # flujo del profesor (tareas, asistencia, actividad)
+MODE=admin ADMIN_PASSWORD=... node scripts/ui-smoke.mjs  # flujo del admin
+MODE=curso node scripts/ui-smoke.mjs    # reproductor protegido
 
 # Prueba E2E de las Edge Functions desplegadas
 node scripts/test-functions.mjs
