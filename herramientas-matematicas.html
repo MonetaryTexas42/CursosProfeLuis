@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Banco de ejercicios · Matemáticas COMIPEMS</title>
+  <script src="tool-gate.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['ui-sans-serif','system-ui','-apple-system','Segoe UI','Roboto','Helvetica Neue','Arial','sans-serif'], } } } };
+  </script>
+  <style>
+    .ex-fig svg{max-width:100%;height:auto} .ex-fig{background:#fff;border:1px solid #e2e8f0;border-radius:14px;display:inline-grid;padding:10px;place-items:center} .shake{animation:s .4s} @keyframes s{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}} .fade{animation:f .3s ease} @keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .frac{display:inline-flex;flex-direction:column;vertical-align:-.45em;line-height:1;margin:0 2px;text-align:center;font-size:.85em} .frac-n{padding:0 2px;border-bottom:1.5px solid currentColor} .frac-d{padding:0 2px}
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+  <header class="bg-gradient-to-r from-blue-800 via-indigo-800 to-sky-800 text-white">
+    <div class="max-w-6xl mx-auto px-4 py-10">
+      <p class="text-sm uppercase tracking-widest text-sky-200 mb-2">Preparación COMIPEMS · Matemáticas</p>
+      <h1 class="text-4xl md:text-5xl font-extrabold">Banco de ejercicios</h1>
+      <p class="mt-3 text-sky-100 max-w-2xl">Resuelve ejercicios aleatorios de todos los temas o lánzate al <b>reto cronometrado</b> (individual o por equipos). Escribe tu resultado, compruébalo al instante y revisa el procedimiento explicado paso a paso. Perfecto para repasar antes del examen.</p>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-8">
+
+    <div id="tabs" class="flex flex-wrap gap-2 mb-6"></div>
+    <section id="sec-ejercicio">
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="bg-indigo-600 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-2xl font-bold flex items-center gap-2">🎲 Ejercicio al azar</h2>
+        <button id="btn-new" class="bg-white text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl px-5 py-2 transition">🎯 Nuevo ejercicio</button>
+      </div>
+      <div class="p-6 space-y-6">
+
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <div class="flex flex-wrap gap-2" id="chips"></div>
+          <div class="flex gap-2 text-sm">
+            <button id="btn-toggle-todos" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">Elegir todos</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+          <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4"><div class="text-2xl font-extrabold text-emerald-600" id="s-aciertos">0</div><div class="text-xs font-semibold text-slate-500 mt-1">Aciertos</div></div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4"><div class="text-2xl font-extrabold text-rose-500" id="s-errores">0</div><div class="text-xs font-semibold text-slate-500 mt-1">Errores</div></div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4"><div class="text-2xl font-extrabold text-indigo-600" id="s-racha">0</div><div class="text-xs font-semibold text-slate-500 mt-1">Racha 🔥</div></div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4"><div class="text-2xl font-extrabold text-slate-700" id="s-total">0</div><div class="text-xs font-semibold text-slate-500 mt-1">Intentos</div></div>
+        </div>
+
+        <div id="card" class="border border-slate-200 rounded-2xl bg-gradient-to-b from-white to-slate-50 p-6"></div>
+      </div>
+    </div>
+
+    <p class="mt-6 text-sm text-slate-500 text-center">Respuesta con texto o número: escribe "3 y 13", "0.5" o "25%". El sistema acepta varias formas equivalentes.</p>
+    </section>
+
+    <section id="sec-reto" class="hidden"></section>
+  </main>
+
+  <script>
+const BANK = [{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 1 · Unidad 1","q":"Simétrico de 14","fig":"","a":"−14","v":["-14"],"pasos":["El simétrico es el mismo número con el signo contrario.","El simétrico de 14 es −14.","Respuesta: −14."],"p":"El simétrico cambia el signo."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 2 · Unidad 1","q":"Valor absoluto: |−25|","fig":"","a":"25","v":["25"],"pasos":["El valor absoluto es la distancia al cero, siempre positiva.","La distancia de −25 al 0 es 25.","|−25| = 25."],"p":"La distancia al cero, sin signo."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 3 · Unidad 1","q":"−6 + (−4)","fig":"","a":"−10","v":["-10"],"pasos":["Signos iguales (ambos negativos): se suman 6 + 4 = 10.","Se conserva el signo negativo.","Respuesta: −10."],"p":"Signos iguales: se suman y se conserva el signo."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 4 · Unidad 1","q":"12 + (−7)","fig":"","a":"5","v":["5"],"pasos":["Signos distintos: se restan los valores absolutos, 12 − 7 = 5.","Gana el signo del de mayor valor absoluto (12, positivo).","Respuesta: 5."],"p":"Signos distintos: se restan (12 − 7) y gana el mayor."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 5 · Unidad 1","q":"−9 + 2","fig":"","a":"−7","v":["-7"],"pasos":["Signos distintos: 9 − 2 = 7.","Gana el signo del mayor valor absoluto (−9).","Respuesta: −7."],"p":"Se restan (9 − 2) y gana el signo de −9."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 6 · Unidad 1","q":"Simétrico de 0","fig":"","a":"0","v":["0"],"pasos":["El simétrico cambia el signo.","0 con el signo cambiado sigue siendo 0.","El cero es su propio simétrico."],"p":"El cero es su propio simétrico."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 7 · Unidad 1","q":"|0|","fig":"","a":"0","v":["0"],"pasos":["El valor absoluto es la distancia al cero.","El 0 está a distancia 0 de sí mismo.","Respuesta: 0."],"p":"Está a distancia 0 del cero."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 8 · Unidad 1","q":"−3 + 3","fig":"","a":"0","v":["0"],"pasos":["Son números opuestos (simétricos).","La suma de un número con su simétrico siempre da 0.","Respuesta: 0."],"p":"Un número más su simétrico da cero."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Significado y uso de los números enteros","tema":"Ejercicio 9 · Unidad 1","q":"8 + 5","fig":"","a":"13","v":["13"],"pasos":["Ambos son positivos: se suman 8 + 5.","Se conserva el signo positivo.","Respuesta: 13."],"p":"Ambos positivos: se suman."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 1 · Unidad 2","q":"(9 − 4) × 2","fig":"","a":"10","v":["10"],"pasos":["Primero resuelvo el paréntesis: 9 − 4 = 5.","Después la multiplicación: 5 × 2 = 10.","Respuesta: 10."],"p":"5 × 2 = 10."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 2 · Unidad 2","q":"18 − (6 + 3)","fig":"","a":"9","v":["9"],"pasos":["Primero el paréntesis: 6 + 3 = 9.","Después resto: 18 − 9 = 9.","Respuesta: 9."],"p":"6+3=9; 18−9=9."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 3 · Unidad 2","q":"4 × 3 + 5","fig":"","a":"17","v":["17"],"pasos":["La multiplicación tiene prioridad: 4 × 3 = 12.","Luego la suma: 12 + 5 = 17.","Respuesta: 17."],"p":"Primero 4×3=12, luego 12+5=17."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 4 · Unidad 2","q":"8 + 12 ÷ 4","fig":"","a":"11","v":["11"],"pasos":["La división va antes que la suma: 12 ÷ 4 = 3.","Después sumo: 8 + 3 = 11.","Respuesta: 11."],"p":"Primero 12÷4=3; 8+3=11."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 5 · Unidad 2","q":"(5 + 2) × (8 − 3)","fig":"","a":"35","v":["35"],"pasos":["Resuelvo cada paréntesis: 5 + 2 = 7 y 8 − 3 = 5.","Multiplico: 7 × 5 = 35.","Respuesta: 35."],"p":"7 y 5; 7×5=35."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 6 · Unidad 2","q":"20 − (7 + 3) − 5","fig":"","a":"5","v":["5"],"pasos":["Paréntesis: 7 + 3 = 10.","20 − 10 = 10; después 10 − 5 = 5.","Respuesta: 5."],"p":"7+3=10; 20−10−5=5."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 7 · Unidad 2","q":"(3 + 4) × 2 − 5","fig":"","a":"9","v":["9"],"pasos":["Paréntesis: 3 + 4 = 7; multiplico 7 × 2 = 14.","Resto: 14 − 5 = 9.","Respuesta: 9."],"p":"7×2=14; 14−5=9."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 8 · Unidad 2","q":"−[−(−5)]","fig":"","a":"−5","v":["-5"],"pasos":["De dentro hacia fuera: −(−5) = 5.","Luego −(5) = −5.","Respuesta: −5."],"p":"−(−5)=5 y −(5) = −5."},{"area":"Números y proporcionalidad","topic":"jerarquia","unidad":"Signos de agrupación","tema":"Ejercicio 9 · Unidad 2","q":"(10 − 2) ÷ 4","fig":"","a":"2","v":["2"],"pasos":["Paréntesis: 10 − 2 = 8.","Divido: 8 ÷ 4 = 2.","Respuesta: 2."],"p":"8÷4=2."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 1 · Unidad 3","q":"Ana vende 8 boletos y Luis 3 veces más. ¿Cuántos boletos vendió Luis?","fig":"","a":"24","v":["24"],"pasos":["Luis vendió 3 veces lo de Ana (8).","3 × 8 = 24.","Luis vendió 24 boletos."],"p":"3 × 8 = 24."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 2 · Unidad 3","q":"Tenías $50 y compraste 9 cuadernos de $5. ¿Cuánto te sobró?","fig":"","a":"$5","v":["5","$5"],"pasos":["Costo de los 9 cuadernos: 9 × 5 = 45.","Lo que sobra: 50 − 45 = 5.","Te sobraron $5."],"p":"Costo 9 × 5 = 45; 50 − 45 = 5."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 3 · Unidad 3","q":"Reparten 72 dulces entre 8 niños. ¿Cuántos por niño?","fig":"","a":"9","v":["9"],"pasos":["Repartir en partes iguales es dividir.","72 ÷ 8 = 9.","9 dulces por niño."],"p":"72 ÷ 8 = 9."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 4 · Unidad 3","q":"Un termómetro marca −4 °C y sube 10. ¿Qué marca?","fig":"","a":"6 °C","v":["6"],"pasos":["Subir es sumar: −4 + 10.","Signos distintos: 10 − 4 = 6.","El termómetro marca 6 °C."],"p":"−4 + 10 = 6."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 5 · Unidad 3","q":"3 cajas con 12 vasos y una con 5: ¿cuántos vasos en total?","fig":"","a":"41","v":["41"],"pasos":["3 cajas de 12: 3 × 12 = 36.","Más la caja de 5: 36 + 5 = 41.","Hay 41 vasos en total."],"p":"3×12=36; 36+5=41."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 6 · Unidad 3","q":"Pedro pesaba 80 kg y bajó 4 kg por mes durante 3 meses. ¿Cuánto pesa?","fig":"","a":"68 kg","v":["68"],"pasos":["Bajó 4 kg cada mes durante 3 meses: 4 × 3 = 12 kg.","80 − 12 = 68.","Pedro pesa 68 kg."],"p":"80 − 12 = 68."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 7 · Unidad 3","q":"Un avión despega a −5 m del nivel (sótano) y sube 120. ¿A qué altura?","fig":"","a":"115 m","v":["115"],"pasos":["Subir es sumar: −5 + 120.","120 − 5 = 115.","Está a 115 m."],"p":"−5 + 120 = 115."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 8 · Unidad 3","q":"Si cada paquete trae 6 y llegan 9 paquetes, ¿cuántas piezas hay?","fig":"","a":"54","v":["54"],"pasos":["Cada paquete trae 6 y llegan 9 paquetes.","6 × 9 = 54.","Hay 54 piezas."],"p":"6 × 9 = 54."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Resolución de problemas con operaciones básicas","tema":"Ejercicio 9 · Unidad 3","q":"Se compran 15 refrescos y se reparten en partes iguales 3 personas. ¿Cuántos cada una?","fig":"","a":"5","v":["5"],"pasos":["Repartir 15 entre 3 es dividir.","15 ÷ 3 = 5.","5 refrescos a cada una."],"p":"15 ÷ 3 = 5."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 1 · Unidad 4","q":"¿Cuáles son primos? (3, 6, 9, 13)","fig":"","a":"3 y 13","v":["3 y 13","3, 13","13 y 3","3 13","3y13"],"pasos":["Un primo solo es divisible entre 1 y sí mismo.","3 es primo y 13 es primo.","6 = 2 × 3 y 9 = 3 × 3 son compuestos.","Respuesta: 3 y 13."],"p":"6 y 9 tienen más divisores."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 2 · Unidad 4","q":"¿36 divisible entre 4?","fig":"","a":"Sí","v":["Si","sí"],"pasos":["Criterio del 4: las dos últimas cifras deben ser múltiplo de 4.","36 es múltiplo de 4 (4 × 9 = 36).","Respuesta: Sí."],"p":"Termina en 36 y sus dos últimas cifras (36) son múltiplo de 4."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 3 · Unidad 4","q":"¿405 divisible entre 9?","fig":"","a":"Sí","v":["Si","sí"],"pasos":["Criterio del 9: la suma de las cifras debe ser múltiplo de 9.","4 + 0 + 5 = 9.","9 es múltiplo de 9, entonces Sí."],"p":"4+0+5=9, múltiplo de 9."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 4 · Unidad 4","q":"Descompón 45","fig":"","a":"3² × 5","v":["3^2x5","3²×5","3²x5","3·3·5","3x3x5","3*3*5","15","3 al cuadrado por 5"],"pasos":["45 = 9 × 5.","9 = 3 × 3.","45 = 3 × 3 × 5 = 3² × 5."],"p":"45 = 9×5 = 3×3×5."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 5 · Unidad 4","q":"Descompón 100","fig":"","a":"2² × 5²","v":["2^2x5^2","2²×5²","2²x5²","2x2x5x5","2·2·5·5","100","2 al cuadrado por 5 al cuadrado"],"pasos":["100 = 10 × 10.","10 = 2 × 5.","100 = 2 × 5 × 2 × 5 = 2² × 5²."],"p":"100 = 10×10 = 2×5×2×5."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 6 · Unidad 4","q":"MCD de 8 y 12","fig":"","a":"4","v":["4"],"pasos":["8 = 2³ y 12 = 2² × 3.","Factores comunes al menor exponente: 2².","MCD = 4."],"p":"8=2³, 12=2²×3 → común 2²."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 7 · Unidad 4","q":"MCM de 6 y 8","fig":"","a":"24","v":["24"],"pasos":["6 = 2 × 3 y 8 = 2³.","Factores comunes y no comunes al mayor exponente: 2³ × 3.","MCM = 24."],"p":"6=2×3, 8=2³ → 2³×3 = 24."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 8 · Unidad 4","q":"¿55 divisible entre 5?","fig":"","a":"Sí","v":["Si","sí"],"pasos":["Criterio del 5: el número termina en 0 o en 5.","55 termina en 5.","Respuesta: Sí."],"p":"Termina en 5."},{"area":"Números y proporcionalidad","topic":"mental","unidad":"Teoría de números","tema":"Ejercicio 9 · Unidad 4","q":"¿Es 29 primó?","fig":"","a":"Sí","v":["Si","sí"],"pasos":["Pruebo divisores primos hasta √29 ≈ 5.4: 2, 3 y 5.","29 no es par; 2 + 9 = 11 (no múltiplo de 3); no termina en 0 ni 5.","Ninguno lo divide, entonces 29 es primo."],"p":"No se divide entre 2,3 ni 5."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 1 · Unidad 5","q":"4 latas cuestan $20, ¿cuánto cuestan 7?","fig":"","a":"$35","v":["35","$35"],"pasos":["Es directa: a más latas, más costo.","Precio de una: 20 ÷ 4 = 5.","7 × 5 = 35. Respuesta: $35."],"p":"7×20÷4 = 35."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 2 · Unidad 5","q":"A 60 km/h un viaje dura 2 h; a 120 km/h dura…","fig":"","a":"1 h","v":["1"],"pasos":["Es inversa: a más velocidad, menos tiempo.","60 × 2 = 120 (recorrido constante).","120 ÷ 120 = 1. Dura 1 hora."],"p":"Inversa: 60×2÷120 = 1."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 3 · Unidad 5","q":"En a/b = c/d el producto de medios es…","fig":"","a":"igual al de extremos","v":["igual al de extremos","igual al producto de extremos","el producto de extremos","extremos","producto de extremos"],"pasos":["En toda proporción a/b = c/d se cumple a·d = b·c.","El producto de medios (b·c) es igual al de extremos (a·d).","Respuesta: igual al de extremos."],"p":"a×d = b×c."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 4 · Unidad 5","q":"3 obreros pintan un muro en 8 h; 4 obreros tardan…","fig":"","a":"6 h","v":["6"],"pasos":["Es inversa: más obreros, menos tiempo.","3 × 8 = 24 (obreros·hora).","24 ÷ 4 = 6. Tardan 6 horas."],"p":"Inversa: 3×8÷4 = 6."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 5 · Unidad 5","q":"10 pasos miden 8 m; 15 pasos miden…","fig":"","a":"12 m","v":["12"],"pasos":["Es directa.","8 ÷ 10 = 0.8 m por paso.","15 × 0.8 = 12. Miden 12 m."],"p":"15×8÷10 = 12."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 6 · Unidad 5","q":"Si 2/5 = 6/x, x = …","fig":"","a":"15","v":["15"],"pasos":["Producto cruzado: 2 · x = 5 · 6.","2x = 30.","x = 15."],"p":"2x = 30 → x = 15."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 7 · Unidad 5","q":"Un coche recorre 90 km con 6 L; con 10 L recorre…","fig":"","a":"150 km","v":["150"],"pasos":["Es directa.","90 ÷ 6 = 15 km por litro.","10 × 15 = 150. Recorre 150 km."],"p":"10×90÷6 = 150."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 8 · Unidad 5","q":"A más personas para un pastel, menos rebanadas por persona: es…","fig":"","a":"proporcionalidad inversa","v":["inversa","proporcionalidad inversa"],"pasos":["Una cantidad crece mientras la otra disminuye.","Eso define la proporcionalidad inversa.","Respuesta: proporcionalidad inversa."],"p":"Una crece y la otra disminuye."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Números fraccionarios y decimales: proporcionalidad","tema":"Ejercicio 9 · Unidad 5","q":"1 docena = 12; 3 docenas = 36. Es…","fig":"","a":"proporcionalidad directa","v":["directa","proporcionalidad directa"],"pasos":["Las dos cantidades crecen a la vez.","1 → 12 y 3 → 36 conservan la misma razón (×3).","Respuesta: proporcionalidad directa."],"p":"Ambas crecen a la vez."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 1 · Unidad 6","q":"2/7 + 3/7","fig":"","a":"5/7","v":["5/7"],"pasos":["Mismo denominador: sumo los numeradores.","2 + 3 = 5.","Resultado: 5/7."],"p":"Igual denominador: sumo numeradores."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 2 · Unidad 6","q":"1/4 + 2/4","fig":"","a":"3/4","v":["3/4"],"pasos":["Mismo denominador: sumo los numeradores.","1 + 2 = 3.","Resultado: 3/4."],"p":"Solo sumo numeradores."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 3 · Unidad 6","q":"1/2 + 1/4","fig":"","a":"3/4","v":["3/4"],"pasos":["El MCM de 2 y 4 es 4.","1/2 = 2/4; entonces 2/4 + 1/4 = 3/4.","Resultado: 3/4."],"p":"MCM 4: 2/4 + 1/4 = 3/4."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 4 · Unidad 6","q":"5/6 − 1/3","fig":"","a":"1/2","v":["1/2"],"pasos":["Convierto 1/3 a sextos: 1/3 = 2/6.","5/6 − 2/6 = 3/6.","Simplifico: 3/6 = 1/2."],"p":"1/3 = 2/6; 5/6 − 2/6 = 3/6 = 1/2."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 5 · Unidad 6","q":"2/3 × 9/4","fig":"","a":"3/2","v":["3/2"],"pasos":["Multiplico numeradores y denominadores: (2 × 9)/(3 × 4) = 18/12.","Simplifico entre 6.","18/12 = 3/2."],"p":"(2×9)/(3×4) = 18/12 = 3/2."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 6 · Unidad 6","q":"3/5 ÷ 6/10","fig":"","a":"1","v":["1"],"pasos":["Dividir es multiplicar por el recíproco: 3/5 × 10/6.","= 30/30.","= 1."],"p":"3/5 × 10/6 = 30/30 = 1."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 7 · Unidad 6","q":"17/5 en mixta","fig":"","a":"3⅖","v":["3 2/5","3.4","17/5"],"pasos":["Divido 17 ÷ 5 = 3 y sobran 2.","El cociente es el entero y el residuo el numerador.","Resultado: 3 2/5."],"p":"17 ÷ 5 = 3, sobra 2."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 8 · Unidad 6","q":"2¾ en impropia","fig":"","a":"11/4","v":["11/4"],"pasos":["Multiplico el entero por el denominador: 2 × 4 = 8.","Sumo el numerador: 8 + 3 = 11.","Resultado: 11/4."],"p":"2×4+3 = 11."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Operaciones con números fraccionarios y decimales","tema":"Ejercicio 9 · Unidad 6","q":"¿2/3 y 6/9 son equivalentes?","fig":"","a":"Sí","v":["Si","sí"],"pasos":["Producto cruzado: 2 × 9 = 18 y 3 × 6 = 18.","Los productos son iguales.","Sí son equivalentes."],"p":"2×9 = 18 y 3×6 = 18."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 1 · Unidad 7","q":"50% de 620","fig":"","a":"310","v":["310"],"pasos":["50% = 1/2.","620 ÷ 2 = 310."],"p":"Es la mitad: 620 ÷ 2."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 2 · Unidad 7","q":"10% de 340","fig":"","a":"34","v":["34"],"pasos":["10% = 0.1.","0.1 × 340 = 34."],"p":"Mueve el punto un lugar."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 3 · Unidad 7","q":"25% de 80","fig":"","a":"20","v":["20"],"pasos":["25% = 1/4.","80 ÷ 4 = 20."],"p":"80 ÷ 4 = 20."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 4 · Unidad 7","q":"1/4 como %","fig":"","a":"25%","v":["25%","25"],"pasos":["Divido 1 ÷ 4 = 0.25.","Multiplico por 100.","Resultado: 25%."],"p":"1 ÷ 4 = 0.25 → 25."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 5 · Unidad 7","q":"0.8 como %","fig":"","a":"80%","v":["80%","80"],"pasos":["Multiplico por 100: 0.8 × 100.","Resultado: 80%."],"p":"Multiplica por 100."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 6 · Unidad 7","q":"40% como fracción","fig":"","a":"2/5","v":["2/5","40/100"],"pasos":["40% = 40/100.","Simplifico dividiendo entre 20.","Resultado: 2/5."],"p":"40/100 = 2/5."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 7 · Unidad 7","q":"15% de 200","fig":"","a":"30","v":["30"],"pasos":["15% = 0.15.","0.15 × 200 = 30."],"p":"0.15 × 200 = 30."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 8 · Unidad 7","q":"Un boleto de $300 con 10% de descuento cuesta…","fig":"","a":"$270","v":["270","$270"],"pasos":["Descuento: 10% de 300 = 30.","Precio final: 300 − 30 = 270.","Resultado: $270."],"p":"Descuento 30; 300 − 30 = 270."},{"area":"Números y proporcionalidad","topic":"porcentaje","unidad":"Porcentajes","tema":"Ejercicio 9 · Unidad 7","q":"12 de 15 = …%","fig":"","a":"80%","v":["80%","80"],"pasos":["Divido 12 ÷ 15 = 0.8.","0.8 × 100 = 80%.","Resultado: 80%."],"p":"12÷15 = 0.8 → 80%."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 1 · Unidad 8","q":"3³","fig":"","a":"27","v":["27"],"pasos":["3³ = 3 × 3 × 3.","3 × 3 = 9 y 9 × 3 = 27."],"p":"3×3×3 = 27."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 2 · Unidad 8","q":"5²","fig":"","a":"25","v":["25"],"pasos":["5² = 5 × 5.","5 × 5 = 25."],"p":"5×5."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 3 · Unidad 8","q":"7⁰","fig":"","a":"1","v":["1"],"pasos":["Todo número distinto de 0 elevado a 0 es 1.","7⁰ = 1."],"p":"Todo número a la 0 es 1."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 4 · Unidad 8","q":"2⁻¹","fig":"","a":"1/2","v":["1/2","0.5"],"pasos":["El exponente negativo da el recíproco.","2⁻¹ = 1/2."],"p":"Recíproco de 2."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 5 · Unidad 8","q":"√64","fig":"","a":"8","v":["8"],"pasos":["Busco un número que al cuadrado dé 64.","8 × 8 = 64.","√64 = 8."],"p":"8×8 = 64."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 6 · Unidad 8","q":"∛27","fig":"","a":"3","v":["3"],"pasos":["Busco un número que al cubo dé 27.","3 × 3 × 3 = 27.","∛27 = 3."],"p":"3³ = 27."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 7 · Unidad 8","q":"10⁴","fig":"","a":"10000","v":["10000","10,000"],"pasos":["10⁴ es 1 seguido de 4 ceros.","10⁴ = 10000."],"p":"Cuatro ceros."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 8 · Unidad 8","q":"8500 en notación científica","fig":"","a":"8.5 × 10³","v":["8.5x10^3","8.5×10³","8.5·10^3","8.5*10^3","8,5x10^3","8.5 x 10^3"],"pasos":["Muevo el punto para dejar un número entre 1 y 10: 8.5.","Conté 3 lugares hacia la izquierda.","Resultado: 8.5 × 10³."],"p":"a entre 1 y 10."},{"area":"Números y proporcionalidad","topic":"potencias","unidad":"Potenciación y radicación","tema":"Ejercicio 9 · Unidad 8","q":"√144","fig":"","a":"12","v":["12"],"pasos":["Busco un número que al cuadrado dé 144.","12 × 12 = 144.","√144 = 12."],"p":"12×12 = 144."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 1 · Unidad 9","q":"1/4 de 200","fig":"","a":"50","v":["50"],"pasos":["Un cuarto de 200 es dividir entre 4.","200 ÷ 4 = 50."],"p":"200 ÷ 4."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 2 · Unidad 9","q":"2/5 de 150","fig":"","a":"60","v":["60"],"pasos":["Dos quintos: divido entre 5 y multiplico por 2.","150 ÷ 5 = 30; 30 × 2 = 60."],"p":"150 ÷ 5 × 2."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 3 · Unidad 9","q":"«20 es el 25% del total» → total:","fig":"","a":"80","v":["80"],"pasos":["El total es x y 25% de x es 20: 0.25x = 20.","x = 20 ÷ 0.25 = 80."],"p":"20 ÷ 0.25 = 80."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 4 · Unidad 9","q":"3/4 de 40","fig":"","a":"30","v":["30"],"pasos":["Tres cuartos de 40.","40 ÷ 4 = 10; 10 × 3 = 30."],"p":"40 ÷ 4 × 3."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 5 · Unidad 9","q":"0.25 × 800","fig":"","a":"200","v":["200"],"pasos":["0.25 equivale a 25%.","800 × 0.25 = 200."],"p":"25% de 800."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 6 · Unidad 9","q":"5 personas hacen un trabajo en 12 horas; 10 personas en…","fig":"","a":"6 h","v":["6"],"pasos":["Es inversa: más personas, menos tiempo.","5 × 12 = 60; 60 ÷ 10 = 6.","Tardan 6 horas."],"p":"Inversa: 5×12÷10."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 7 · Unidad 9","q":"Con $45 compras 3 kg; con $75 compras…","fig":"","a":"5 kg","v":["5"],"pasos":["Es directa: 45 ÷ 3 = 15 por kg.","75 ÷ 15 = 5.","Compras 5 kg."],"p":"Directa: 75×3÷45."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 8 · Unidad 9","q":"El 30% de un número es 15; el número es…","fig":"","a":"50","v":["50"],"pasos":["0.30x = 15.","x = 15 ÷ 0.30 = 50.","El número es 50."],"p":"15 ÷ 0.30."},{"area":"Números y proporcionalidad","topic":"fracciones","unidad":"Resolución de problemas con números fraccionarios y decimales","tema":"Ejercicio 9 · Unidad 9","q":"1/6 de 72","fig":"","a":"12","v":["12"],"pasos":["Un sexto de 72 es dividir entre 6.","72 ÷ 6 = 12."],"p":"72 ÷ 6."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 1 · Unidad 10","q":"Coeficiente de 5y","fig":"","a":"5","v":["5"],"pasos":["El coeficiente es el número que multiplica a la literal.","En 5y, el 5 multiplica a y.","Respuesta: 5."],"p":"El número que multiplica a la literal."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 2 · Unidad 10","q":"Parte literal de −4x²y","fig":"","a":"x²y","v":["x^2y","x²y"],"pasos":["La parte literal son las literales con sus exponentes.","En −4x²y la parte literal es x²y.","Respuesta: x²y."],"p":"Las literales con sus potencias."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 3 · Unidad 10","q":"«El doble de x más 3»","fig":"","a":"2x + 3","v":["2x+3","2x + 3"],"pasos":["El doble de x es 2x.","Más 3: 2x + 3.","Expresión: 2x + 3."],"p":"Doble → 2x."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 4 · Unidad 10","q":"«Un número menos su mitad»","fig":"","a":"x − x/2","v":["x-x/2","x - x/2","x−x/2","x - 1/2 x","x(1 - 1/2)"],"pasos":["Un número es x y su mitad es x/2.","Resto la mitad: x − x/2.","Expresión: x − x/2."],"p":"Literal menos la mitad."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 5 · Unidad 10","q":"«El cuadrado de a»","fig":"","a":"a²","v":["a^2","a2","a²"],"pasos":["El cuadrado es elevar a la 2.","Expresión: a²."],"p":"Potencia al cuadrado."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 6 · Unidad 10","q":"Número de términos de 4x − 2y + 9","fig":"","a":"3","v":["3"],"pasos":["Los términos se separan con + o −.","4x, −2y y 9 son tres términos.","Respuesta: 3."],"p":"4x, −2y y 9."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 7 · Unidad 10","q":"«La tercera parte de b»","fig":"","a":"b/3","v":["b/3","b÷3","b entre 3"],"pasos":["La tercera parte es dividir entre 3.","Expresión: b/3."],"p":"Dividir entre 3."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 8 · Unidad 10","q":"«El producto de dos números»","fig":"","a":"xy","v":["xy","x·y","x*y","x × y"],"pasos":["Producto = multiplicar.","Dos números: x y y.","Expresión: xy."],"p":"Producto = multiplicación."},{"area":"Álgebra","topic":"algebra","unidad":"Significado y uso de las literales","tema":"Ejercicio 9 · Unidad 10","q":"Expresión para «5 más el doble de z»","fig":"","a":"5 + 2z","v":["5+2z","5 + 2z","2z+5","2z + 5"],"pasos":["El doble de z es 2z.","5 más eso: 5 + 2z.","Expresión: 5 + 2z."],"p":"Si z es el número."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 1 · Unidad 11","q":"x + 7 con x = 5","fig":"","a":"12","v":["12"],"pasos":["Sustituyo x = 5: 5 + 7.","= 12."],"p":"5 + 7."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 2 · Unidad 11","q":"3x con x = 4","fig":"","a":"12","v":["12"],"pasos":["Sustituyo x = 4: 3 × 4.","= 12."],"p":"3 × 4."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 3 · Unidad 11","q":"2x + 1 con x = 3","fig":"","a":"7","v":["7"],"pasos":["Sustituyo x = 3: 2 × 3 + 1.","6 + 1 = 7."],"p":"2×3 + 1."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 4 · Unidad 11","q":"x² con x = 6","fig":"","a":"36","v":["36"],"pasos":["Sustituyo x = 6: 6².","6 × 6 = 36."],"p":"6×6."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 5 · Unidad 11","q":"x² con x = −2","fig":"","a":"4","v":["4"],"pasos":["Sustituyo x = −2: (−2)².","(−2) × (−2) = 4."],"p":"(−2)² = 4."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 6 · Unidad 11","q":"y/4 con y = 20","fig":"","a":"5","v":["5"],"pasos":["Sustituyo y = 20: 20 ÷ 4.","= 5."],"p":"20 ÷ 4."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 7 · Unidad 11","q":"3a + b con a=2, b=5","fig":"","a":"11","v":["11"],"pasos":["Sustituyo: 3 × 2 + 5.","6 + 5 = 11."],"p":"3×2 + 5."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 8 · Unidad 11","q":"2x − y con x=8, y=3","fig":"","a":"13","v":["13"],"pasos":["Sustituyo: 2 × 8 − 3.","16 − 3 = 13."],"p":"16 − 3."},{"area":"Álgebra","topic":"algebra","unidad":"Valor numérico","tema":"Ejercicio 9 · Unidad 11","q":"x² − 4 con x = 5","fig":"","a":"21","v":["21"],"pasos":["Sustituyo x = 5: 5² − 4.","25 − 4 = 21."],"p":"25 − 4."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 1 · Unidad 12","q":"(2x + 3) + (4x + 1)","fig":"","a":"6x + 4","v":["6x+4","6x + 4"],"pasos":["Elimino los paréntesis (nada cambia de signo).","Sumo semejantes: 2x + 4x = 6x.","Constantes: 3 + 1 = 4.","Resultado: 6x + 4."],"p":"Junta semejantes."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 2 · Unidad 12","q":"(5x − 2) − (3x + 1)","fig":"","a":"2x − 3","v":["2x-3","2x − 3","2x - 3"],"pasos":["Al restar, cambio los signos de (3x + 1): −3x − 1.","5x − 3x = 2x.","−2 − 1 = −3.","Resultado: 2x − 3."],"p":"Cambia signos: −3x−1."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 3 · Unidad 12","q":"x³ · x²","fig":"","a":"x⁵","v":["x^5","x⁵"],"pasos":["Al multiplicar potencias de la misma base, sumo los exponentes.","3 + 2 = 5.","Resultado: x⁵."],"p":"5 salido de exponentes: 3+2."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 4 · Unidad 12","q":"3x · 2y","fig":"","a":"6xy","v":["6xy","6xy"],"pasos":["Multiplico coeficientes: 3 × 2 = 6.","Multiplico literales: x · y = xy.","Resultado: 6xy."],"p":"Coeﬁcientes y letras."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 5 · Unidad 12","q":"(2x² + x) − (x² + x)","fig":"","a":"x²","v":["x^2","x²"],"pasos":["Cambio los signos del segundo: −x² − x.","2x² − x² = x².","x − x = 0.","Resultado: x²."],"p":"2x²−x² = x²; x−x = 0."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 6 · Unidad 12","q":"4x ÷ x","fig":"","a":"4","v":["4"],"pasos":["Divido coeficientes: 4 ÷ 1 = 4.","x ÷ x = x¹⁻¹ = x⁰ = 1.","Resultado: 4."],"p":"x¹⁻¹ = x⁰ = 1."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 7 · Unidad 12","q":"6x⁵ ÷ 2x²","fig":"","a":"3x³","v":["3x^3","3x³"],"pasos":["Divido coeficientes: 6 ÷ 2 = 3.","Divido potencias: x⁵ ÷ x² = x³.","Resultado: 3x³."],"p":"6÷2 y 5−2."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 8 · Unidad 12","q":"(x + 2) + (x + 3)","fig":"","a":"2x + 5","v":["2x+5","2x + 5"],"pasos":["Sumo semejantes: x + x = 2x.","Constantes: 2 + 3 = 5.","Resultado: 2x + 5."],"p":"x+x y 2+3."},{"area":"Álgebra","topic":"algebra","unidad":"Operaciones con polinomios","tema":"Ejercicio 9 · Unidad 12","q":"x⁶ ÷ x⁴","fig":"","a":"x²","v":["x^2","x²"],"pasos":["Al dividir potencias de la misma base, resto los exponentes.","6 − 4 = 2.","Resultado: x²."],"p":"Resta exponentes: 6−4."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 1 · Unidad 13","q":"Un número más 8 es 20 → el número es…","fig":"","a":"12","v":["12"],"pasos":["x + 8 = 20.","x = 20 − 8 = 12."],"p":"x + 8 = 20."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 2 · Unidad 13","q":"El doble de un número es 8 → el número es…","fig":"","a":"4","v":["4"],"pasos":["2x = 8.","x = 8 ÷ 2 = 4."],"p":"2x = 8."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 3 · Unidad 13","q":"x + 2x = 30 → x = …","fig":"","a":"10","v":["10"],"pasos":["x + 2x = 3x = 30.","x = 30 ÷ 3 = 10."],"p":"3x = 30."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 4 · Unidad 13","q":"3x + 4 = 19 → x = …","fig":"","a":"5","v":["5"],"pasos":["3x + 4 = 19 → 3x = 19 − 4 = 15.","x = 15 ÷ 3 = 5."],"p":"3x = 15."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 5 · Unidad 13","q":"Un número menos 5 es 9 → el número…","fig":"","a":"14","v":["14"],"pasos":["x − 5 = 9.","x = 9 + 5 = 14."],"p":"x − 5 = 9."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 6 · Unidad 13","q":"La mitad de un número es 9 → el número…","fig":"","a":"18","v":["18"],"pasos":["x/2 = 9.","x = 9 × 2 = 18."],"p":"x/2 = 9."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 7 · Unidad 13","q":"Edad: hijo x, padre el triple; suman 48 → x = …","fig":"","a":"12","v":["12"],"pasos":["El padre tiene el triple: 3x.","x + 3x = 4x = 48.","x = 48 ÷ 4 = 12."],"p":"x + 3x = 48."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 8 · Unidad 13","q":"Dos números consecutivos suman 15 → los números…","fig":"","a":"7 y 8","v":["7 y 8","7, 8","8 y 7"],"pasos":["Planteo x + (x+1) = 15.","2x + 1 = 15 → 2x = 14 → x = 7.","Los números son 7 y 8."],"p":"x + (x+1) = 15."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con expresiones algebraicas","tema":"Ejercicio 9 · Unidad 13","q":"«Un número aumentado en su triple es 40» → x = …","fig":"","a":"10","v":["10"],"pasos":["Un número x, su triple 3x.","x + 3x = 4x = 40.","x = 40 ÷ 4 = 10."],"p":"x + 3x = 40."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 1 · Unidad 14","q":"x + 3 = 10 → x =","fig":"","a":"7","v":["7"],"pasos":["El +3 pasa restando: x = 10 − 3.","x = 7."],"p":"+3 → −3."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 2 · Unidad 14","q":"x − 7 = 4 → x =","fig":"","a":"11","v":["11"],"pasos":["El −7 pasa sumando: x = 4 + 7.","x = 11."],"p":"−7 → +7."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 3 · Unidad 14","q":"2x = 14 → x =","fig":"","a":"7","v":["7"],"pasos":["El 2 pasa dividiendo: x = 14 ÷ 2.","x = 7."],"p":"El 2 divide."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 4 · Unidad 14","q":"4x + 1 = 13 → x =","fig":"","a":"3","v":["3"],"pasos":["4x = 13 − 1 = 12.","x = 12 ÷ 4 = 3."],"p":"4x = 12 → x = 3."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 5 · Unidad 14","q":"x/3 = 6 → x =","fig":"","a":"18","v":["18"],"pasos":["El ÷3 pasa multiplicando: x = 6 × 3.","x = 18."],"p":"×3."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 6 · Unidad 14","q":"5x − 2 = 8 → x =","fig":"","a":"2","v":["2"],"pasos":["5x = 8 + 2 = 10.","x = 10 ÷ 5 = 2."],"p":"5x = 10 → 2."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 7 · Unidad 14","q":"2x + 3 = 3x → x =","fig":"","a":"3","v":["3"],"pasos":["Resto 2x en ambos lados: 3 = x.","x = 3."],"p":"3 = x."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 8 · Unidad 14","q":"3(x + 1) = 12 → x =","fig":"","a":"3","v":["3"],"pasos":["Distribuyo: 3x + 3 = 12.","3x = 12 − 3 = 9.","x = 9 ÷ 3 = 3."],"p":"Distribuye: 3x+3 = 12."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de primer grado y despejes","tema":"Ejercicio 9 · Unidad 14","q":"x + 5 = 5x + 1 → x =","fig":"","a":"1","v":["1"],"pasos":["Quito x a la izquierda: 5 = 5x + 1 − x = 4x + 1.","Resto 1: 4 = 4x.","x = 1."],"p":"5−1 = 5x−x → 4 = 4x."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 1 · Unidad 15","q":"x + 3 = 9","fig":"","a":"6","v":["6"],"pasos":["x = 9 − 3.","x = 6."],"p":"x = 9 − 3."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 2 · Unidad 15","q":"4x = 28","fig":"","a":"7","v":["7"],"pasos":["x = 28 ÷ 4.","x = 7."],"p":"x = 28 ÷ 4."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 3 · Unidad 15","q":"2x − 1 = 7","fig":"","a":"4","v":["4"],"pasos":["2x = 7 + 1 = 8.","x = 8 ÷ 2 = 4."],"p":"2x = 8."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 4 · Unidad 15","q":"x/4 = 5","fig":"","a":"20","v":["20"],"pasos":["x = 4 × 5.","x = 20."],"p":"x = 4×5."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 5 · Unidad 15","q":"x/3 + 1 = 4","fig":"","a":"9","v":["9"],"pasos":["x/3 = 4 − 1 = 3.","x = 3 × 3 = 9."],"p":"x/3 = 3 → 9."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 6 · Unidad 15","q":"3x/2 = 6","fig":"","a":"4","v":["4"],"pasos":["3x = 6 × 2 = 12.","x = 12 ÷ 3 = 4."],"p":"3x = 12 → 4."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 7 · Unidad 15","q":"2x + x = 15","fig":"","a":"5","v":["5"],"pasos":["2x + x = 3x = 15.","x = 15 ÷ 3 = 5."],"p":"3x = 15."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 8 · Unidad 15","q":"5x = 2x + 9","fig":"","a":"3","v":["3"],"pasos":["5x − 2x = 9.","3x = 9 → x = 3."],"p":"3x = 9."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de ecuaciones de primer grado","tema":"Ejercicio 9 · Unidad 15","q":"x + 6 = 4x","fig":"","a":"2","v":["2"],"pasos":["6 = 4x − x = 3x.","x = 6 ÷ 3 = 2."],"p":"6 = 3x → 2."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 1 · Unidad 16","q":"La mitad de un número es 15 → el número…","fig":"","a":"30","v":["30"],"pasos":["x/2 = 15.","x = 15 × 2 = 30."],"p":"x/2 = 15."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 2 · Unidad 16","q":"Un número más 12 es 25 → el número…","fig":"","a":"13","v":["13"],"pasos":["x + 12 = 25.","x = 25 − 12 = 13."],"p":"x + 12 = 25."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 3 · Unidad 16","q":"Dos consecutivos suman 17 → los números…","fig":"","a":"8 y 9","v":["8 y 9","8, 9","9 y 8"],"pasos":["Planteo x + (x+1) = 17.","2x + 1 = 17 → 2x = 16 → x = 8.","Son 8 y 9."],"p":"x + x+1 = 17."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 4 · Unidad 16","q":"El doble de un número menos 2 es 10 → x =…","fig":"","a":"6","v":["6"],"pasos":["2x − 2 = 10.","2x = 10 + 2 = 12.","x = 12 ÷ 2 = 6."],"p":"2x − 2 = 10."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 5 · Unidad 16","q":"Tres números consecutivos suman 21 → el menor…","fig":"","a":"6","v":["6"],"pasos":["El menor es x: x + (x+1) + (x+2) = 21.","3x + 3 = 21 → 3x = 18 → x = 6."],"p":"6+7+8 = 21."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 6 · Unidad 16","q":"El triple de un número es 27 → x =…","fig":"","a":"9","v":["9"],"pasos":["3x = 27.","x = 27 ÷ 3 = 9."],"p":"3x = 27."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 7 · Unidad 16","q":"«Ana tiene 5 más que Beto; suman 25» → Beto…","fig":"","a":"10","v":["10"],"pasos":["Beto = x, Ana = x + 5.","x + (x+5) = 25 → 2x = 20.","x = 10. Beto tiene 10."],"p":"x + (x+5) = 25 → x = 10."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 8 · Unidad 16","q":"Un número aumentado en la mitad de sí mismo es 9 → x =…","fig":"","a":"6","v":["6"],"pasos":["x + x/2 = 9 → (3/2)x = 9.","x = 9 · (2/3) = 6."],"p":"x + x/2 = 9 → 3x/2 = 9 → x = 6."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con ecuaciones de primer grado","tema":"Ejercicio 9 · Unidad 16","q":"Suma de pares consecutivos que da 14 → los números…","fig":"","a":"6 y 8","v":["6 y 8","6, 8","8 y 6"],"pasos":["Pares consecutivos: x y x + 2.","x + (x+2) = 14 → 2x = 12 → x = 6.","Son 6 y 8."],"p":"x + (x+2) = 14 → x = 6."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 1 · Unidad 17","q":"x + y = 4, x − y = 0 → x =…","fig":"","a":"2","v":["2"],"pasos":["Sumo las ecuaciones: (x+y) + (x−y) = 4 + 0.","2x = 4.","x = 4 ÷ 2 = 2."],"p":"Sumo: 2x = 4."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 2 · Unidad 17","q":"Mismo sistema → y =…","fig":"","a":"2","v":["2"],"pasos":["Sustituyo x = 2 en x + y = 4.","2 + y = 4 → y = 2."],"p":"2 + y = 4."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 3 · Unidad 17","q":"x + y = 8, x = 3 → y =…","fig":"","a":"5","v":["5"],"pasos":["Sustituyo x = 3: 3 + y = 8.","y = 8 − 3 = 5."],"p":"3 + y = 8."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 4 · Unidad 17","q":"2x = 10 → x =…","fig":"","a":"5","v":["5"],"pasos":["2x = 10.","x = 10 ÷ 2 = 5."],"p":"Primer paso de reducción."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 5 · Unidad 17","q":"En x − y = 2 con x = 5 → y =…","fig":"","a":"3","v":["3"],"pasos":["Sustituyo x = 5: 5 − y = 2.","5 − 2 = y → y = 3."],"p":"5 − y = 2."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 6 · Unidad 17","q":"y = 2x − 1 sustituido en x + y = 8 → x =…","fig":"","a":"3","v":["3"],"pasos":["Sustituyo y en la primera: x + (2x − 1) = 8.","3x − 1 = 8 → 3x = 9.","x = 3."],"p":"x + 2x − 1 = 8 → 3x = 9."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 7 · Unidad 17","q":"x + y = 10, x − y = 4 → x =…","fig":"","a":"7","v":["7"],"pasos":["Sumo: x + y + x − y = 10 + 4.","2x = 14.","x = 7."],"p":"2x = 14."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 8 · Unidad 17","q":"Mismo sistema → y =…","fig":"","a":"3","v":["3"],"pasos":["Sustituyo x = 7: 7 + y = 10.","y = 3."],"p":"7 + y = 10."},{"area":"Álgebra","topic":"algebra","unidad":"Sistemas de ecuaciones lineales (2 × 2)","tema":"Ejercicio 9 · Unidad 17","q":"Sistema con 0 = 5 al reducir significa…","fig":"","a":"no hay solución","v":["no hay solución","sin solución","no existe","ninguna"],"pasos":["Al reducir se obtiene 0 = 5, una falsedad.","Es imposible → el sistema no tiene solución.","Las rectas son paralelas."],"p":"Falsedad → rectas paralelas."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 1 · Unidad 18","q":"Dos números suman 20 y se diferencian en 4 → el mayor…","fig":"","a":"12","v":["12"],"pasos":["Planteo x + y = 20 y x − y = 4.","Sumo: 2x = 24.","x = 12. El mayor es 12."],"p":"x+y=20, x−y=4."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 2 · Unidad 18","q":"El mayor es 12 → el menor…","fig":"","a":"8","v":["8"],"pasos":["12 + y = 20.","y = 20 − 12 = 8. El menor es 8."],"p":"12+8 = 20."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 3 · Unidad 18","q":"3x + 2y = 19 y x = 3 → y =…","fig":"","a":"5","v":["5"],"pasos":["Sustituyo x = 3: 3(3) + 2y = 19.","9 + 2y = 19 → 2y = 10.","y = 5."],"p":"9+2y = 19."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 4 · Unidad 18","q":"Si A = 2B y A + B = 27 → B =…","fig":"","a":"9","v":["9"],"pasos":["Sustituyo A = 2B en A + B = 27.","2B + B = 3B = 27.","B = 27 ÷ 3 = 9."],"p":"3B = 27."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 5 · Unidad 18","q":"2 boletos + 1 palomita = 70; 1 boleto + 1 palomita = 45 → boleto =…","fig":"","a":"25","v":["25","$25"],"pasos":["Resto las ecuaciones: (2B + P) − (B + P) = 70 − 45.","B = 25.","El boleto cuesta $25."],"p":"Resta: boleto = 25."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 6 · Unidad 18","q":"Mismo problema → palomita =…","fig":"","a":"20","v":["20","$20"],"pasos":["Sustituyo 25 + P = 45.","P = 45 − 25 = 20. La palomita cuesta $20."],"p":"25 + p = 45."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 7 · Unidad 18","q":"x + y = 15 y x = y + 5 → y =…","fig":"","a":"5","v":["5"],"pasos":["x = y + 5: (y + 5) + y = 15.","2y + 5 = 15 → 2y = 10.","y = 5."],"p":"2y + 5 = 15."},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 8 · Unidad 18","q":"Mismo sistema → x =…","fig":"","a":"10","v":["10"],"pasos":["x = y + 5 = 5 + 5 = 10.","x = 10."],"p":"x = y + 5 = 5 + 5 = 10"},{"area":"Álgebra","topic":"algebra","unidad":"Resolución de problemas con sistemas de ecuaciones","tema":"Ejercicio 9 · Unidad 18","q":"Un sistema que da x negativa para «cantidad de sillas»…","fig":"","a":"Revisa el planteo","v":["Revisa el planteo","revisar el planteo","revisar el planteamiento"],"pasos":["Una cantidad (sillas) no puede ser negativa.","Si x sale negativa, el planteamiento está mal.","Respuesta: revisar el planteo."],"p":"Las cantidades no pueden ser negativas."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 1 · Unidad 19","q":"(x + 1)²","fig":"","a":"x² + 2x + 1","v":["x^2+2x+1","x²+2x+1","x^2 + 2x + 1"],"pasos":["Binomio al cuadrado: cuadrado del primero + doble producto + cuadrado del segundo.","x² + 2(x)(1) + 1².","= x² + 2x + 1."],"p":"Doble producto 2x."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 2 · Unidad 19","q":"(x − 2)²","fig":"","a":"x² − 4x + 4","v":["x^2-4x+4","x²−4x+4","x² - 4x + 4","x^2 - 4x + 4"],"pasos":["x² − 2(x)(2) + 2².","= x² − 4x + 4."],"p":"Termino −2·x·2."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 3 · Unidad 19","q":"(x + 4)(x − 4)","fig":"","a":"x² − 16","v":["x^2-16","x²−16","x^2 - 16"],"pasos":["Conjugados: cuadrado del primero menos cuadrado del segundo.","x² − 4².","= x² − 16."],"p":"Conjugados."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 4 · Unidad 19","q":"(x + 1)(x + 2)","fig":"","a":"x² + 3x + 2","v":["x^2+3x+2","x²+3x+2"],"pasos":["Término común: x² + (1+2)x + (1)(2).","= x² + 3x + 2."],"p":"Suma 3, producto 2."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 5 · Unidad 19","q":"Factor común de 8x + 12","fig":"","a":"4(2x + 3)","v":["4(2x+3)","4(2x + 3)","2(4x+6)"],"pasos":["MCD de 8 y 12 es 4.","8x ÷ 4 = 2x y 12 ÷ 4 = 3.","= 4(2x + 3)."],"p":"4 es el MCD."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 6 · Unidad 19","q":"x² − 25","fig":"","a":"(x + 5)(x − 5)","v":["(x+5)(x-5)","(x + 5)(x - 5)","(x-5)(x+5)"],"pasos":["Es una diferencia de cuadrados: x² − 5².","= (x + 5)(x − 5)."],"p":"Dif. de cuadrados."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 7 · Unidad 19","q":"x² + 6x + 9","fig":"","a":"(x + 3)²","v":["(x+3)^2","(x+3)²","(x + 3)^2"],"pasos":["Es un trinomio cuadrado perfecto: x² + 2(x)(3) + 3².","= (x + 3)²."],"p":"TCP."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 8 · Unidad 19","q":"x² + 5x + 6","fig":"","a":"(x + 2)(x + 3)","v":["(x+2)(x+3)","(x + 2)(x + 3)","(x+3)(x+2)"],"pasos":["Busco dos números que sumen 5 y multipliquen 6.","2 + 3 = 5 y 2 × 3 = 6.","= (x + 2)(x + 3)."],"p":"2 y 3 suman 5, producto 6."},{"area":"Álgebra","topic":"algebra","unidad":"Productos notables y factorización","tema":"Ejercicio 9 · Unidad 19","q":"(2x + 1)²","fig":"","a":"4x² + 4x + 1","v":["4x^2+4x+1","4x²+4x+1"],"pasos":["(2x)² + 2(2x)(1) + 1².","= 4x² + 4x + 1."],"p":"(2x)², 2·2x·1, 1²."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 1 · Unidad 20","q":"x² − 4 = 0 → x =","fig":"","a":"2 y −2","v":["2 y -2","2 y −2","-2 y 2","±2"],"pasos":["x² − 4 = 0 → x² = 4.","x = ±√4 = ±2.","Soluciones: 2 y −2."],"p":"x² = 4."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 2 · Unidad 20","q":"x² − 4x + 4 = 0 → x =","fig":"","a":"2 (doble)","v":["2","2 (doble)"],"pasos":["Es (x − 2)² = 0.","x − 2 = 0 → x = 2.","Solución doble: 2."],"p":"TCP (x−2)²."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 3 · Unidad 20","q":"x² + 5x + 4 = 0 → x =","fig":"","a":"−1 y −4","v":["-1 y -4","−1 y −4","-4 y -1","-1 y −4"],"pasos":["Busco dos números que sumen 5 y multipliquen 4: 1 y 4.","(x + 1)(x + 4) = 0.","x = −1 y x = −4."],"p":"1 y 4 suman 5."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 4 · Unidad 20","q":"x² = 25 → x =","fig":"","a":"5 y −5","v":["5 y -5","5 y −5","±5"],"pasos":["x = ±√25.","x = 5 y x = −5."],"p":"Ambas raíces."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 5 · Unidad 20","q":"x² + 6x + 9 = 0 → x =","fig":"","a":"−3 (doble)","v":["-3","−3","-3 (doble)"],"pasos":["Es (x + 3)² = 0.","x + 3 = 0 → x = −3.","Solución doble: −3."],"p":"TCP."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 6 · Unidad 20","q":"x² − 7x + 12 = 0 → x =","fig":"","a":"3 y 4","v":["3 y 4","3, 4","4 y 3"],"pasos":["Busco dos números que sumen 7 y multipliquen 12: 3 y 4.","(x − 3)(x − 4) = 0.","x = 3 y x = 4."],"p":"3 y 4."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 7 · Unidad 20","q":"x² + x = 0 → x =","fig":"","a":"0 y −1","v":["0 y -1","0 y −1","-1 y 0","0, -1"],"pasos":["Factorizo x(x + 1) = 0.","x = 0 o x + 1 = 0.","x = 0 y x = −1."],"p":"x(x+1) = 0."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 8 · Unidad 20","q":"Discriminante Δ < 0 significa…","fig":"","a":"sin soluciones reales","v":["sin soluciones reales","no tiene solución real","no hay solución real","ninguna"],"pasos":["El discriminante es Δ = b² − 4ac.","Si Δ < 0, su raíz no existe en los reales.","La ecuación no tiene soluciones reales."],"p":"Raíz negativa."},{"area":"Álgebra","topic":"algebra","unidad":"Ecuaciones de segundo grado","tema":"Ejercicio 9 · Unidad 20","q":"En x² + 2x + 1 = 0, Δ = …","fig":"","a":"0","v":["0"],"pasos":["a = 1, b = 2, c = 1.","Δ = 2² − 4(1)(1) = 4 − 4.","Δ = 0."],"p":"4 − 4 = 0 (una solución)."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 1 · Unidad 21","q":"x² = 64 → x (medida)","fig":"","a":"8","v":["8"],"pasos":["x = ±√64 = ±8.","Como x es una medida, tomamos el positivo.","x = 8."],"p":"Descarto −8."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 2 · Unidad 21","q":"x(x + 1) = 12 → x > 0","fig":"","a":"3","v":["3"],"pasos":["Busco dos números consecutivos cuyo producto sea 12: 3 y 4.","x(x+1) = 3·4 = 12.","x = 3."],"p":"3·4 = 12."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 3 · Unidad 21","q":"x² + 3x − 4 = 0 → x > 0","fig":"","a":"1","v":["1"],"pasos":["Factorizo: (x + 4)(x − 1) = 0.","x = −4 o x = 1.","Como x > 0, x = 1."],"p":"(x+4)(x−1)."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 4 · Unidad 21","q":"Rectángulo de área 20 con un lado el doble → lado menor","fig":"","a":"√10 ≈ 3.16","v":["3.16","3,16","√10","3.2"],"pasos":["Lados x y 2x; el área es x · 2x = 2x².","2x² = 20 → x² = 10.","x = √10 ≈ 3.16."],"p":"2x² = 20."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 5 · Unidad 21","q":"x² = 2x → x (positivo)","fig":"","a":"2","v":["2"],"pasos":["x² = 2x → x² − 2x = 0.","x(x − 2) = 0 → x = 0 o x = 2.","Positivo: x = 2."],"p":"x(x−2) = 0."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 6 · Unidad 21","q":"Cuadrado de área 121 → lado","fig":"","a":"11","v":["11"],"pasos":["Lado = √121.","= 11."],"p":"√121."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 7 · Unidad 21","q":"Producto de 7 y 8 =","fig":"","a":"56","v":["56"],"pasos":["7 × 8 = 56.","El producto es 56."],"p":"consecutivos."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 8 · Unidad 21","q":"¿Cuál se descarta en x = 8 o x = −9 para «lado»?","fig":"","a":"−9","v":["-9","−9","9"],"pasos":["Un lado no puede medir una cantidad negativa.","x = −9 no tiene sentido.","Se descarta x = −9."],"p":"Medida negativa."},{"area":"Álgebra","topic":"algebra","unidad":"Problemas con ecuaciones de segundo grado","tema":"Ejercicio 9 · Unidad 21","q":"x(x + 5) = 36 con x > 0 → x","fig":"","a":"4","v":["4"],"pasos":["Busco x tal que x(x+5) = 36.","4 · 9 = 36.","x = 4."],"p":"4·9 = 36."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 1 · Unidad 22","q":"y = 3x + 2: ¿recta o parábola?","fig":"","a":"Recta","v":["Recta","recta","una recta"],"pasos":["El grado de x es 1.","Las funciones lineales trazan una recta."],"p":"Grado 1."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 2 · Unidad 22","q":"y = x² − 1: ¿recta o parábola?","fig":"","a":"Parábola","v":["Parábola","parabola","una parábola"],"pasos":["El grado de x es 2.","Las funciones cuadráticas trazan una parábola."],"p":"Grado 2."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 3 · Unidad 22","q":"En y = 2x, si x = 3 → y =","fig":"","a":"6","v":["6"],"pasos":["y = 2x = 2 × 3.","y = 6."],"p":"2·3."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 4 · Unidad 22","q":"En y = 3x + 1, si x = 0 → y =","fig":"","a":"1","v":["1"],"pasos":["y = 3(0) + 1.","= 1. Es la ordenada al origen."],"p":"Ordenada al origen."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 5 · Unidad 22","q":"y = −x² abre hacia…","fig":"","a":"abajo","v":["abajo","hacia abajo","hacia abajo"],"pasos":["El coeficiente a = −1 (negativo).","Una parábola con a < 0 abre hacia abajo."],"p":"a < 0."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 6 · Unidad 22","q":"¿y = −2x + 1 sube o baja?","fig":"","a":"baja","v":["baja","decrece","hacia abajo"],"pasos":["La pendiente es m = −2.","Pendiente negativa → la recta baja."],"p":"Pendiente −2."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 7 · Unidad 22","q":"Puntos de y = x + 1 para x = 2","fig":"","a":"(2, 3)","v":["(2,3)","2, 3","(2, 3)"],"pasos":["y = x + 1 = 2 + 1 = 3.","El punto es (2, 3)."],"p":"2+1."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 8 · Unidad 22","q":"Vértice de y = x² está en…","fig":"","a":"(0,0)","v":["(0,0)","el origen","(0, 0)"],"pasos":["y = x² tiene su mínimo en x = 0.","y = 0. El vértice está en (0, 0)."],"p":"Mínimo de la parábola."},{"area":"Álgebra","topic":"algebra","unidad":"Gráficas de función lineal y cuadrática","tema":"Ejercicio 9 · Unidad 22","q":"y = 5 es…","fig":"","a":"una recta horizontal","v":["una recta horizontal","recta horizontal","horizontal"],"pasos":["La pendiente es 0 (no aparece x).","y siempre vale 5.","Es una recta horizontal."],"p":"Pendiente 0."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 1 · Unidad 23","q":"En (4, 7), 4 es la…","fig":"","a":"abscisa (x)","v":["abscisa","abscisa (x)","la abscisa"],"pasos":["La primera coordenada es la abscisa (eje x).","En (4, 7), el 4 es la abscisa."],"p":"Primera coordenada."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 2 · Unidad 23","q":"La constante de 3/1 = 6/2 es…","fig":"","a":"3","v":["3"],"pasos":["k = y/x.","3/1 = 3 y 6/2 = 3.","La constante de proporcionalidad es 3."],"p":"k = y/x."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 3 · Unidad 23","q":"¿(2,4) y (3,6) son proporcionales?","fig":"","a":"Sí","v":["Si","sí","S"],"pasos":["Razones: 4/2 = 2 y 6/3 = 2.","La constante es la misma.","Sí son proporcionales."],"p":"Ambas razones 2."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 4 · Unidad 23","q":"¿(1,1) y (2,3)?","fig":"","a":"No","v":["No","no","No."],"pasos":["Razones: 1/1 = 1 y 3/2 = 1.5.","Son distintas.","No son proporcionales."],"p":"1 vs 1.5."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 5 · Unidad 23","q":"Recta proporcional pasa por…","fig":"","a":"el origen (0,0)","v":["el origen","pasa por el origen","(0,0)","el origen (0,0)"],"pasos":["En y = kx, si x = 0 entonces y = 0.","La recta proporcional pasa por el origen (0,0)."],"p":"Clave del bloque."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 6 · Unidad 23","q":"y = 4x: con x = 3, y =","fig":"","a":"12","v":["12"],"pasos":["y = 4x = 4 × 3.","y = 12."],"p":"4·3."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 7 · Unidad 23","q":"Tabla x: 2→6, 3→9, k =","fig":"","a":"3","v":["3"],"pasos":["k = 6/2 = 3 (y 9/3 = 3).","La constante es 3."],"p":"6/2 = 3."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 8 · Unidad 23","q":"Graficar (0,0) y (1,5) → recta con k =","fig":"","a":"5","v":["5"],"pasos":["k = y/x = 5/1.","La pendiente de la recta es 5."],"p":"Pendiente 5."},{"area":"Álgebra","topic":"algebra","unidad":"Relaciones de proporcionalidad en el plano cartesiano","tema":"Ejercicio 9 · Unidad 23","q":"Un punto en el eje y tiene x =","fig":"","a":"0","v":["0"],"pasos":["Todos los puntos del eje y tienen x = 0."],"p":"Está sobre el eje vertical."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 1 · Unidad 24","q":"Estudiamos TODOS los autos del estacionamiento → …","fig":"","a":"población","v":["población","poblacion"],"pasos":["Se estudia el conjunto completo.","Eso es la población."],"p":"El conjunto completo."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 2 · Unidad 24","q":"Investigamos a 40 de 1000 alumnos → …","fig":"","a":"muestra","v":["muestra"],"pasos":["Solo se observa una parte del conjunto.","Eso es la muestra."],"p":"Subconjunto."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 3 · Unidad 24","q":"'Rojo' es un …","fig":"","a":"dato","v":["dato"],"pasos":["'Rojo' es un valor registrado.","Es un dato."],"p":"Un valor."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 4 · Unidad 24","q":"Edad es variable…","fig":"","a":"cuantitativa","v":["cuantitativa"],"pasos":["La edad se expresa con números.","Es una variable cuantitativa."],"p":"Números."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 5 · Unidad 24","q":"Color de ojos es variable…","fig":"","a":"cualitativa","v":["cualitativa"],"pasos":["El color de ojos se clasifica en categorías.","Es una variable cualitativa."],"p":"Categorías."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 6 · Unidad 24","q":"Cada elemento de la población es un…","fig":"","a":"individuo","v":["individuo"],"pasos":["Cada unidad de la población.","Es el individuo."],"p":"Unidad estadística."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 7 · Unidad 24","q":"Elegir la muestra es el…","fig":"","a":"muestreo","v":["muestreo"],"pasos":["Es el proceso de selección de la muestra.","Se llama muestreo."],"p":"Proceso de selección."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 8 · Unidad 24","q":"Lanzar un dado y registrar 5 → '5' es un…","fig":"","a":"dato","v":["dato"],"pasos":["El '5' es un valor observado.","Es un dato."],"p":"Valor registrado."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Estadística: conceptos básicos","tema":"Ejercicio 9 · Unidad 24","q":"Número de hermanos es variable…","fig":"","a":"cuantitativa discreta","v":["cuantitativa discreta","discreta"],"pasos":["Se mide con números enteros contables.","Es una variable cuantitativa discreta."],"p":"Entero contable."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 1 · Unidad 25","q":"Con N = 20, fi = 5 → hi =","fig":"","a":"0.25 (25%)","v":["0.25","25%","0.25 (25%)"],"pasos":["hi = fi ÷ N = 5 ÷ 20.","= 0.25 = 25%."],"p":"5/20."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 2 · Unidad 25","q":"Con N = 50, fi = 10 → hi =","fig":"","a":"0.2","v":["0.2"],"pasos":["hi = 10 ÷ 50 = 0.2."],"p":"10/50."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 3 · Unidad 25","q":"El 35% en decimal =","fig":"","a":"0.35","v":["0.35"],"pasos":["35 ÷ 100 = 0.35."],"p":"35/100."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 4 · Unidad 25","q":"El 0.75 en fracción =","fig":"","a":"3/4","v":["3/4"],"pasos":["0.75 = 75/100.","Simplifico entre 25: 3/4."],"p":"75/100 = 3/4."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 5 · Unidad 25","q":"Suma de las frecuencias relativas =","fig":"","a":"1 (100%)","v":["1","1 (100%)","100%"],"pasos":["Las frecuencias relativas siempre suman 1.","Es decir, 100%."],"p":"Siempre."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 6 · Unidad 25","q":"Suma de frecuencias absolutas =","fig":"","a":"N (total de datos)","v":["N","el total de datos","N (total de datos)"],"pasos":["Cada dato se cuenta una vez.","La suma es N, el total de datos."],"p":"Definición."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 7 · Unidad 25","q":"N = 40, fi = 10 → hi","fig":"","a":"0.25","v":["0.25","25%"],"pasos":["hi = 10 ÷ 40 = 0.25.","= 25%."],"p":"1/4, 25%."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 8 · Unidad 25","q":"hi = 0.1 es…","fig":"","a":"10%","v":["10%","10"],"pasos":["0.1 × 100 = 10%."],"p":"×100."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Frecuencias absoluta y relativa","tema":"Ejercicio 9 · Unidad 25","q":"En 100 lanzamientos, sol = 60 → fi sol =","fig":"","a":"60","v":["60"],"pasos":["La frecuencia absoluta es el número de veces.","La moneda cayó sol 60 veces."],"p":"Absoluta."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 1 · Unidad 26","q":"Para comparar categorías →","fig":"","a":"barras","v":["barras","gráfica de barras","de barras","barras"],"pasos":["Cada categoría es una barra.","Sirve para comparar categorías."],"p":"Típico."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 2 · Unidad 26","q":"Parte del total (25%, etc.) →","fig":"","a":"circular","v":["circular","pastel","de pastel","sectores"],"pasos":["Cada parte se representa como sector del total.","Es la gráfica circular (de pastel)."],"p":"Pastel."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 3 · Unidad 26","q":"Datos agrupados en rangos →","fig":"","a":"histograma","v":["histograma"],"pasos":["Los datos se agrupan en intervalos con barras contiguas.","Es el histograma."],"p":"Barras juntas."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 4 · Unidad 26","q":"Ver tendencia en el tiempo →","fig":"","a":"poligonal","v":["poligonal","de línea","línea","poligonal de línea"],"pasos":["Une los puntos con una línea.","Muestra la tendencia en el tiempo."],"p":"Línea."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 5 · Unidad 26","q":"25% en un pastel es…","fig":"","a":"90°","v":["90°","90"],"pasos":["25% de 360°.","0.25 × 360 = 90°."],"p":"0.25×360."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 6 · Unidad 26","q":"50% en un pastel es…","fig":"","a":"180°","v":["180°","180"],"pasos":["50% de 360° = 180°.","Media vuelta."],"p":"Media vuelta."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 7 · Unidad 26","q":"Barras del histograma se tocan…","fig":"","a":"porque hay continuidad","v":["por continuidad","porque hay continuidad","continuidad"],"pasos":["Los intervalos son continuos, sin huecos.","Por eso las barras se tocan."],"p":"Intervalos."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 8 · Unidad 26","q":"Una barra de altura 8 de N=24 es…","fig":"","a":"un tercio (≈33%)","v":["33%","un tercio","1/3","≈33%"],"pasos":["8 ÷ 24 = 1/3 ≈ 0.33.","≈ 33%."],"p":"8/24."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Gráficas estadísticas","tema":"Ejercicio 9 · Unidad 26","q":"La barra más alta es la…","fig":"","a":"de mayor frecuencia","v":["la de mayor frecuencia","mayor frecuencia","de mayor frecuencia"],"pasos":["La altura representa la frecuencia.","La más alta es la más frecuente."],"p":"Interpretación."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 1 · Unidad 27","q":"Media de 2, 4, 6 =","fig":"","a":"4","v":["4"],"pasos":["(2 + 4 + 6) ÷ 3 = 12 ÷ 3.","= 4."],"p":"12/3."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 2 · Unidad 27","q":"Mediana de 1, 1, 2, 2 =","fig":"","a":"1.5","v":["1.5"],"pasos":["Hay 4 datos (par): los dos centrales son 1 y 2.","(1 + 2) ÷ 2 = 1.5."],"p":"(1+2)/2."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 3 · Unidad 27","q":"Moda de 2, 2, 3, 4 =","fig":"","a":"2","v":["2"],"pasos":["El 2 se repite dos veces.","Moda = 2."],"p":"El repetido."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 4 · Unidad 27","q":"Moda de 1, 2, 3, 4 =","fig":"","a":"no existe","v":["no existe","no hay","ninguna"],"pasos":["Ningún valor se repite.","No hay moda."],"p":"Todos distintos."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 5 · Unidad 27","q":"Mediana de 7, 1, 4, 2, 5 =","fig":"","a":"4","v":["4"],"pasos":["Ordeno: 1, 2, 4, 5, 7.","El dato central es 4."],"p":"Ordena: 1,2,4,5,7."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 6 · Unidad 27","q":"Media de 100, 2, 3 =","fig":"","a":"35","v":["35"],"pasos":["(100 + 2 + 3) ÷ 3 = 105 ÷ 3.","= 35. El 100 sesga el promedio."],"p":"105/3, sesgada por el 100."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 7 · Unidad 27","q":"Mediana de 1,2,2,3,40 =","fig":"","a":"2","v":["2"],"pasos":["Ordenada: 1, 2, 2, 3, 40.","El dato central (posición 3) es 2."],"p":"Central tras ordenar."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 8 · Unidad 27","q":"Si N es par, la mediana es el promedio de…","fig":"","a":"los dos centrales","v":["los dos centrales","los dos datos centrales","los centrales"],"pasos":["Con N par no hay valor central único.","La mediana es el promedio de los dos datos centrales."],"p":"Regla."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Media, mediana y moda","tema":"Ejercicio 9 · Unidad 27","q":"Dos valores con moda → se llama…","fig":"","a":"bimodal","v":["bimodal"],"pasos":["Dos valores comparten la mayor frecuencia.","La distribución es bimodal."],"p":"Dos modas."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 1 · Unidad 28","q":"Lanzar un dado es un experimento…","fig":"","a":"aleatorio","v":["aleatorio"],"pasos":["No se puede predecir el resultado.","Es un experimento aleatorio."],"p":"No se predice."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 2 · Unidad 28","q":"Sol a 1000 °C se derrite es…","fig":"","a":"determinista","v":["determinista"],"pasos":["El resultado es siempre el mismo (seguro).","Es un experimento determinista."],"p":"Resultado seguro."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 3 · Unidad 28","q":"Nº de caras de una moneda (Ω) =","fig":"","a":"2","v":["2"],"pasos":["Los resultados son águila o sol.","El espacio muestral tiene 2 resultados."],"p":"Águila o sol."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 4 · Unidad 28","q":"Ω de un dado =","fig":"","a":"{1,2,3,4,5,6}","v":["{1,2,3,4,5,6}","1,2,3,4,5,6","{1, 2, 3, 4, 5, 6}","1, 2, 3, 4, 5, 6"],"pasos":["Resultados posibles de un dado.","Ω = {1, 2, 3, 4, 5, 6}."],"p":"6 resultados."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 5 · Unidad 28","q":"Primos en un dado (1–6) =","fig":"","a":"{2, 3, 5}","v":["{2,3,5}","{2, 3, 5}","2, 3 y 5","2,3,5"],"pasos":["Los números primos entre 1 y 6.","Son 2, 3 y 5."],"p":"Evento."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 6 · Unidad 28","q":"Moneda × dado da…","fig":"","a":"12","v":["12"],"pasos":["2 resultados de la moneda por 6 del dado.","2 × 6 = 12."],"p":"2×6."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 7 · Unidad 28","q":"Dos monedas dan…","fig":"","a":"4 resultados","v":["4","4 resultados"],"pasos":["Águila-Águila, Águila-Sol, Sol-Águila, Sol-Sol.","4 resultados."],"p":"HH, HT, TH, TT."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 8 · Unidad 28","q":"«Sacar 7» en un dado es un evento…","fig":"","a":"imposible (nunca)","v":["imposible","imposible (nunca)","0"],"pasos":["El dado solo da del 1 al 6.","Sacar 7 nunca ocurre: evento imposible."],"p":"No está en Ω."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Experimentos y espacio muestral","tema":"Ejercicio 9 · Unidad 28","q":"Ω de {dado par} =","fig":"","a":"{2, 4, 6}","v":["{2,4,6}","{2, 4, 6}","2, 4 y 6","2,4,6"],"pasos":["Los resultados pares de un dado.","Ω = {2, 4, 6}."],"p":"Evento."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 1 · Unidad 29","q":"P(6) en un dado =","fig":"","a":"1/6","v":["1/6"],"pasos":["1 caso favorable (el 6) de 6 posibles.","P = 1/6."],"p":"1 favorable."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 2 · Unidad 29","q":"P(impar) en un dado =","fig":"","a":"3/6 = 1/2","v":["1/2","3/6"],"pasos":["Impares: 1, 3 y 5 → 3 casos.","P = 3/6 = 1/2."],"p":"1,3,5."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 3 · Unidad 29","q":"P(águila o sol) =","fig":"","a":"1 (seguro)","v":["1","1 (seguro)","100%"],"pasos":["Siempre sale águila o sol.","P = 2/2 = 1 (evento seguro)."],"p":"2/2."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 4 · Unidad 29","q":"P(de 7 en dado) =","fig":"","a":"0","v":["0","0%"],"pasos":["El 7 no está en el espacio muestral de un dado.","P = 0 (imposible)."],"p":"Imposible."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 5 · Unidad 29","q":"P(no par) en dado =","fig":"","a":"1/2","v":["1/2"],"pasos":["Pares: 2, 4, 6 → P(par) = 1/2.","Complemento: 1 − 1/2 = 1/2."],"p":"Complemento."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 6 · Unidad 29","q":"En 50 intentos, 20 éxitos → P ≈","fig":"","a":"0.4","v":["0.4","40%","2/5"],"pasos":["Probabilidad frecuencial = éxitos ÷ intentos.","20 ÷ 50 = 0.4."],"p":"20/50."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 7 · Unidad 29","q":"P(rojo) si rojos = 4 de 10 =","fig":"","a":"0.4","v":["0.4","2/5","40%"],"pasos":["P = casos favorables ÷ total.","4 ÷ 10 = 0.4."],"p":"4/10."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 8 · Unidad 29","q":"Saco de 3 bolas rojas y 2 azules → P(azul) =","fig":"","a":"2/5","v":["2/5","0.4","40%"],"pasos":["2 bolas azules de 5 en total.","P = 2/5."],"p":"2 de 5."},{"area":"Estadística y probabilidad","topic":"estadistica","unidad":"Probabilidad: teórica y frecuencial","tema":"Ejercicio 9 · Unidad 29","q":"0.75 en % =","fig":"","a":"75%","v":["75%","75"],"pasos":["0.75 × 100 = 75%."],"p":"×100."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 1 · Unidad 30","q":"90° es un ángulo…","fig":"<svg viewBox=\"0 0 170 120\" width=\"160\" xmlns=\"http://www.w3.org/2000/svg\"><line x1=\"20\" y1=\"100\" x2=\"150\" y2=\"100\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"20\" y1=\"100\" x2=\"20\" y2=\"18\" stroke=\"#2563EB\" stroke-width=\"2\"/><rect x=\"20\" y=\"85\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"#10B981\" stroke-width=\"1.6\"/><text x=\"42\" y=\"93\" font-size=\"13\" fill=\"#065F46\">90° recto</text></svg>","a":"recto","v":["recto"],"pasos":["Mide exactamente 90°.","Es un ángulo recto."],"p":"Cuadradito."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 2 · Unidad 30","q":"30° es…","fig":"<svg viewBox=\"0 0 170 120\" width=\"160\" xmlns=\"http://www.w3.org/2000/svg\"><line x1=\"20\" y1=\"100\" x2=\"150\" y2=\"100\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"20\" y1=\"100\" x2=\"128\" y2=\"34\" stroke=\"#2563EB\" stroke-width=\"2\"/><path d=\"M62,100 A42,42 0 0,0 50,72\" fill=\"none\" stroke=\"#10B981\" stroke-width=\"1.6\"/><text x=\"66\" y=\"88\" font-size=\"13\" fill=\"#065F46\">30° agudo</text></svg>","a":"agudo","v":["agudo"],"pasos":["Es menor de 90°.","Es un ángulo agudo."],"p":"< 90°."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 3 · Unidad 30","q":"170° es…","fig":"<svg viewBox=\"0 0 190 120\" width=\"180\" xmlns=\"http://www.w3.org/2000/svg\"><line x1=\"95\" y1=\"100\" x2=\"180\" y2=\"100\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"95\" y1=\"100\" x2=\"14\" y2=\"86\" stroke=\"#2563EB\" stroke-width=\"2\"/><path d=\"M135,100 A40,40 0 0,1 65,84\" fill=\"none\" stroke=\"#10B981\" stroke-width=\"1.6\"/><text x=\"70\" y=\"74\" font-size=\"13\" fill=\"#065F46\">170° obtuso</text></svg>","a":"obtuso","v":["obtuso"],"pasos":["Está entre 90° y 180°.","Es un ángulo obtuso."],"p":"Entre 90 y 180."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 4 · Unidad 30","q":"180° es…","fig":"<svg viewBox=\"0 0 210 95\" width=\"200\" xmlns=\"http://www.w3.org/2000/svg\"><line x1=\"15\" y1=\"72\" x2=\"195\" y2=\"72\" stroke=\"#2563EB\" stroke-width=\"2\"/><path d=\"M60,72 A45,45 0 0,1 150,72\" fill=\"none\" stroke=\"#10B981\" stroke-width=\"1.6\"/><circle cx=\"105\" cy=\"72\" r=\"3.5\" fill=\"#2563EB\"/><text x=\"86\" y=\"48\" font-size=\"13\" fill=\"#065F46\">180° llano</text></svg>","a":"llano","v":["llano"],"pasos":["Mide 180° y forma una línea recta.","Es un ángulo llano."],"p":"Recta."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 5 · Unidad 30","q":"Rectas que nunca se cruzan →","fig":"","a":"paralelas","v":["paralelas"],"pasos":["Tienen la misma dirección y nunca se cruzan.","Son rectas paralelas."],"p":"Misma dirección."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 6 · Unidad 30","q":"Rectas que forman 90° →","fig":"","a":"perpendiculares","v":["perpendiculares"],"pasos":["Forman un ángulo de 90°.","Son rectas perpendiculares."],"p":"Esquina recta."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 7 · Unidad 30","q":"Rectas que se cruzan en un punto →","fig":"","a":"secantes","v":["secantes"],"pasos":["Se cruzan en un punto.","Son rectas secantes."],"p":"Corte."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 8 · Unidad 30","q":"La vuelta completa mide…","fig":"","a":"360°","v":["360°","360"],"pasos":["Una vuelta completa equivale a todo el círculo.","Mide 360°."],"p":"Todo el círculo."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Figuras geométricas y ángulos","tema":"Ejercicio 9 · Unidad 30","q":"Opuestos por el vértice son…","fig":"","a":"iguales","v":["iguales","son iguales"],"pasos":["Al cruzar dos rectas, los ángulos opuestos por el vértice miden igual.","Son iguales."],"p":"Regla del cruce."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 1 · Unidad 31","q":"Suma de ángulos de un pentágono =","fig":"<svg viewBox=\"0 0 200 175\" width=\"175\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"100,15 185,78 152,168 48,168 15,78\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><text x=\"58\" y=\"100\" font-size=\"13\" fill=\"#1E3A8A\">5 lados</text></svg>","a":"540°","v":["540°","540"],"pasos":["Suma de ángulos internos = (n − 2) · 180°.","(5 − 2) · 180° = 3 · 180°.","= 540°."],"p":"(5−2)×180."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 2 · Unidad 31","q":"Triángulo con 3 lados iguales →","fig":"","a":"equilátero","v":["equilátero","equilatero"],"pasos":["Tiene sus tres lados iguales.","Es un triángulo equilátero."],"p":"3 iguales."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 3 · Unidad 31","q":"Triángulo con 2 lados iguales →","fig":"","a":"isósceles","v":["isósceles","isosceles"],"pasos":["Tiene dos lados iguales.","Es un triángulo isósceles."],"p":"2 iguales."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 4 · Unidad 31","q":"Cuadrilátero con un par de paralelos →","fig":"","a":"trapecio","v":["trapecio"],"pasos":["Tiene un solo par de lados paralelos.","Es un trapecio."],"p":"Un solo par."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 5 · Unidad 31","q":"Suma de ángulos de un triángulo =","fig":"","a":"180°","v":["180°","180"],"pasos":["La suma de los ángulos internos de un triángulo.","Siempre es 180°."],"p":"Regla de oro."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 6 · Unidad 31","q":"Ángulo recto en un triángulo → es…","fig":"","a":"rectángulo","v":["rectángulo","rectangulo"],"pasos":["Tiene un ángulo de 90°.","Es un triángulo rectángulo."],"p":"90°."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 7 · Unidad 31","q":"Todos los ángulos menores de 90° →","fig":"","a":"acutángulo","v":["acutángulo","acutangulo"],"pasos":["Todos sus ángulos son menores de 90°.","Es acutángulo."],"p":"Fino."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 8 · Unidad 31","q":"Un cuadrilátero con 4 ángulos rectos y 4 lados iguales →","fig":"","a":"cuadrado","v":["cuadrado"],"pasos":["Cuatro lados iguales y cuatro ángulos de 90°.","Es un cuadrado."],"p":"Perfecto."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Polígonos: triángulos y cuadriláteros","tema":"Ejercicio 9 · Unidad 31","q":"n = 6 → suma interna","fig":"","a":"720°","v":["720°","720"],"pasos":["(6 − 2) · 180° = 4 · 180°.","= 720°."],"p":"(6−2)×180."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 1 · Unidad 32","q":"Área del cuadrado de lado 5 =","fig":"<svg viewBox=\"0 0 165 160\" width=\"140\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"28\" y=\"28\" width=\"110\" height=\"110\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><text x=\"76\" y=\"152\" font-size=\"14\" fill=\"#1E3A8A\">5</text><text x=\"6\" y=\"88\" font-size=\"14\" fill=\"#1E3A8A\">5</text></svg>","a":"25","v":["25","25 m²","25 cm²"],"pasos":["Área del cuadrado = lado².","5² = 25."],"p":"5²."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 2 · Unidad 32","q":"Perímetro del cuadrado de lado 5 =","fig":"","a":"20","v":["20"],"pasos":["Perímetro = 4 × lado.","4 × 5 = 20."],"p":"4×5."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 3 · Unidad 32","q":"Área del rectángulo 6 × 2 =","fig":"<svg viewBox=\"0 0 210 110\" width=\"185\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"22\" y=\"25\" width=\"165\" height=\"60\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><text x=\"96\" y=\"103\" font-size=\"14\" fill=\"#1E3A8A\">6</text><text x=\"4\" y=\"60\" font-size=\"14\" fill=\"#1E3A8A\">2</text></svg>","a":"12","v":["12"],"pasos":["Área del rectángulo = base × altura.","6 × 2 = 12."],"p":"b×h."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 4 · Unidad 32","q":"Área del triángulo base 8, altura 6 =","fig":"<svg viewBox=\"0 0 220 150\" width=\"190\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"30,120 200,120 30,30\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"30\" y1=\"30\" x2=\"30\" y2=\"120\" stroke=\"#10B981\" stroke-width=\"1.6\" stroke-dasharray=\"4 3\"/><rect x=\"30\" y=\"105\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"#2563EB\" stroke-width=\"1.3\"/><text x=\"96\" y=\"138\" font-size=\"13\" fill=\"#1E3A8A\">base = 8</text><text x=\"6\" y=\"80\" font-size=\"13\" fill=\"#065F46\">h = 6</text></svg>","a":"24","v":["24"],"pasos":["Área del triángulo = (base × altura) ÷ 2.","(8 × 6) ÷ 2 = 48 ÷ 2.","= 24."],"p":"8×6/2."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 5 · Unidad 32","q":"Área del círculo de r = 10 (π=3.14) =","fig":"<svg viewBox=\"0 0 180 160\" width=\"150\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"90\" cy=\"80\" r=\"62\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"90\" y1=\"80\" x2=\"152\" y2=\"80\" stroke=\"#10B981\" stroke-width=\"1.8\"/><circle cx=\"90\" cy=\"80\" r=\"3\" fill=\"#2563EB\"/><text x=\"110\" y=\"74\" font-size=\"13\" fill=\"#065F46\">r = 10</text></svg>","a":"314","v":["314"],"pasos":["Área del círculo = πr².","3.14 × 10² = 3.14 × 100.","= 314."],"p":"3.14×100."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 6 · Unidad 32","q":"Perímetro de un círculo de r = 5 =","fig":"","a":"31.4","v":["31.4","31,4"],"pasos":["Perímetro del círculo = 2πr.","2 × 3.14 × 5.","= 31.4."],"p":"2×3.14×5."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 7 · Unidad 32","q":"Rombo con D=8, d=6 → A =","fig":"<svg viewBox=\"0 0 180 172\" width=\"150\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"90,14 166,86 90,158 14,86\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"14\" y1=\"86\" x2=\"166\" y2=\"86\" stroke=\"#F97316\" stroke-width=\"1.6\"/><line x1=\"90\" y1=\"14\" x2=\"90\" y2=\"158\" stroke=\"#F97316\" stroke-width=\"1.6\"/><text x=\"120\" y=\"80\" font-size=\"12\" fill=\"#9A3412\">D = 8</text><text x=\"96\" y=\"46\" font-size=\"12\" fill=\"#9A3412\">d = 6</text></svg>","a":"24","v":["24"],"pasos":["Área del rombo = (D × d) ÷ 2.","(8 × 6) ÷ 2 = 24."],"p":"8×6/2."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 8 · Unidad 32","q":"A del trapecio B=10, b=4, h=5 =","fig":"<svg viewBox=\"0 0 225 150\" width=\"195\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"58,32 168,32 198,116 28,116\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><line x1=\"113\" y1=\"32\" x2=\"113\" y2=\"116\" stroke=\"#10B981\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\"/><text x=\"90\" y=\"27\" font-size=\"12\" fill=\"#1E3A8A\">B = 10</text><text x=\"100\" y=\"134\" font-size=\"12\" fill=\"#1E3A8A\">b = 4</text><text x=\"120\" y=\"80\" font-size=\"12\" fill=\"#065F46\">h = 5</text></svg>","a":"35","v":["35"],"pasos":["Área del trapecio = (B + b) · h ÷ 2.","(10 + 4) × 5 ÷ 2.","= 35."],"p":"(10+4)×5/2."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Área y perímetro de figuras","tema":"Ejercicio 9 · Unidad 32","q":"m² es medida de…","fig":"","a":"área","v":["área","area","superficie"],"pasos":["El metro cuadrado (m²) mide superficies.","Es una medida de área."],"p":"Superficie."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 1 · Unidad 33","q":"Ortoedro de 1×2×3 → V =","fig":"","a":"6","v":["6","6 cm³"],"pasos":["Volumen = largo × ancho × alto.","1 × 2 × 3 = 6."],"p":"base 1×2 = 2, ×3."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 2 · Unidad 33","q":"Cubo de arista 3 → V =","fig":"<svg viewBox=\"0 0 185 170\" width=\"155\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"40,60 120,60 120,140 40,140\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><polygon points=\"40,60 72,34 152,34 120,60\" fill=\"#BFDBFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><polygon points=\"120,60 152,34 152,114 120,140\" fill=\"#93C5FD\" stroke=\"#2563EB\" stroke-width=\"2\"/><text x=\"72\" y=\"160\" font-size=\"14\" fill=\"#1E3A8A\">3</text></svg>","a":"27","v":["27"],"pasos":["Volumen del cubo = arista³.","3³ = 27."],"p":"3³."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 3 · Unidad 33","q":"Cubitos de 1 cm³ en una caja de 2×2×8=","fig":"","a":"32","v":["32"],"pasos":["2 × 2 × 8 = 32.","Caben 32 cubitos."],"p":"2×2×8."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 4 · Unidad 33","q":"Prisma base 5×2, h=6 → V =","fig":"","a":"60","v":["60"],"pasos":["Área de la base = 5 × 2 = 10.","V = base × altura = 10 × 6.","= 60."],"p":"10×6."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 5 · Unidad 33","q":"Cilindro r=2, h=3 → V ≈","fig":"","a":"37.68","v":["37.68","37,68"],"pasos":["Área de la base = πr² = 3.14 × 4 = 12.56.","V = 12.56 × 3.","≈ 37.68."],"p":"3.14×4×3."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 6 · Unidad 33","q":"Pirámide base 9, h=9 → V =","fig":"","a":"27","v":["27"],"pasos":["Volumen de la pirámide = (área de la base × h) ÷ 3.","(9 × 9) ÷ 3 = 81 ÷ 3.","= 27."],"p":"(9 × 9) ÷ 3 = 27"},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 7 · Unidad 33","q":"Sólido con 2 bases iguales =","fig":"","a":"prisma","v":["prisma"],"pasos":["Los prismas tienen dos bases iguales y paralelas.","Es un prisma."],"p":"Identifica."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 8 · Unidad 33","q":"Un L =","fig":"","a":"1000 cm³","v":["1000 cm³","1000","1000cm3"],"pasos":["1 L equivale a 1 dm³.","1 dm³ = 1000 cm³."],"p":"Medida típica."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Cuerpos geométricos y volumen","tema":"Ejercicio 9 · Unidad 33","q":"La esfera NO tiene…","fig":"","a":"bases","v":["bases","base"],"pasos":["La esfera es totalmente redonda.","No tiene bases."],"p":"Es totalmente circular."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 1 · Unidad 34","q":"c² = 25 → c =","fig":"","a":"5","v":["5"],"pasos":["c² = 25.","c = √25 = 5."],"p":"√25."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 2 · Unidad 34","q":"Terna 5-12-…","fig":"","a":"13","v":["13"],"pasos":["c² = 5² + 12² = 25 + 144 = 169.","c = √169 = 13."],"p":"25+144=169."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 3 · Unidad 34","q":"Catetos 6 y 8 → c =","fig":"<svg viewBox=\"0 0 250 155\" width=\"230\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"35,125 35,25 215,125\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><rect x=\"35\" y=\"110\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"#2563EB\" stroke-width=\"1.4\"/><text x=\"14\" y=\"80\" font-size=\"14\" fill=\"#1E3A8A\">6</text><text x=\"116\" y=\"145\" font-size=\"14\" fill=\"#1E3A8A\">8</text><text x=\"130\" y=\"66\" font-size=\"14\" fill=\"#1E3A8A\">c = ?</text></svg>","a":"10","v":["10"],"pasos":["c² = 6² + 8² = 36 + 64 = 100.","c = √100 = 10."],"p":"36+64=100."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 4 · Unidad 34","q":"c=13, a=12 → b =","fig":"<svg viewBox=\"0 0 250 155\" width=\"230\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"35,125 35,25 215,125\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><rect x=\"35\" y=\"110\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"#2563EB\" stroke-width=\"1.4\"/><text x=\"14\" y=\"80\" font-size=\"14\" fill=\"#1E3A8A\">a = 12</text><text x=\"116\" y=\"145\" font-size=\"14\" fill=\"#1E3A8A\">b = ?</text><text x=\"130\" y=\"66\" font-size=\"14\" fill=\"#1E3A8A\">c = 13</text></svg>","a":"5","v":["5"],"pasos":["b² = c² − a² = 169 − 144 = 25.","b = √25 = 5."],"p":"169−144=25."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 5 · Unidad 34","q":"Hipotenusa = lado…","fig":"","a":"más largo (± opuesto al recto)","v":["el lado más largo","más largo","opuesto al ángulo recto"],"pasos":["La hipotenusa está opuesta al ángulo recto.","Es el lado más largo del triángulo rectángulo."],"p":"Opuesto al recto."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 6 · Unidad 34","q":"c=15, a=9 → b =","fig":"","a":"12","v":["12"],"pasos":["b² = c² − a² = 225 − 81 = 144.","b = √144 = 12."],"p":"225−81=144."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 7 · Unidad 34","q":"Triángulo de lados 3,4,5 es…","fig":"","a":"rectángulo","v":["rectángulo","rectangulo"],"pasos":["3² + 4² = 9 + 16 = 25 = 5².","Cumple el teorema de Pitágoras.","Es un triángulo rectángulo."],"p":"Cumple el teorema."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 8 · Unidad 34","q":"9-12-15 es una terna (¿por qué?)","fig":"","a":"múltiplo de 3-4-5","v":["múltiplo de 3-4-5","multiplo de 3-4-5","es múltiplo de 3-4-5","múltiplo de 3,4,5"],"pasos":["9 = 3×3, 12 = 3×4, 15 = 3×5.","Es la terna 3-4-5 multiplicada por 3."],"p":"×3."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Teorema de Pitágoras","tema":"Ejercicio 9 · Unidad 34","q":"Pitágoras SOLO aplica a triángulos…","fig":"","a":"rectángulos","v":["rectángulos","rectangulos","triángulos rectángulos","con un ángulo recto"],"pasos":["El teorema solo vale en triángulos con un ángulo de 90°.","Aplica solo a triángulos rectángulos."],"p":"Con 90°."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 1 · Unidad 35","q":"Misma forma y tamaño →","fig":"","a":"congruentes","v":["congruentes"],"pasos":["Tienen la misma forma y el mismo tamaño.","Son congruentes (≅)."],"p":"≅."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 2 · Unidad 35","q":"Misma forma, otro tamaño →","fig":"","a":"semejantes","v":["semejantes"],"pasos":["Tienen la misma forma pero distinto tamaño.","Son semejantes (∼)."],"p":"∼."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 3 · Unidad 35","q":"Razón entre 2 y 6 es…","fig":"","a":"3 (o 1/3)","v":["3","1/3","3 (o 1/3)"],"pasos":["Razón = 6 ÷ 2.","= 3. La mayor es el triple de la menor."],"p":"6/2."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 4 · Unidad 35","q":"Si k = 2, lados de 5 →","fig":"","a":"10","v":["10"],"pasos":["Cada lado se multiplica por k.","5 × 2 = 10."],"p":"×2."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 5 · Unidad 35","q":"Figuras semejantes se…","fig":"","a":"proporcionales","v":["proporcionales","son proporcionales","se conservan la proporción"],"pasos":["Todos los lados guardan la misma razón.","Las figuras semejantes son proporcionales."],"p":"Razón constante."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 6 · Unidad 35","q":"Si k = 2, el área se hace…","fig":"","a":"4 veces","v":["4 veces","4","cuatro veces"],"pasos":["Las áreas crecen con k².","k² = 2² = 4 veces."],"p":"k²."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 7 · Unidad 35","q":"Dos rectángulos 2×4 y 4×8 son…","fig":"","a":"semejantes (k=2)","v":["semejantes","semejantes (k=2)","son semejantes"],"pasos":["4 ÷ 2 = 2 y 8 ÷ 4 = 2.","La razón es k = 2, así que son semejantes."],"p":"Dobles."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 8 · Unidad 35","q":"Ángulos correspondientes en semejantes =","fig":"","a":"iguales","v":["iguales","son iguales"],"pasos":["En figuras semejantes los ángulos se conservan.","Los ángulos correspondientes son iguales."],"p":"Misma forma."},{"area":"Geometría y trigonometría","topic":"geometria","unidad":"Semejanza y congruencia","tema":"Ejercicio 9 · Unidad 35","q":"Perímetro de la copia con k=2 =","fig":"","a":"doble","v":["doble","el doble"],"pasos":["El perímetro crece con la razón k.","Con k = 2, el perímetro es el doble."],"p":"Razón k."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 1 · Unidad 36","q":"Calcula sen 30°.","fig":"","a":"1/2","v":["1/2","0.5"],"pasos":["30° es un ángulo notable.","sen 30° = 1/2.","Resultado: 1/2."],"p":"Ángulo notable."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 2 · Unidad 36","q":"Calcula cos 60°.","fig":"","a":"1/2","v":["1/2","0.5"],"pasos":["60° es un ángulo notable.","cos 60° = 1/2.","Resultado: 1/2."],"p":"Ángulo notable."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 3 · Unidad 36","q":"Calcula tan 45°.","fig":"","a":"1","v":["1"],"pasos":["tan α = sen α ÷ cos α.","sen 45° = cos 45° = √2/2.","Se cancelan: tan 45° = 1."],"p":"sen y cos son iguales."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 4 · Unidad 36","q":"Calcula sen 45°.","fig":"","a":"√2/2 ≈ 0.71","v":["√2/2","0.71","0.7","raiz de 2 entre 2"],"pasos":["45° es un ángulo notable.","sen 45° = √2/2.","≈ 0.71."],"p":"Ángulo notable."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 5 · Unidad 36","q":"Calcula cos 30°.","fig":"","a":"√3/2 ≈ 0.87","v":["√3/2","0.87","raiz de 3 entre 2"],"pasos":["30° es un ángulo notable.","cos 30° = √3/2.","≈ 0.87."],"p":"Ángulo notable."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 6 · Unidad 36","q":"En un triángulo rectángulo el cateto opuesto mide 4 y la hipotenusa 5. ¿Cuánto vale sen α?","fig":"<svg viewBox=\"0 0 260 160\" width=\"230\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"35,130 35,30 215,130\" fill=\"#DBEAFE\" stroke=\"#2563EB\" stroke-width=\"2\"/><rect x=\"35\" y=\"115\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"#2563EB\" stroke-width=\"1.4\"/><path d=\"M78,130 A43,43 0 0,0 63,99\" fill=\"none\" stroke=\"#F97316\" stroke-width=\"2\"/><text x=\"82\" y=\"122\" font-size=\"14\" fill=\"#9A3412\">&#945;</text><text x=\"16\" y=\"84\" font-size=\"12\" fill=\"#1E3A8A\">opuesto</text><text x=\"105\" y=\"150\" font-size=\"12\" fill=\"#1E3A8A\">adyacente</text><text x=\"130\" y=\"72\" font-size=\"12\" fill=\"#1E3A8A\">hipotenusa</text></svg>","a":"4/5 = 0.8","v":["4/5","0.8"],"pasos":["sen α = cateto opuesto ÷ hipotenusa.","4 ÷ 5 = 0.8.","Resultado: 4/5 = 0.8."],"p":"sen = opuesto ÷ hipotenusa."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 7 · Unidad 36","q":"¿Cuánto vale sen 90°?","fig":"","a":"1","v":["1"],"pasos":["Cuando el ángulo es 90°, el opuesto coincide con la hipotenusa.","sen 90° = hipotenusa ÷ hipotenusa.","Resultado: 1."],"p":"Ángulo de 90°."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 8 · Unidad 36","q":"Aplica sen²30° + cos²30°.","fig":"","a":"1","v":["1"],"pasos":["sen²30° = (1/2)² = 1/4.","cos²30° = (√3/2)² = 3/4.","1/4 + 3/4 = 1."],"p":"Identidad pitagórica."},{"area":"Geometría y trigonometría","topic":"trigonometria","unidad":"Trigonometría: razones en el triángulo rectángulo","tema":"Ejercicio 9 · Unidad 36","q":"Calcula tan 60°.","fig":"","a":"√3 ≈ 1.73","v":["√3","1.73","1.7","raiz de 3"],"pasos":["60° es un ángulo notable.","tan 60° = √3.","≈ 1.73."],"p":"Ángulo notable."}];
+
+const areas = ['Números y proporcionalidad','Álgebra','Estadística y probabilidad','Geometría y trigonometría'];
+let sel = { 'Números y proporcionalidad': true, 'Álgebra': true, 'Estadística y probabilidad': true, 'Geometría y trigonometría': true };
+let done = []; let current = null; let stats = { ok: 0, fail: 0, streak: 0 };
+
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const norm = s => String(s == null ? '' : s).toLowerCase().trim()
+  .replace(/[−–—]/g, '-')
+  .replace(/[$%]/g, '')
+  .replace(/(cm|mm|km|m|kg|g|l|h|hrs?|min|seg|s)\s*([23²³])?(?![a-záéíóúñ0-9])/g, '')
+  .replace(/°/g, '')
+  .replace(/²/g, '2').replace(/³/g, '3').replace(/¹/g, '1')
+  .replace(/[\^\u00d7·*\u00f7]/g, '')
+  .replace(/(?<=\d)x(?=\d)/g, '')
+  .replace(/\s+/g, '')
+  .replace(/[.,;:]+$/, '').replace(/^[.,;:]+/, '');
+function numVal(s){
+  const t = norm(s).replace(/,/g, '.');
+  if (/^[+-]?\d+(\.\d+)?$/.test(t)) return parseFloat(t);
+  const mixed = t.match(/^([+-]?\d+)(\d+)\/(\d+)$/);
+  if (mixed) return parseInt(mixed[1],10) + parseInt(mixed[2],10)/parseInt(mixed[3],10);
+  const fr = t.match(/^([+-]?\d+)\/(\d+)$/);
+  if (fr) return parseInt(fr[1],10)/parseInt(fr[2],10);
+  return null;
+}
+function matchAnsw(user, list){
+  const u = norm(user); if (!u) return false;
+  if (list.some(x => norm(x) === u)) return true;
+  const un = numVal(user); if (un == null) return false;
+  return list.some(x => { const xn = numVal(x); return xn != null && Math.abs(un - xn) < 1e-6; });
+}
+
+const FRAC_RX = /\d+\s*\/\s*\d+/g;
+const FRAC_TEST = /\d\s*\/\s*\d/;
+function fmtMath(root){
+  if (!root) return;
+  const REJ = { INPUT: 1, TEXTAREA: 1, SCRIPT: 1, STYLE: 1, SVG: 1 };
+  const nodes = [];
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode(n){
+    const p = n.parentNode; if (!p || REJ[p.nodeName]) return NodeFilter.FILTER_REJECT;
+    const cl = p.classList; if (cl && (cl.contains('frac') || cl.contains('frac-n') || cl.contains('frac-d'))) return NodeFilter.FILTER_REJECT;
+    return FRAC_TEST.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+  } });
+  while (w.nextNode()) nodes.push(w.currentNode);
+  for (const n of nodes){
+    const s = n.nodeValue; if (!FRAC_TEST.test(s)) continue;
+    const frag = document.createDocumentFragment(); let last = 0, m; FRAC_RX.lastIndex = 0;
+    while ((m = FRAC_RX.exec(s))){
+      if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+      const pr = m[0].split('/');
+      const sp = document.createElement('span'); sp.className = 'frac';
+      const nn = document.createElement('span'); nn.className = 'frac-n'; nn.textContent = pr[0].trim();
+      const dd = document.createElement('span'); dd.className = 'frac-d'; dd.textContent = pr[1].trim();
+      sp.appendChild(nn); sp.appendChild(dd); frag.appendChild(sp); last = m.index + m[0].length;
+    }
+    if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+    if (n.parentNode) n.parentNode.replaceChild(frag, n);
+  }
+}
+
+function renderChips(){
+  $('chips').innerHTML = areas.map(a => {
+    const n = BANK.filter(b => b.area === a).length;
+    const on = sel[a];
+    return '<button data-area="' + a + '" class="chip px-3 py-1.5 rounded-full text-sm font-semibold transition border ' + (on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400') + '">' + a + ' · ' + n + '</button>';
+  }).join('');
+}
+
+function pick(){
+  const pool = BANK.filter(b => sel[b.area] && !done.includes(b));
+  let src = pool.length ? pool : BANK.filter(b => sel[b.area]);
+  if (!src.length) { $('card').innerHTML = '<div class="text-center text-slate-500 py-10">Elige al menos un tema.</div>'; return; }
+  if (!pool.length) done = [];
+  current = src[Math.floor(Math.random() * src.length)];
+  done.push(current);
+  const fig = current.fig ? '<div class="ex-fig mt-2">' + current.fig + '</div>' : '';
+  const acc = JSON.stringify(current.v.length ? current.v : [current.a]).replace(/</g,'\u003c').replace(/>/g,'\u003e');
+  const steps = (current.pasos.length ? current.pasos : [current.p]).join('\n').replace(/"/g,'&quot;');
+  $('card').innerHTML = 
+    '<span class="inline-block text-[11px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-50 rounded-full px-2.5 py-1">' + esc(current.tema) + '</span>' +
+    '<span class="block mt-1 text-xs font-semibold text-slate-400">' + esc(current.unidad) + '</span>' +
+    '<h3 class="mt-2 text-lg md:text-xl font-bold text-slate-800 leading-snug">' + esc(current.q) + '</h3>' + fig +
+    '<div class="mt-4 flex flex-col sm:flex-row gap-2">' +
+      '<input id="resp" autocomplete="off" placeholder="Escribe tu respuesta…" class="flex-1 rounded-xl border border-indigo-200 px-4 py-2.5 font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-400" />' +
+      '<button id="btn-check" data-acc="' + esc(acc) + '" data-res="' + esc(current.a) + '" class="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 transition">Comprobar</button>' +
+    '</div>' +
+    '<div id="fb" class="mt-4"></div>';
+  document.getElementById('resp').focus();
+  fmtMath($('card'));
+}
+function showFb(ok){
+  const fb = $('fb');
+  const steps = current.pasos.length ? current.pasos : [current.p];
+  fb.innerHTML = 
+    '<div class="fade rounded-xl border-2 px-4 py-3 ' + (ok ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200') + '">' +
+      '<div class="font-extrabold ' + (ok ? 'text-emerald-700' : 'text-rose-600') + '">' + (ok ? '🎉 ¡Correcto!' : '🙃 Todavía no es correcto') + '</div>' +
+      '<div class="mt-1 text-sm text-slate-600"><b>Respuesta:</b> ' + esc(current.a) + '</div>' +
+      '<div class="mt-3 rounded-xl border border-indigo-100 bg-white px-4 py-3">' +
+        '<div class="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Procedimiento paso a paso</div>' +
+        '<ol class="mt-2 space-y-1.5 list-decimal list-inside">' + steps.map(s => '<li class="text-sm text-slate-700">' + esc(s) + '</li>').join('') + '</ol>' +
+      '</div>' +
+      '<button id="btn-next" class="mt-3 text-sm font-bold text-indigo-600 hover:text-indigo-800">Siguiente ejercicio →</button>' +
+    '</div>';
+  fmtMath($('fb'));
+}
+
+function next(){ renderChips(); pick(); updateStats(); }
+
+function updateStats(){ $('s-aciertos').textContent = stats.ok; $('s-errores').textContent = stats.fail; $('s-racha').textContent = stats.streak; $('s-total').textContent = stats.ok + stats.fail; }
+
+document.addEventListener('click', ev => {
+  const chip = ev.target.closest('.chip');
+  if (chip){ const a = chip.dataset.area; sel[a] = !sel[a]; renderChips(); return; }
+  if (ev.target.closest('#btn-next')){ next(); return; }
+  const check = ev.target.closest('#btn-check'); if (!check || check.disabled) return;
+  const inp = $('resp'); if (!inp) return;
+  const raw = inp.value.trim();
+  if (!raw){ inp.classList.add('shake'); inp.setAttribute('placeholder', 'Escribe una respuesta'); setTimeout(() => inp.classList.remove('shake'), 500); return; }
+  const acc = JSON.parse(check.dataset.acc || '[]');
+  const ok = matchAnsw(raw, acc);
+  if (ok){ stats.ok++; stats.streak++; } else { stats.fail++; stats.streak = 0; }
+  check.disabled = true; inp.disabled = true;
+  showFb(ok);
+  updateStats();
+});
+
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter') return;
+  if (document.activeElement && document.activeElement.id === 'btn-next'){ next(); return; }
+  if (!(document.activeElement && document.activeElement.id === 'resp')) return;
+  ev.preventDefault();
+  const check = $('btn-check'); if (check && !check.disabled) check.click();
+});
+
+$('btn-new').addEventListener('click', next);
+$('btn-toggle-todos').addEventListener('click', () => { const all = areas.every(a => sel[a]); areas.forEach(a => sel[a] = !all); renderChips(); });
+
+const TABS = [ { id: 'ejercicio', label: '\uD83C\uDFB2 Ejercicio al azar' }, { id: 'reto', label: '\u23F1\uFE0F Reto cronometrado' } ];
+function setTab(name){
+  document.querySelectorAll('#tabs [data-tab]').forEach(b => { const on = b.getAttribute('data-tab') === name; b.className = 'px-4 py-2 rounded-xl font-bold border-2 transition ' + (on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'); });
+  const se = $('sec-ejercicio'), sr = $('sec-reto');
+  if (se) se.classList.toggle('hidden', name !== 'ejercicio');
+  if (sr) sr.classList.toggle('hidden', name !== 'reto');
+  if (typeof reportH === 'function') setTimeout(reportH, 60);
+}
+$('tabs').innerHTML = TABS.map(t => '<button data-tab="' + t.id + '">' + t.label + '</button>').join('');
+document.addEventListener('click', ev => { const tb = ev.target.closest('#tabs [data-tab]'); if (tb) setTab(tb.getAttribute('data-tab')); });
+setTab('ejercicio');
+
+renderChips(); updateStats(); pick();
+
+function reportH(){ try { if (window.parent && window.parent !== window){ window.parent.postMessage({ type: 'mateHeight', h: document.body.scrollHeight + 120 }, '*'); } } catch(e){} }
+window.addEventListener('load', reportH);
+window.addEventListener('resize', reportH);
+document.addEventListener('click', () => setTimeout(reportH, 60));
+setTimeout(reportH, 200);
+
+  </script>
+
+  <script>
+/* ============================================================
+   Reto cronometrado de Matemáticas
+   Motor de juego (se inyecta dentro de herramientas-matematicas.html)
+   Requiere globales: BANK, matchAnsw, fmtMath, esc, reportH
+   ============================================================ */
+(function () {
+  "use strict";
+  var root = document.getElementById("sec-reto");
+  if (!root) return;
+
+  function $(id) { return document.getElementById(id); }
+  function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = b; b = a % b; a = t; } return a || 1; }
+  function simp(n, d) { var g = gcd(n, d); return [n / g, d / g]; }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function esc2(s) { return typeof esc === "function" ? esc(s) : String(s == null ? "" : s); }
+  function dollars(n) { return String(n).replace(/\$/g, "\u0024"); }
+
+  /* ---------------- Metadatos de temas ---------------- */
+  var TOPICS = [
+    { id: "mental", name: "C\u00e1lculo mental", time: 8 },
+    { id: "jerarquia", name: "Jerarqu\u00eda de operaciones", time: 30 },
+    { id: "fracciones", name: "Fracciones", time: 40 },
+    { id: "porcentaje", name: "Porcentajes", time: 25 },
+    { id: "potencias", name: "Potencias y ra\u00edces", time: 15 },
+    { id: "algebra", name: "\u00c1lgebra", time: 60 },
+    { id: "geometria", name: "Geometr\u00eda y \u00e1reas", time: 45 },
+    { id: "estadistica", name: "Estad\u00edstica", time: 45 },
+    { id: "trigonometria", name: "Trigonometr\u00eda", time: 50 }
+  ];
+  var GENS = {
+    mental: ["suma", "resta", "mult", "divExacta", "doble", "mitad"],
+    jerarquia: ["jerarquia"],
+    fracciones: ["fracSuma", "fracResta", "fracMult", "simplificar"],
+    porcentaje: ["porcentaje"],
+    potencias: ["potencia2", "potencia3", "raiz2", "raiz3"],
+    algebra: ["ecuacion1", "evaluar"],
+    geometria: ["areaRect", "perimRect", "areaTri", "areaCuad"],
+    estadistica: ["promedio", "mediana", "moda"],
+    trigonometria: ["trig"]
+  };
+
+  /* ---------------- Generadores (respuesta correcta por construcci\u00f3n) ---------------- */
+  var G = {
+    suma: function () { var a = rnd(13, 89), b = rnd(13, 89), s = a + b; return { q: a + " + " + b, a: String(s), v: [String(s)], pasos: ["Sumo " + a + " + " + b + ".", "Resultado: " + s + "."], cat: "mental" }; },
+    resta: function () { var a = rnd(31, 99), b = rnd(11, a - 10), s = a - b; return { q: a + " \u2212 " + b, a: String(s), v: [String(s)], pasos: ["Resto " + a + " \u2212 " + b + " = " + s + "."], cat: "mental" }; },
+    mult: function () { var a = rnd(2, 12), b = rnd(2, 12), p = a * b; return { q: a + " \u00d7 " + b, a: String(p), v: [String(p)], pasos: [a + " \u00d7 " + b + " = " + p + "."], cat: "mental" }; },
+    divExacta: function () { var b = rnd(2, 12), q = rnd(2, 12), a = b * q; return { q: a + " \u00f7 " + b, a: String(q), v: [String(q)], pasos: [b + " \u00d7 ? = " + a + " \u2192 ? = " + q + ".", a + " \u00f7 " + b + " = " + q + "."], cat: "mental" }; },
+    doble: function () { var a = rnd(12, 89); return { q: "El doble de " + a, a: String(2 * a), v: [String(2 * a)], pasos: [a + " \u00d7 2 = " + (2 * a) + "."], cat: "mental" }; },
+    mitad: function () { var a = 2 * rnd(6, 60); return { q: "La mitad de " + a, a: String(a / 2), v: [String(a / 2)], pasos: [a + " \u00f7 2 = " + (a / 2) + "."], cat: "mental" }; },
+    jerarquia: function () {
+      var A = rnd(2, 9), B = rnd(2, 9), C = rnd(2, 9), D = rnd(2, 9), v = rnd(0, 4);
+      if (v === 0) { var r0 = A + B * C; return { q: A + " + " + B + " \u00d7 " + C, a: String(r0), v: [String(r0)], pasos: ["Primero la multiplicaci\u00f3n: " + B + " \u00d7 " + C + " = " + (B * C) + ".", "Luego la suma: " + A + " + " + (B * C) + " = " + r0 + "."], cat: "jerarquia" }; }
+      if (v === 1) { var r1 = (A + B) * C; return { q: "(" + A + " + " + B + ") \u00d7 " + C, a: String(r1), v: [String(r1)], pasos: ["Primero el par\u00e9ntesis: " + A + " + " + B + " = " + (A + B) + ".", "Luego: " + (A + B) + " \u00d7 " + C + " = " + r1 + "."], cat: "jerarquia" }; }
+      if (v === 2) { var r2 = A * B - C * D; return { q: A + " \u00d7 " + B + " \u2212 " + C + " \u00d7 " + D, a: String(r2), v: [String(r2)], pasos: [A + " \u00d7 " + B + " = " + (A * B) + ".", C + " \u00d7 " + D + " = " + (C * D) + ".", "Resta: " + (A * B) + " \u2212 " + (C * D) + " = " + r2 + "."], cat: "jerarquia" }; }
+      if (v === 3) { var k = rnd(2, 6), bb = C * k, r3 = A + bb / C; return { q: A + " + " + bb + " \u00f7 " + C, a: String(r3), v: [String(r3)], pasos: ["Primero la divisi\u00f3n: " + bb + " \u00f7 " + C + " = " + k + ".", "Luego la suma: " + A + " + " + k + " = " + r3 + "."], cat: "jerarquia" }; }
+      var k2 = rnd(2, 6), sum = C * k2, a = rnd(1, sum - 1), b2 = sum - a, r4 = k2;
+      return { q: "(" + a + " + " + b2 + ") \u00f7 " + C, a: String(r4), v: [String(r4)], pasos: ["Primero el par\u00e9ntesis: " + a + " + " + b2 + " = " + sum + ".", "Luego: " + sum + " \u00f7 " + C + " = " + r4 + "."], cat: "jerarquia" };
+    },
+    fracSuma: function () { var d = rnd(2, 10), x = rnd(1, d - 1), y = rnd(1, d - x), n = x + y; var pasos = ["Mismo denominador: sumo los numeradores.", x + " + " + y + " = " + n + "."]; var a, v; if (n === d) { a = "1"; v = ["1"]; pasos.push("Resultado: " + d + "/" + d + " = 1."); } else { var s = simp(n, d); a = s[0] + "/" + s[1]; v = [n + "/" + d]; if (s[0] !== n || s[1] !== d) v.push(s[0] + "/" + s[1]); pasos.push("Resultado: " + n + "/" + d + (s[0] !== n || s[1] !== d ? " = " + s[0] + "/" + s[1] : "") + "."); } return { q: x + "/" + d + " + " + y + "/" + d, a: a, v: v, pasos: pasos, cat: "fracciones" }; },
+    fracResta: function () { var d = rnd(2, 10), x = rnd(2, d), y = rnd(1, x - 1), n = x - y; var s = simp(n, d), a = s[0] + "/" + s[1], v = [n + "/" + d]; if (s[0] !== n || s[1] !== d) v.push(s[0] + "/" + s[1]); return { q: x + "/" + d + " \u2212 " + y + "/" + d, a: a, v: v, pasos: ["Mismo denominador: resto los numeradores.", x + " \u2212 " + y + " = " + n + ".", "Resultado: " + n + "/" + d + (s[0] !== n || s[1] !== d ? " = " + s[0] + "/" + s[1] : "") + "."], cat: "fracciones" }; },
+    fracMult: function () { var b = rnd(2, 9), d = rnd(2, 9), a = rnd(1, b), c = rnd(1, d); var n = a * c, den = b * d, s = simp(n, den); var v = [n + "/" + den]; if (s[0] !== n || s[1] !== den) v.push(s[0] + "/" + s[1]); return { q: a + "/" + b + " \u00d7 " + c + "/" + d, a: s[0] + "/" + s[1], v: v, pasos: ["Multiplico numeradores: " + a + " \u00d7 " + c + " = " + n + ".", "Multiplico denominadores: " + b + " \u00d7 " + d + " = " + den + ".", "Resultado: " + n + "/" + den + (s[0] !== n || s[1] !== den ? " = " + s[0] + "/" + s[1] : "") + "."], cat: "fracciones" }; },
+    simplificar: function () { var p, q; do { p = rnd(1, 9); q = rnd(2, 9); } while (gcd(p, q) !== 1); var k = rnd(2, 6), n = p * k, d = q * k; return { q: "Simplifica " + n + "/" + d, a: p + "/" + q, v: [p + "/" + q], pasos: ["El m\u00e1ximo com\u00fan divisor es " + k + ".", "Divido: " + n + " \u00f7 " + k + " = " + p + " y " + d + " \u00f7 " + k + " = " + q + ".", "Resultado: " + p + "/" + q + "."], cat: "fracciones" }; },
+    porcentaje: function () { var pct = pick([10, 20, 25, 50, 75]); var factor = 100 / gcd(pct, 100); var base = rnd(1, 20) * factor; var r = base * pct / 100; return { q: pct + "% de " + base, a: String(r), v: [String(r), r + ""], pasos: [pct + "% = " + pct + "/100.", pct + "/100 \u00d7 " + base + " = " + r + "."], cat: "porcentaje" }; },
+    potencia2: function () { var n = rnd(2, 15), r = n * n; return { q: n + "\u00b2", a: String(r), v: [String(r)], pasos: [n + " \u00d7 " + n + " = " + r + "."], cat: "potencias" }; },
+    potencia3: function () { var n = rnd(2, 6), r = n * n * n; return { q: n + "\u00b3", a: String(r), v: [String(r)], pasos: [n + " \u00d7 " + n + " \u00d7 " + n + " = " + r + "."], cat: "potencias" }; },
+    raiz2: function () { var n = rnd(2, 15), r = n * n; return { q: "\u221a" + r, a: String(n), v: [String(n)], pasos: ["Busco un n\u00famero que al cuadrado d\u00e9 " + r + ".", n + " \u00d7 " + n + " = " + r + ".", "\u221a" + r + " = " + n + "."], cat: "potencias" }; },
+    raiz3: function () { var n = rnd(2, 6), r = n * n * n; return { q: "\u221b" + r, a: String(n), v: [String(n)], pasos: [n + " \u00d7 " + n + " \u00d7 " + n + " = " + r + ".", "\u221b" + r + " = " + n + "."], cat: "potencias" }; },
+    ecuacion1: function () { var a = rnd(2, 9), x = rnd(-9, 12), b = rnd(-9, 9); var c = a * x + b; var ax = a * x; var pasos = ["Dejo el t\u00e9rmino con x solo: " + a + "x = " + c + (b >= 0 ? " \u2212 " + b : " + " + Math.abs(b)) + " = " + ax + ".", "Divido entre " + a + ": x = " + ax + " \u00f7 " + a + " = " + x + "."]; return { q: a + "x " + (b >= 0 ? "+" : "\u2212") + " " + Math.abs(b) + " = " + c, a: String(x), v: [String(x)], pasos: pasos, cat: "algebra" }; },
+    evaluar: function () { var x = rnd(-6, 8), vv = rnd(0, 2); if (vv === 0) { var a = rnd(2, 5), b = rnd(-9, 9), r = a * x + b; return { q: "Si x = " + x + ", \u00bfcu\u00e1nto vale " + a + "x + " + b + "?", a: String(r), v: [String(r)], pasos: ["Sustituyo x = " + x + ": " + a + "(" + x + ") + " + b + ".", "= " + (a * x) + (b >= 0 ? " + " + b : " \u2212 " + Math.abs(b)) + " = " + r + "."], cat: "algebra" }; } if (vv === 1) { var bb = rnd(1, 20), r1 = x * x - bb; return { q: "Si x = " + x + ", \u00bfcu\u00e1nto vale x\u00b2 \u2212 " + bb + "?", a: String(r1), v: [String(r1)], pasos: ["x\u00b2 = (" + x + ")\u00b2 = " + (x * x) + ".", x * x + " \u2212 " + bb + " = " + r1 + "."], cat: "algebra" }; } var a2 = rnd(2, 5), b2 = rnd(1, 9), r2 = a2 * (x + b2); return { q: "Si x = " + x + ", \u00bfcu\u00e1nto vale " + a2 + "(x + " + b2 + ")?", a: String(r2), v: [String(r2)], pasos: ["Primero el par\u00e9ntesis: " + x + " + " + b2 + " = " + (x + b2) + ".", a2 + " \u00d7 " + (x + b2) + " = " + r2 + "."], cat: "algebra" }; },
+    areaRect: function () { var b = rnd(2, 15), h = rnd(2, 15), A = b * h; return { q: "\u00c1rea de un rect\u00e1ngulo de " + b + " cm \u00d7 " + h + " cm", a: A + " cm\u00b2", v: [String(A)], pasos: ["\u00c1rea = base \u00d7 altura.", b + " \u00d7 " + h + " = " + A + " cm\u00b2."], cat: "geometria" }; },
+    perimRect: function () { var b = rnd(2, 15), h = rnd(2, 15), P = 2 * (b + h); return { q: "Per\u00edmetro de un rect\u00e1ngulo de " + b + " cm \u00d7 " + h + " cm", a: P + " cm", v: [String(P)], pasos: ["Per\u00edmetro = 2(base + altura).", "2(" + b + " + " + h + ") = " + P + " cm."], cat: "geometria" }; },
+    areaTri: function () { var b = 2 * rnd(1, 12), h = rnd(2, 15), A = b * h / 2; return { q: "\u00c1rea de un tri\u00e1ngulo de base " + b + " cm y altura " + h + " cm", a: A + " cm\u00b2", v: [String(A)], pasos: ["\u00c1rea = (base \u00d7 altura) \u00f7 2.", "(" + b + " \u00d7 " + h + ") \u00f7 2 = " + A + " cm\u00b2."], cat: "geometria" }; },
+    areaCuad: function () { var l = rnd(2, 15), A = l * l; return { q: "\u00c1rea de un cuadrado de lado " + l + " cm", a: A + " cm\u00b2", v: [String(A)], pasos: ["\u00c1rea = lado\u00b2 = " + l + "\u00b2 = " + A + " cm\u00b2."], cat: "geometria" }; },
+    promedio: function () { var v = [rnd(1, 20), rnd(1, 20), rnd(1, 20), rnd(1, 20)]; var s = v[0] + v[1] + v[2] + v[3]; var k = 0; while (s % 4 !== 0) { v[3] = rnd(1, 20); s = v[0] + v[1] + v[2] + v[3]; if (++k > 200) break; } var m = s / 4; return { q: "Promedio de " + v.join(", "), a: String(m), v: [String(m)], pasos: ["Sumo: " + v.join(" + ") + " = " + s + ".", "Divido entre 4: " + s + " \u00f7 4 = " + m + "."], cat: "estadistica" }; },
+    mediana: function () { var set = {}; var v = []; while (v.length < 5) { var n = rnd(1, 30); if (!set[n]) { set[n] = 1; v.push(n); } } var s = v.slice().sort(function (a, b) { return a - b; }); var med = s[2]; return { q: "Mediana de " + v.join(", "), a: String(med), v: [String(med)], pasos: ["Ordeno: " + s.join(", ") + ".", "El valor central es " + med + "."], cat: "estadistica" }; },
+    moda: function () { var base = rnd(1, 9), others = []; while (others.length < 3) { var n = rnd(1, 12); if (n !== base && others.indexOf(n) < 0) others.push(n); } var list = shuffle([base, base, base].concat(others)); return { q: "Moda de " + list.join(", "), a: String(base), v: [String(base)], pasos: ["Cuento la frecuencia de cada valor.", "El " + base + " aparece 3 veces; es el m\u00e1s repetido.", "Moda = " + base + "."], cat: "estadistica" }; },
+    trig: function () { var T = [
+      { q: "sen 30\u00b0", a: "1/2", v: ["1/2", "0.5"], p: "sen 30\u00b0 = 1/2." },
+      { q: "cos 60\u00b0", a: "1/2", v: ["1/2", "0.5"], p: "cos 60\u00b0 = 1/2." },
+      { q: "tan 45\u00b0", a: "1", v: ["1"], p: "tan 45\u00b0 = 1." },
+      { q: "sen 45\u00b0", a: "\u221a2/2", v: ["\u221a2/2", "0.71", "0.7", "raiz de 2 entre 2"], p: "sen 45\u00b0 = \u221a2/2 \u2248 0.71." },
+      { q: "cos 45\u00b0", a: "\u221a2/2", v: ["\u221a2/2", "0.71", "0.7"], p: "cos 45\u00b0 = \u221a2/2 \u2248 0.71." },
+      { q: "cos 30\u00b0", a: "\u221a3/2", v: ["\u221a3/2", "0.87"], p: "cos 30\u00b0 = \u221a3/2 \u2248 0.87." },
+      { q: "sen 60\u00b0", a: "\u221a3/2", v: ["\u221a3/2", "0.87"], p: "sen 60\u00b0 = \u221a3/2 \u2248 0.87." },
+      { q: "sen 90\u00b0", a: "1", v: ["1"], p: "sen 90\u00b0 = 1." },
+      { q: "cos 0\u00b0", a: "1", v: ["1"], p: "cos 0\u00b0 = 1." },
+      { q: "tan 0\u00b0", a: "0", v: ["0"], p: "tan 0\u00b0 = 0." }
+    ]; var it = pick(T); return { q: "\u00bfCu\u00e1nto vale " + it.q + "?", a: it.a, v: it.v, pasos: [it.p], cat: "trigonometria" }; }
+  };
+  function genProblem(topic) {
+    var names = GENS[topic] || GENS.mental;
+    return G[pick(names)]();
+  }
+
+  /* ---------------- Modos ---------------- */
+  var MODES = [
+    { id: "relampago", name: "\u26a1 Rel\u00e1mpago", desc: "C\u00e1lculo mental, poco tiempo, respuestas casi inmediatas." },
+    { id: "sprint", name: "\ud83c\udfc3 Sprint 60 s", desc: "Responde todas las que puedas contra el reloj." },
+    { id: "supervivencia", name: "\u2764\ufe0f Supervivencia", desc: "3 vidas; la dificultad sube al acertar." },
+    { id: "tema", name: "\ud83d\udcda Por tema", desc: "Practica solo el tema elegido, con tiempo." },
+    { id: "duelo", name: "\u2694\ufe0f Duelo cronometrado", desc: "Tiempo por tipo; marca qui\u00e9n gan\u00f3 cada reactivo." },
+    { id: "repaso", name: "\ud83d\udd01 Repaso de errores", desc: "Solo lo que has fallado antes." }
+  ];
+
+  var LS = "mate_reto_v1";
+  function loadStore() { try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.fails) return s; } catch (e) {} return { fails: [], records: {} }; }
+  function saveStore(s) { try { localStorage.setItem(LS, JSON.stringify(s)); } catch (e) {} }
+  var store = loadStore();
+
+  /* ---------------- Configuraci\u00f3n ---------------- */
+  var cfg = {
+    mode: "relampago",
+    format: "individual",
+    namesText: "",
+    topics: {},
+    difficulty: "intermedio",
+    nProblems: 15,
+    sprintTime: 60,
+    lives: 3,
+    mixGen: true,
+    mixBank: true,
+    genWeight: 0.65
+  };
+  TOPICS.forEach(function (t) { cfg.topics[t.id] = true; });
+
+  var G_game = null;
+  var perTimer = null, sprintTimer = null;
+  function clearPerTimer() { if (perTimer) { clearInterval(perTimer); perTimer = null; } }
+  function clearAllTimers() { clearPerTimer(); if (sprintTimer) { clearInterval(sprintTimer); sprintTimer = null; } }
+
+  function topicsOn() { return Object.keys(cfg.topics).filter(function (k) { return cfg.topics[k]; }); }
+  function timeScale() { return cfg.difficulty === "basico" ? 0.8 : cfg.difficulty === "avanzado" ? 1.35 : 1; }
+  function timeFor(p) {
+    var t = null; for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].id === p.cat) t = TOPICS[i];
+    var base = t ? t.time : 30;
+    return Math.max(4, Math.round(base * timeScale()));
+  }
+
+  function getProblem(forceTopic) {
+    var topics = topicsOn().slice();
+    if (forceTopic) topics = [forceTopic];
+    if (!topics.length) return null;
+    var useGen = cfg.mixGen && (!cfg.mixBank || Math.random() < cfg.genWeight);
+    if (useGen) return genProblem(pick(topics));
+    var pool = BANK.filter(function (b) { return topics.indexOf(b.topic) >= 0; });
+    if (!pool.length) return genProblem(pick(topics));
+    var b = pick(pool);
+    return { q: b.q, fig: b.fig || "", a: b.a, v: (b.v && b.v.length ? b.v : [b.a]), pasos: (b.pasos && b.pasos.length ? b.pasos : [b.p]).filter(Boolean), cat: b.topic, unit: b.unidad, tema: b.tema, from: "bank" };
+  }
+
+  function recordFail(p) {
+    if (!p || p.from === "bank" && !p.q) return;
+    var key = p.q;
+    for (var i = 0; i < store.fails.length; i++) if (store.fails[i].q === key) return;
+    store.fails.push({ q: p.q, a: p.a, v: p.v, pasos: p.pasos, fig: p.fig || "", cat: p.cat });
+    if (store.fails.length > 60) store.fails = store.fails.slice(-60);
+    saveStore(store);
+  }
+  function clearFail(q) { store.fails = store.fails.filter(function (f) { return f.q !== q; }); saveStore(store); }
+
+  /* ---------------- Render: setup ---------------- */
+  function renderSetup() {
+    clearAllTimers();
+    if (G_game) G_game.over = true;
+    var rec = store.records || {};
+    var modeCards = MODES.map(function (m) {
+      var on = cfg.mode === m.id;
+      return '<button data-mode="' + m.id + '" class="text-left rounded-xl border-2 p-3 transition ' + (on ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:border-indigo-300") + '">' +
+        '<div class="font-extrabold text-slate-800">' + m.name + '</div>' +
+        '<div class="text-xs text-slate-500 mt-0.5">' + m.desc + '</div></button>';
+    }).join("");
+    var topicChips = TOPICS.map(function (t) {
+      var on = cfg.topics[t.id];
+      var n = BANK.filter(function (b) { return b.topic === t.id; }).length;
+      return '<button data-topic="' + t.id + '" class="px-3 py-1.5 rounded-full text-sm font-semibold border transition ' + (on ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-500 border-slate-300 hover:border-slate-400") + '">' + t.name + (n ? " \u00b7 " + n : "") + '</button>';
+    }).join("");
+    var fmtOpt = function (id, label) { return '<button data-format="' + id + '" class="px-4 py-2 rounded-xl font-bold border-2 transition ' + (cfg.format === id ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-500") + '">' + label + '</button>'; };
+    var recLine = "";
+    var rk = Object.keys(rec);
+    if (rk.length) recLine = '<div class="text-sm text-slate-500">\ud83c\udfc6 R\u00e9cords: ' + rk.map(function (k) { var m = MODES.filter(function (x) { return x.id === k; })[0]; return (m ? m.name.replace(/[^\w\s\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]/g, "").trim() : k) + " " + rec[k]; }).join(" \u00b7 ") + '</div>';
+
+    root.innerHTML =
+      '<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">' +
+        '<div class="bg-indigo-600 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3">' +
+          '<h2 class="text-2xl font-bold flex items-center gap-2">\u23f1\ufe0f Reto cronometrado</h2>' +
+          '<span class="text-sm text-indigo-100">Config\u00faralo a tu gusto \u00b7 individual o equipos</span>' +
+        '</div>' +
+        '<div class="p-6 space-y-6">' +
+          '<div><div class="text-sm font-bold text-slate-600 mb-2">1. Elige el modo</div><div id="reto-modes" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">' + modeCards + '</div></div>' +
+          '<div class="grid md:grid-cols-2 gap-5">' +
+            '<div><div class="text-sm font-bold text-slate-600 mb-2">2. Formato</div><div class="flex gap-2">' + fmtOpt("individual", "\ud83d\udc64 Individual") + fmtOpt("equipos", "\ud83d\udc65 Equipos") + '</div>' +
+              '<label class="block mt-3"><span class="text-xs font-semibold text-slate-500">Nombres (uno por l\u00ednea; equipos o jugadores)</span><textarea id="reto-names" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Equipo Azul\nEquipo Rojo\n...">' + esc2(cfg.namesText) + '</textarea></label></div>' +
+            '<div><div class="text-sm font-bold text-slate-600 mb-2">3. Temas</div><div id="reto-topics" class="flex flex-wrap gap-2">' + topicChips + '</div>' +
+              '<div class="flex gap-2 mt-3"><button data-topics-all class="text-xs font-semibold text-indigo-600 hover:underline">Todos</button><button data-topics-none class="text-xs font-semibold text-slate-400 hover:underline">Ninguno</button></div></div>' +
+          '</div>' +
+          '<details class="rounded-xl border border-slate-200 p-4 bg-slate-50"><summary class="cursor-pointer font-bold text-slate-600 text-sm">Ajustes avanzados</summary>' +
+            '<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">' +
+              '<label class="block"><span class="text-xs font-semibold text-slate-500">Dificultad</span><select id="reto-diff" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="basico"' + (cfg.difficulty === "basico" ? " selected" : "") + '>B\u00e1sico</option><option value="intermedio"' + (cfg.difficulty === "intermedio" ? " selected" : "") + '>Intermedio</option><option value="avanzado"' + (cfg.difficulty === "avanzado" ? " selected" : "") + '>Avanzado</option></select></label>' +
+              '<label class="block"><span class="text-xs font-semibold text-slate-500">Reactivos</span><input id="reto-n" type="number" min="5" max="60" value="' + cfg.nProblems + '" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></label>' +
+              '<label class="block"><span class="text-xs font-semibold text-slate-500">Segundos (sprint)</span><input id="reto-sprint" type="number" min="20" max="300" value="' + cfg.sprintTime + '" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></label>' +
+              '<label class="block"><span class="text-xs font-semibold text-slate-500">Vidas (supervivencia)</span><input id="reto-lives" type="number" min="1" max="9" value="' + cfg.lives + '" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></label>' +
+            '</div>' +
+            '<div class="flex flex-wrap gap-4 mt-4 text-sm text-slate-600">' +
+              '<label class="flex items-center gap-2"><input id="reto-mixgen" type="checkbox"' + (cfg.mixGen ? " checked" : "") + ' class="w-4 h-4 accent-indigo-600">Generados</label>' +
+              '<label class="flex items-center gap-2"><input id="reto-mixbank" type="checkbox"' + (cfg.mixBank ? " checked" : "") + ' class="w-4 h-4 accent-indigo-600">Del banco</label>' +
+            '</div>' +
+          '</details>' +
+          '<div class="flex flex-wrap items-center gap-4">' +
+            '<button id="reto-start" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl px-8 py-3.5 transition text-lg">\u25b6 Empezar reto</button>' +
+            '<span id="reto-warn" class="text-sm text-rose-500 font-semibold"></span>' +
+          '</div>' +
+          recLine +
+        '</div>' +
+      '</div>';
+    if (typeof reportH === "function") setTimeout(reportH, 30);
+  }
+
+  function applyConfigFromDOM() {
+    var e;
+    if ((e = $("reto-names"))) cfg.namesText = e.value || "";
+    if ((e = $("reto-diff"))) cfg.difficulty = e.value || "intermedio";
+    if ((e = $("reto-n"))) cfg.nProblems = Math.max(1, parseInt(e.value, 10) || 15);
+    if ((e = $("reto-sprint"))) cfg.sprintTime = Math.max(10, parseInt(e.value, 10) || 60);
+    if ((e = $("reto-lives"))) cfg.lives = Math.max(1, parseInt(e.value, 10) || 3);
+    if ((e = $("reto-mixgen"))) cfg.mixGen = e.checked;
+    if ((e = $("reto-mixbank"))) cfg.mixBank = e.checked;
+  }
+
+  function parsePlayers() {
+    var lines = (cfg.namesText || "").split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var want = cfg.format === "equipos" ? Math.max(2, lines.length) : Math.max(1, lines.length);
+    if (lines.length < want) {
+      var defaults = ["Equipo A", "Equipo B", "Equipo C", "Equipo D"];
+      for (var i = lines.length; i < want; i++) lines.push(cfg.format === "equipos" ? defaults[i % 4] : (i === 0 ? "Jugador" : "Jugador " + (i + 1)));
+    }
+    return lines.map(function (n) { return { name: n, score: 0, hits: 0 }; });
+  }
+
+  /* ---------------- Partida ---------------- */
+  function startGame() {
+    clearAllTimers();
+    applyConfigFromDOM();
+    var topics = topicsOn();
+    if (!topics.length) { if ($("reto-warn")) $("reto-warn").textContent = "Elige al menos un tema."; return; }
+    if (!cfg.mixGen && !cfg.mixBank) { if ($("reto-warn")) $("reto-warn").textContent = "Activa 'Generados' o 'Del banco'."; return; }
+    var players = parsePlayers();
+    var multi = cfg.format === "equipos" || players.length > 1;
+    G_game = {
+      mode: cfg.mode,
+      format: cfg.format,
+      multi: multi,
+      players: players,
+      topics: topics,
+      idx: 0,
+      total: cfg.nProblems,
+      lives: cfg.lives,
+      sprintLeft: cfg.sprintTime,
+      answered: 0,
+      correct: 0,
+      current: null,
+      timeLeft: 0,
+      timeTotal: 1,
+      awaiting: false,
+      over: false,
+      manual: multi || ["tema", "duelo", "repaso"].indexOf(cfg.mode) >= 0,
+      pool: cfg.mode === "repaso" ? store.fails.slice() : [],
+      usedTopic: null
+    };
+    if (cfg.mode === "repaso" && G_game.pool.length === 0) {
+      if ($("reto-warn")) $("reto-warn").textContent = "\u00a1No hay errores guardados! Juega otro modo primero.";
+      G_game = null; return;
+    }
+    renderGameShell();
+    if (cfg.mode === "sprint") startSprintTimer();
+    nextProblem();
+  }
+
+  function renderGameShell() {
+    var pmode = MODES.filter(function (m) { return m.id === G_game.mode; })[0];
+    root.innerHTML =
+      '<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">' +
+        '<div class="bg-indigo-600 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3">' +
+          '<h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">' + (pmode ? pmode.name : "Reto") + '</h2>' +
+          '<div class="flex items-center gap-3"><span id="reto-prog" class="text-sm text-indigo-100"></span>' +
+          '<button id="reto-stop" class="bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 text-sm font-bold">Terminar</button></div>' +
+        '</div>' +
+        '<div class="p-6 space-y-5">' +
+          '<div id="reto-board" class="flex flex-wrap gap-2"></div>' +
+          '<div>' +
+            '<div class="h-3 rounded-full bg-slate-200 overflow-hidden"><div id="reto-tbar" class="h-full bg-indigo-500 transition-[width] duration-100" style="width:100%"></div></div>' +
+            '<div id="reto-time" class="text-right text-sm font-mono font-bold text-slate-500 mt-1"></div>' +
+          '</div>' +
+          '<div id="reto-card" class="border border-slate-200 rounded-2xl bg-gradient-to-b from-white to-slate-50 p-6"></div>' +
+          '<div id="reto-fb"></div>' +
+        '</div>' +
+      '</div>';
+    renderBoard();
+    if (typeof reportH === "function") setTimeout(reportH, 30);
+  }
+
+  function renderBoard() {
+    var board = $("reto-board"); if (!board || !G_game) return;
+    board.innerHTML = G_game.players.map(function (p, i) {
+      var col = ["bg-indigo-50 text-indigo-700 border-indigo-200", "bg-rose-50 text-rose-700 border-rose-200", "bg-emerald-50 text-emerald-700 border-emerald-200", "bg-amber-50 text-amber-700 border-amber-200"][i % 4];
+      return '<span class="px-3 py-1.5 rounded-full border ' + col + ' font-bold text-sm">' + esc2(p.name) + ': ' + p.score + '</span>';
+    }).join("");
+    var prog = $("reto-prog");
+    if (prog) {
+      if (G_game.mode === "sprint") prog.textContent = "\u23f1 " + G_game.sprintLeft + " s \u00b7 \u2713 " + G_game.correct;
+      else if (G_game.mode === "supervivencia") prog.textContent = "\u2764\ufe0f " + G_game.lives + " \u00b7 \u2713 " + G_game.correct;
+      else prog.textContent = "Reactivo " + Math.min(G_game.idx + 1, G_game.total) + " / " + G_game.total + " \u00b7 \u2713 " + G_game.correct;
+    }
+  }
+
+  function nextProblem() {
+    clearTimer();
+    if (!G_game || G_game.over) return;
+    G_game.awaiting = false;
+    if (G_game.mode === "sprint") { if (G_game.sprintLeft <= 0) return endGame(); }
+    else if (G_game.mode === "supervivencia") { if (G_game.lives <= 0) return endGame(); }
+    else if (G_game.mode === "repaso") { if (!G_game.pool.length && G_game.answered > 0) return endGame(); }
+    else { if (G_game.idx >= G_game.total) return endGame(); }
+    var p;
+    if (G_game.mode === "repaso") {
+      var raw = G_game.pool.shift();
+      p = { q: raw.q, a: raw.a, v: raw.v && raw.v.length ? raw.v : [raw.a], pasos: raw.pasos || [], fig: raw.fig || "", cat: raw.cat, from: "repaso" };
+    } else {
+      p = getProblem();
+      if (G_game.mode === "tema") {
+        var on = topicsOn();
+        if (on.length === 1) p = getProblem(on[0]);
+      }
+    }
+    if (!p) return endGame();
+    G_game.current = p;
+    G_game.idx++;
+    renderProblem(p);
+    if (G_game.mode !== "sprint") startPerProblemTimer(p);
+  }
+
+  function renderProblem(p) {
+    var card = $("reto-card"); if (!card) return;
+    G_game.tried = {};
+    G_game.selected = null;
+    var tname = ""; for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].id === p.cat) tname = TOPICS[i].name;
+    var fig = p.fig ? '<div class="ex-fig mt-3">' + p.fig + '</div>' : "";
+    var controls = "";
+    if (G_game.multi) {
+      controls = '<div class="mt-4 flex items-center justify-between gap-2"><span class="text-xs font-bold uppercase tracking-wider text-slate-400">\u00bfQui\u00e9n responde?</span><span id="reto-turn" class="text-xs font-semibold text-indigo-500"></span></div>' +
+        '<div id="reto-players" class="flex flex-wrap gap-2 mt-2"></div>' +
+        '<div class="mt-3 flex flex-col sm:flex-row gap-2">' +
+          '<input id="reto-inp" autocomplete="off" placeholder="Respuesta del compa\u00f1ero\u2026" class="flex-1 rounded-xl border border-indigo-200 px-4 py-2.5 font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-400" />' +
+          '<button id="reto-ok" class="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5">Comprobar</button>' +
+          '<button id="reto-skip" class="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2.5">Nadie</button></div>';
+    } else {
+      controls = '<div class="mt-4 flex flex-col sm:flex-row gap-2">' +
+        '<input id="reto-inp" autocomplete="off" placeholder="Escribe tu respuesta\u2026" class="flex-1 rounded-xl border border-indigo-200 px-4 py-2.5 font-bold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-400" />' +
+        '<button id="reto-ok" class="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5">Comprobar</button>' +
+        '<button id="reto-skip" class="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2.5">Pasar</button></div>';
+    }
+    card.innerHTML =
+      (tname ? '<span class="inline-block text-[11px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-50 rounded-full px-2.5 py-1">' + esc2(tname) + '</span>' : "") +
+      '<h3 class="mt-2 text-2xl md:text-3xl font-extrabold text-slate-800 leading-snug">' + esc2(p.q) + '</h3>' + fig + controls;
+    fmtMath(card);
+    renderPlayers();
+    if ($("reto-inp")) $("reto-inp").focus();
+    renderBoard();
+    if (typeof reportH === "function") setTimeout(reportH, 30);
+  }
+
+  function renderPlayers() {
+    var wrap = $("reto-players"); if (!wrap || !G_game) return;
+    wrap.innerHTML = G_game.players.map(function (pl, i) {
+      var tried = G_game.tried && G_game.tried[i];
+      var sel = G_game.selected === i;
+      var cls = tried ? "bg-slate-100 text-slate-400 border-slate-200 line-through cursor-not-allowed"
+        : sel ? "bg-indigo-600 text-white border-indigo-600"
+          : "bg-white text-slate-600 border-slate-300 hover:border-indigo-400";
+      return '<button data-pick="' + i + '"' + (tried ? " disabled" : "") + ' class="px-3 py-1.5 rounded-full border-2 font-bold text-sm transition ' + cls + '">' + esc2(pl.name) + '</button>';
+    }).join("");
+    var turn = $("reto-turn");
+    if (turn) { turn.className = "text-xs font-semibold text-indigo-500"; turn.textContent = G_game.selected != null ? "Turno de " + G_game.players[G_game.selected].name : "Toca a qui\u00e9n le toca responder"; }
+  }
+
+  function showTurnNotice(name) {
+    var fb = $("reto-fb"); if (!fb) return;
+    fb.innerHTML = '<div class="fade rounded-xl border-2 px-4 py-3 bg-amber-50 border-amber-200 text-amber-700"><b>' + esc2(name) + '</b> no acert\u00f3. Pasa el siguiente. \uD83E\uDD14</div>';
+  }
+
+  function shakeEl(el) { if (!el) return; el.classList.add("shake"); setTimeout(function () { el.classList.remove("shake"); }, 400); }
+
+  function startPerProblemTimer(p) {
+    var base = timeFor(p);
+    if (G_game.mode === "supervivencia") base = Math.max(4, Math.round(base * Math.max(0.55, 1 - G_game.correct * 0.04)));
+    G_game.timeTotal = base;
+    G_game.timeLeft = base;
+    updateTimerUI();
+    clearPerTimer();
+    perTimer = setInterval(function () {
+      G_game.timeLeft -= 0.1;
+      if (G_game.timeLeft <= 0) { G_game.timeLeft = 0; updateTimerUI(); onTimeout(); return; }
+      updateTimerUI();
+    }, 100);
+  }
+  function updateTimerUI() {
+    var bar = $("reto-tbar"), tx = $("reto-time");
+    if (!G_game) return;
+    var pct = Math.max(0, Math.min(100, (G_game.timeLeft / G_game.timeTotal) * 100));
+    if (bar) { bar.style.width = pct + "%"; bar.className = "h-full transition-[width] duration-100 " + (pct < 25 ? "bg-rose-500" : pct < 55 ? "bg-amber-500" : "bg-indigo-500"); }
+    if (tx) tx.textContent = "\u23f1 " + G_game.timeLeft.toFixed(1) + " s";
+  }
+  function clearTimer() { clearPerTimer(); }
+  function startSprintTimer() {
+    if (sprintTimer) { clearInterval(sprintTimer); sprintTimer = null; }
+    G_game.timeTotal = cfg.sprintTime; G_game.timeLeft = cfg.sprintTime;
+    updateTimerUI();
+    sprintTimer = setInterval(function () {
+      if (!G_game || G_game.over) { clearInterval(sprintTimer); sprintTimer = null; return; }
+      G_game.sprintLeft -= 1;
+      G_game.timeTotal = cfg.sprintTime; G_game.timeLeft = G_game.sprintLeft;
+      updateTimerUI(); renderBoard();
+      if (G_game.sprintLeft <= 0) { clearInterval(sprintTimer); sprintTimer = null; endGame(); }
+    }, 1000);
+  }
+
+  function onTimeout() {
+    clearTimer();
+    if (!G_game || G_game.over || G_game.awaiting) return;
+    G_game.awaiting = true;
+    var p = G_game.current;
+    G_game.answered++;
+    if (!G_game.multi) recordFail(p);
+    if (G_game.mode === "supervivencia" && !G_game.multi) { G_game.lives--; renderBoard(); }
+    showFeedback(false, { timeout: true, p: p });
+    scheduleNext(G_game.manual ? null : 900);
+  }
+
+  function submitInput() {
+    if (!G_game || G_game.over || G_game.awaiting) return;
+    var inp = $("reto-inp"); if (!inp) return;
+    var raw = inp.value;
+    if (!String(raw).trim()) { shakeEl(inp); return; }
+    var p = G_game.current;
+    var ok = matchAnsw(raw, p.v);
+    if (G_game.multi) {
+      if (G_game.selected == null) {
+        shakeEl(inp);
+        var tn = $("reto-turn");
+        if (tn) { tn.className = "text-xs font-semibold text-rose-500"; tn.textContent = "Primero toca qui\u00e9n va a responder"; }
+        return;
+      }
+      var i = G_game.selected, name = G_game.players[i].name;
+      if (ok) {
+        G_game.awaiting = true; clearTimer(); G_game.answered++;
+        G_game.players[i].score++; G_game.players[i].hits++; G_game.correct++; clearFail(p.q);
+        renderBoard();
+        showFeedback(true, { p: p, winner: i });
+        scheduleNext(G_game.manual ? null : 1200);
+      } else {
+        G_game.tried[i] = true;
+        G_game.selected = null;
+        inp.value = "";
+        var all = G_game.players.every(function (_, idx) { return G_game.tried[idx]; });
+        renderPlayers();
+        if (all) {
+          G_game.awaiting = true; clearTimer(); G_game.answered++; recordFail(p);
+          showFeedback(false, { p: p });
+          scheduleNext(G_game.manual ? null : 1200);
+        } else {
+          showTurnNotice(name);
+          if ($("reto-inp")) $("reto-inp").focus();
+        }
+      }
+      return;
+    }
+    G_game.awaiting = true; clearTimer();
+    G_game.answered++;
+    if (ok) { G_game.correct++; G_game.players[0].score++; clearFail(p.q); }
+    else { recordFail(p); if (G_game.mode === "supervivencia") G_game.lives--; }
+    renderBoard();
+    showFeedback(ok, { p: p, raw: raw });
+    scheduleNext(G_game.manual ? null : advanceDelay());
+  }
+
+  function skip() {
+    if (!G_game || G_game.over || G_game.awaiting) return;
+    G_game.awaiting = true; clearTimer();
+    var p = G_game.current;
+    G_game.answered++;
+    recordFail(p);
+    showFeedback(false, { p: p, skip: true });
+    scheduleNext(G_game.manual ? null : advanceDelay());
+  }
+
+  function advanceDelay() { return G_game.mode === "sprint" ? 650 : G_game.mode === "relampago" ? 900 : 1400; }
+
+  function showFeedback(ok, o) {
+    var fb = $("reto-fb"); if (!fb) return;
+    o = o || {}; var p = o.p || {};
+    var head = o.timeout ? "\u23f0 \u00a1Se acab\u00f3 el tiempo!" : o.skip ? "\u23ed\ufe0f Pasaste" : ok ? "\ud83c\udf89 \u00a1Correcto!" : "\ud83d\ude43 A\u00fan no";
+    var cls = ok ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-600";
+    var showSteps = G_game.manual || G_game.mode === "supervivencia" || G_game.mode === "tema" || G_game.mode === "duelo" || G_game.mode === "repaso";
+    var steps = (p.pasos && p.pasos.length ? p.pasos : []).map(function (s) { return "<li>" + esc2(s) + "</li>"; }).join("");
+    fb.innerHTML =
+      '<div class="fade rounded-xl border-2 px-4 py-3 ' + cls + '">' +
+        '<div class="font-extrabold">' + head + (o.winner >= 0 && o.winner !== undefined && G_game.players[o.winner] ? ' \u2014 ' + esc2(G_game.players[o.winner].name) : "") + '</div>' +
+        '<div class="mt-1 text-sm text-slate-600"><b>Respuesta:</b> ' + esc2(p.a) + '</div>' +
+        (showSteps && steps ? '<div class="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3"><ol class="list-decimal list-inside space-y-1 text-sm text-slate-700">' + steps + '</ol></div>' : "") +
+        (G_game.manual ? '<button id="reto-next" class="mt-3 text-sm font-bold text-indigo-600 hover:text-indigo-800">Siguiente \u2192</button>' : '') +
+      '</div>';
+    fmtMath(fb);
+    if (typeof reportH === "function") setTimeout(reportH, 30);
+  }
+
+  function scheduleNext(delay) {
+    if (delay == null) return;
+    var my = G_game; setTimeout(function () { if (G_game === my && !G_game.over) nextProblem(); }, delay);
+  }
+  function manualNext() { if (G_game && G_game.awaiting) nextProblem(); }
+
+  function endGame() {
+    clearAllTimers();
+    if (!G_game) return;
+    G_game.over = true;
+    var mode = G_game.mode;
+    var best = Math.max(G_game.correct, store.records[mode] || 0);
+    store.records[mode] = best; saveStore(store);
+    var ranked = G_game.players.slice().sort(function (a, b) { return b.score - a.score; });
+    var medal = ["\ud83e\udd47", "\ud83e\udd48", "\ud83e\udd49"];
+    var board = ranked.map(function (p, i) {
+      return '<div class="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"><span class="font-bold">' + (medal[i] || "\u2022") + ' ' + esc2(p.name) + '</span><span class="font-extrabold text-indigo-600">' + p.score + '</span></div>';
+    }).join("");
+    root.innerHTML =
+      '<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">' +
+        '<div class="bg-indigo-600 text-white px-6 py-4"><h2 class="text-2xl font-bold">\ud83c\udfc1 Resultados</h2></div>' +
+        '<div class="p-6 space-y-5">' +
+          '<div class="grid grid-cols-3 gap-3 text-center">' +
+            '<div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-4"><div class="text-2xl font-extrabold text-emerald-600">' + G_game.correct + '</div><div class="text-xs font-semibold text-slate-500 mt-1">Aciertos</div></div>' +
+            '<div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-4"><div class="text-2xl font-extrabold text-slate-700">' + G_game.answered + '</div><div class="text-xs font-semibold text-slate-500 mt-1">Respondidos</div></div>' +
+            '<div class="rounded-xl bg-amber-50 border border-amber-100 px-3 py-4"><div class="text-2xl font-extrabold text-amber-600">' + best + '</div><div class="text-xs font-semibold text-slate-500 mt-1">R\u00e9cord</div></div>' +
+          '</div>' +
+          '<div class="space-y-2">' + board + '</div>' +
+          '<div class="flex flex-wrap gap-3">' +
+            '<button id="reto-again" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl px-6 py-3">\ud83d\udd01 Otra vez</button>' +
+            '<button id="reto-config" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl px-6 py-3">\u2699\ufe0f Configurar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    if (typeof reportH === "function") setTimeout(reportH, 30);
+  }
+
+  /* ---------------- Eventos ---------------- */
+  root.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if ($("reto-names")) applyConfigFromDOM();
+    var mode = t.closest ? t.closest("[data-mode]") : null;
+    if (mode) { cfg.mode = mode.getAttribute("data-mode"); if (cfg.mode === "duelo") cfg.format = "equipos"; renderSetup(); return; }
+    var tp = t.closest ? t.closest("[data-topic]") : null;
+    if (tp) { var id = tp.getAttribute("data-topic"); cfg.topics[id] = !cfg.topics[id]; renderSetup(); return; }
+    if (t.closest && t.closest("[data-topics-all]")) { TOPICS.forEach(function (x) { cfg.topics[x.id] = true; }); renderSetup(); return; }
+    if (t.closest && t.closest("[data-topics-none]")) { TOPICS.forEach(function (x) { cfg.topics[x.id] = false; }); renderSetup(); return; }
+    var fm = t.closest ? t.closest("[data-format]") : null;
+    if (fm) { cfg.format = fm.getAttribute("data-format"); renderSetup(); return; }
+    if (t.closest && t.closest("#reto-start")) { startGame(); return; }
+    if (t.closest && t.closest("#reto-stop")) { endGame(); return; }
+    if (t.closest && t.closest("#reto-ok")) { submitInput(); return; }
+    if (t.closest && t.closest("#reto-skip")) { skip(); return; }
+    if (t.closest && t.closest("#reto-next")) { manualNext(); return; }
+    if (t.closest && t.closest("#reto-again")) { startGame(); return; }
+    if (t.closest && t.closest("#reto-config")) { renderSetup(); return; }
+    var pk = t.closest ? t.closest("[data-pick]") : null;
+    if (pk) {
+      if (!pk.disabled && G_game) { G_game.selected = parseInt(pk.getAttribute("data-pick"), 10); renderPlayers(); if ($("reto-inp")) $("reto-inp").focus(); }
+      return;
+    }
+  });
+  root.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter") return;
+    if (ev.target && ev.target.id === "reto-inp") { ev.preventDefault(); submitInput(); }
+    else if (ev.target && ev.target.id === "reto-next") { ev.preventDefault(); manualNext(); }
+  });
+
+  /* ---------------- Init ---------------- */
+  if (typeof BANK !== "undefined" && BANK.length) {
+    // normaliza clasificaci\u00f3n de banco por si falta
+    BANK.forEach(function (b) { if (!b.topic) b.topic = "mental"; });
+  }
+  renderSetup();
+})();
+
+  </script>
+</body>
+</html>
