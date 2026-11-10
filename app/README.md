@@ -98,6 +98,17 @@ app/
       de selección múltiple — series recientes, clásicas, anime…— y elección
       de carrera). Se guardan con `app_save_student_test` y el personal ve
       los resultados (rasgos, carreras sugeridas, intereses) en la ficha.
+- [x] Vinculación de cuentas existentes (`0017`–`0019`): en el alta hay una
+      casilla "el alumno ya tiene cuenta"; con su correo se reutiliza su
+      cuenta (sin duplicar acceso), se confirma su correo y se crea solo la
+      ficha de alumno. El alumno entra con su correo en la pestaña Alumno.
+- [x] Detector de cuentas externas ("colados"): el admin ve en Usuarios las
+      cuentas creadas fuera de la plataforma (sin perfil ni grupo) y puede
+      **bloquearlas/desbloquearlas**; las cuentas sin perfil no ven nada
+      (la app cierra su sesión) y RLS no les entrega contenido.
+      ⚠️ Recomendado: desactivar "Allow new users to sign up" en
+      Supabase → Authentication → Providers → Email para cerrar el
+      autorregistro por completo.
 - [x] Cerrar y reabrir unidades desde la tarjeta.
 - [x] Modo claro/oscuro con persistencia.
 - [x] Panel del staff de una sola página: barra lateral colapsable (se
