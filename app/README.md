@@ -85,7 +85,9 @@ app/
       los últimos 7 días, recordatorios automáticos (consentimientos
       pendientes, alumnos inactivos, asistencia sin registrar, unidades por
       activar/cerrar) y feed de actividad reciente.
-- [x] Detalle por alumno (avance por unidad, intentos, precisión y actividad).
+- [x] Ficha visual del alumno en ventana emergente: score animado, XP,
+      racha, asistencia, precisión, avance por materia, unidades asignadas,
+      actividad reciente, perfil profesional editable y observaciones.
 - [x] Activación de unidades por tarjetas (activar con cierre opcional,
       cerrar y reabrir desde la tarjeta).
 - [x] Modo claro/oscuro con persistencia.

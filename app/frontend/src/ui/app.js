@@ -79,6 +79,9 @@ const state = {
   staffTab: 'dashboard',
   sidebarCollapsed: localStorage.getItem('ecoems_sidebar') === 'collapsed',
   collapsedSubjects: readCollapsedSubjects(),
+  fichaStudentId: null,
+  fichaTrigger: null,
+  fichaEscHandler: null,
   loading: true
 };
 
@@ -1370,51 +1373,6 @@ function staffOverviewMarkup(overview) {
   `;
 }
 
-function studentDetailMarkup(detail) {
-  if (!detail) return '<p class="empty-state">No se pudo cargar el detalle del alumno.</p>';
-
-  const stats = detail.stats || {};
-  const units = Array.isArray(detail.units) ? detail.units : [];
-  const recent = Array.isArray(detail.recent) ? detail.recent : [];
-
-  return `
-    <div class="detail-head">
-      <span class="pill pill-green">⚡ ${stats.xp ?? 0} XP</span>
-      <span class="pill pill-amber">🔥 racha ${stats.streak ?? 0}</span>
-      <span class="pill pill-blue">${stats.units ?? 0} unidades completadas</span>
-      ${stats.accuracy != null ? `<span class="pill pill-violet">🎯 ${Math.round(stats.accuracy)}% precisión</span>` : ''}
-      <span class="pill">🕐 ${stats.last ? `última actividad ${escapeHtml(formatRelative(stats.last))}` : 'sin actividad'}</span>
-    </div>
-
-    ${units.length ? `
-      <span class="card-label">Unidades asignadas</span>
-      ${units.map((unit) => `
-        <div class="progress-row">
-          <div>
-            <strong>${escapeHtml(unit.unit)}</strong>
-            <div class="muted"><small>${escapeHtml(unit.subject)} · ${unit.attempts} intentos${unit.accuracy != null ? ` · ${Math.round(unit.accuracy)}% precisión` : ''}</small></div>
-          </div>
-          <span class="pill ${unit.status === 'completed' ? 'success' : unit.status === 'in_progress' ? 'pill-blue' : ''}">${escapeHtml(progressLabels[unit.status] || unit.status)}</span>
-          ${unit.last ? `<span class="muted"><small>${escapeHtml(formatRelative(unit.last))}</small></span>` : ''}
-        </div>
-      `).join('')}
-    ` : '<p class="empty-state">Este alumno no tiene unidades asignadas.</p>'}
-
-    ${recent.length ? `
-      <span class="card-label">Última actividad</span>
-      <div class="feed-list">
-        ${recent.slice(0, 6).map((item) => `
-          <div class="feed-item">
-            <span class="feed-emoji">${item.kind === 'quiz' ? '🧠' : '✏️'}</span>
-            <div><strong>${escapeHtml(item.text)}</strong><div><small>${escapeHtml(formatRelative(item.ts))}</small></div></div>
-            <span class="${item.ok ? 'feed-ok' : 'feed-bad'}">${item.ok ? '✓' : '✗'}</span>
-          </div>
-        `).join('')}
-      </div>
-    ` : ''}
-  `;
-}
-
 function teacherGroupMarkup(group, data) {
   return `
     <div class="teacher-group">
@@ -1430,7 +1388,7 @@ function teacherGroupMarkup(group, data) {
                 <small>${escapeHtml(student.student_code)}${student.stats ? ` · ⚡ ${student.stats.xp_total} XP · 🔥 racha ${student.stats.current_streak} · ${student.stats.units_completed} unidades` : ''}</small>
               </div>
               <div class="row">
-                <button class="btn ghost" data-student-detail="${escapeHtml(student.id)}">Detalle</button>
+                <button class="btn ghost" data-student-detail="${escapeHtml(student.id)}">Ver ficha</button>
                 <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
                 <button class="btn ghost" data-advise-student="${escapeHtml(student.id)}" data-advise-name="${escapeHtml(student.full_name)}">Avisar tutor</button>
               </div>
@@ -1458,7 +1416,6 @@ function teacherGroupMarkup(group, data) {
               </form>
               <div class="invite-result hidden" data-invite-result="${escapeHtml(student.id)}"></div>
               <div class="advise-form hidden" data-advise-form="${escapeHtml(student.id)}"></div>
-              <div class="student-detail hidden" data-student-detail-box="${escapeHtml(student.id)}"></div>
             </li>
           `).join('')}
         </ul>
@@ -1823,7 +1780,6 @@ function staffStudentsTabMarkup(data) {
               <span class="pill ${(scoreRow.absences ?? 0) > 0 ? 'pill-red' : ''}">Faltas: ${scoreRow.absences ?? 0}</span>
             </div>
             <button class="btn ghost" data-ficha-toggle="${escapeHtml(student.id)}">Ver ficha completa</button>
-            <div class="student-ficha hidden" data-ficha-box="${escapeHtml(student.id)}"></div>
           </article>
         `;
       }).join('')}
@@ -2982,129 +2938,532 @@ async function setAssignmentStatus(button, status) {
   }
 }
 
-async function openStudentDetail(studentId, button) {
-  const box = appRoot.querySelector(`[data-student-detail-box="${studentId}"]`);
-  if (!box) return;
+/* ---------------- Ficha completa del alumno (ventana emergente) ---------------- */
 
-  if (!box.classList.contains('hidden')) {
-    box.classList.add('hidden');
-    return;
-  }
-
-  if (!box.dataset.loaded) {
-    box.classList.remove('hidden');
-    box.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
-
-    const { data, error } = await supabase.rpc('app_student_detail', { p_student_id: studentId });
-
-    if (error || !data) {
-      box.innerHTML = `<p class="empty-state">No se pudo cargar el detalle: ${escapeHtml(error?.message || 'error')}</p>`;
-      return;
-    }
-
-    box.innerHTML = studentDetailMarkup(data);
-    box.dataset.loaded = '1';
-  } else {
-    box.classList.remove('hidden');
-  }
+function fichaCsv(value) {
+  return Array.isArray(value) ? value.filter(Boolean).join(', ') : '';
 }
 
-/* ---------------- Ficha completa del alumno ---------------- */
+function fichaJson(value) {
+  if (value && typeof value === 'object') return JSON.stringify(value, null, 1);
+  return typeof value === 'string' ? value : '';
+}
 
-function studentFichaMarkup(data, student) {
-  const profile = data.studentProfiles?.get(student.id) || {};
-  const perSubject = subjectProgressForStudent(data, student.student_code);
-  const missing = nextUnitMissing(data, student.student_code);
-  const scoreRow = (data.overview?.scores?.students || []).find((item) => item.code === student.student_code) || {};
+function fichaLoadingMarkup(text) {
+  return `<div class="ficha-loading"><span class="spinner" aria-hidden="true"></span><span>${escapeHtml(text)}</span></div>`;
+}
 
-  const csv = (value) => (Array.isArray(value) ? value.join(', ') : '');
-  const json = (value) => (value && typeof value === 'object' ? JSON.stringify(value, null, 1) : (typeof value === 'string' && value ? value : ''));
-
+function fichaStatMarkup(icon, value, label, tone, key) {
   return `
-    <div class="ficha-grid">
-      <div class="ficha-box">
-        <h4>📚 Cómo va por materia</h4>
-        ${perSubject.length ? perSubject.map((item) => `
-          <div class="subject-progress-item">
-            <span><strong>${escapeHtml(item.subject)}</strong></span>
-            <span>${item.done}/${item.total} ${item.accuracy != null ? `· 🎯 ${item.accuracy}%` : ''}</span>
-            <div class="progress-track" style="grid-column:1/-1">
-              <div class="progress-fill" style="width:${item.total ? Math.round((item.done / item.total) * 100) : 0}%"></div>
-            </div>
-          </div>
-        `).join('') : '<p class="empty-state">Sin avance registrado.</p>'}
-        <div class="sp-meta">
-          ${missing ? `⏭️ Le falta: <strong>${escapeHtml(missing)}</strong>` : '🎉 No le falta ninguna unidad por empezar.'}
-        </div>
-      </div>
-
-      <div class="ficha-box">
-        <h4>🎯 Resumen</h4>
-        <div class="student-mini-stats">
-          <span class="pill pill-pink">⚡ ${scoreRow.xp ?? 0} XP</span>
-          <span class="pill pill-amber">🔥 racha ${scoreRow?.xp ? (data.overview?.scores?.students || []).find((item) => item.code === student.student_code)?.xp : 0}</span>
-          <span class="pill ${(scoreRow.absences ?? 0) > 0 ? 'pill-red' : 'pill-green'}">Faltas: ${scoreRow.absences ?? 0}</span>
-          ${scoreRow.accuracy != null ? `<span class="pill pill-blue">🎯 ${Math.round(scoreRow.accuracy)}% precisión</span>` : ''}
-        </div>
-        <h4>🧭 Perfil profesional</h4>
-        <form class="form profile-edit-grid" data-save-profile="${escapeHtml(student.id)}">
-          <label class="field"><span>Carrera que quiere</span><input name="career_choice" value="${escapeHtml(profile.career_choice || '')}" placeholder="ej. Medicina"></label>
-          <label class="field"><span>Carreras sugeridas (separadas por coma)</span><input name="career_suggestions" value="${escapeHtml(csv(profile.career_suggestions))}" placeholder="ej. Enfermería, Biología"></label>
-          <label class="field"><span>Intereses (separados por coma)</span><input name="interests" value="${escapeHtml(csv(profile.interests))}" placeholder="ciencia, música…"></label>
-          <label class="field"><span>Aptitudes (separadas por coma)</span><input name="aptitudes" value="${escapeHtml(csv(profile.aptitudes))}" placeholder="razonamiento, lectura…"></label>
-          <label class="field"><span>Fortalezas (separadas por coma)</span><input name="strengths" value="${escapeHtml(csv(profile.strengths))}"></label>
-          <label class="field"><span>Áreas a trabajar (separadas por coma)</span><input name="weaknesses" value="${escapeHtml(csv(profile.weaknesses))}"></label>
-          <label class="field"><span>Test de personalidad (resultados)</span><textarea name="personality" placeholder="Resultado del test…">${escapeHtml(json(profile.personality))}</textarea></label>
-          <label class="field"><span>Test de aptitudes (resultados)</span><textarea name="aptitude" placeholder="Resultado del test…">${escapeHtml(json(profile.aptitude))}</textarea></label>
-          <label class="field"><span>Notas de orientación vocacional</span><textarea name="vocational_notes">${escapeHtml(profile.vocational_notes || '')}</textarea></label>
-          <button class="btn primary" type="submit">Guardar perfil profesional</button>
-        </form>
-      </div>
-
-      <div class="ficha-box">
-        <h4>📝 Observaciones</h4>
-        <div data-observations-list="${escapeHtml(student.id)}"><div class="spinner" aria-hidden="true"></div></div>
-        <form class="form" data-add-observation="${escapeHtml(student.id)}">
-          <label class="field"><span>Categoría (opcional)</span><input name="category" placeholder="conducta, académico…"></label>
-          <label class="field"><span>Observación</span><textarea name="body" required></textarea></label>
-          <label class="field"><span>Visible para</span>
-            <select name="visibility">
-              <option value="internal">Solo personal</option>
-              <option value="family">Personal y tutor</option>
-            </select>
-          </label>
-          <button class="btn primary" type="submit">Agregar observación</button>
-        </form>
+    <div class="ficha-stat ${escapeHtml(tone || '')}">
+      <span class="ficha-stat-icon" aria-hidden="true">${icon}</span>
+      <div class="ficha-stat-copy">
+        <strong data-ficha-stat="${escapeHtml(key)}">${escapeHtml(value)}</strong>
+        <small data-ficha-stat-label="${escapeHtml(key)}">${escapeHtml(label)}</small>
       </div>
     </div>
   `;
 }
 
-async function openStudentFicha(studentId, button) {
-  const box = appRoot.querySelector(`[data-ficha-box="${studentId}"]`);
-  if (!box) return;
+function scoreRingMarkup(score) {
+  const value = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - value / 100);
 
-  if (!box.classList.contains('hidden')) {
-    box.classList.add('hidden');
-    button.textContent = 'Ver ficha completa';
+  return `
+    <div class="ficha-ring ${scoreRingClass(value)}" role="img" aria-label="Score general ${value} de 100">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="ring-track" cx="50" cy="50" r="${radius}" />
+        <circle class="ring-fill" cx="50" cy="50" r="${radius}" style="--dash:${circumference.toFixed(2)};--offset:${offset.toFixed(2)}" />
+      </svg>
+      <div class="ficha-ring-center"><strong>${value}</strong><small>/100</small></div>
+    </div>
+  `;
+}
+
+function fichaSubjectProgressMarkup(perSubject) {
+  if (!perSubject.length) {
+    return '<p class="ficha-empty">Sin avance registrado todavía. Cuando empiece una unidad aparecerá aquí.</p>';
+  }
+
+  return `
+    <div class="ficha-subject-list">
+      ${perSubject.map((item) => {
+        const pct = item.total ? Math.round((item.done / item.total) * 100) : 0;
+        return `
+          <div class="ficha-subject">
+            <div class="ficha-subject-head">
+              <strong>${escapeHtml(item.subject)}</strong>
+              <span>${item.done}/${item.total} · ${pct}%</span>
+            </div>
+            <div class="ficha-bar" aria-hidden="true">
+              <div class="ficha-bar-fill" style="--bar-color:${escapeHtml(item.color || 'var(--brand)')};--bar-scale:${(pct / 100).toFixed(3)}"></div>
+            </div>
+            <div class="ficha-subject-meta">
+              ${item.accuracy != null ? `🎯 ${item.accuracy}% precisión` : 'Sin precisión registrada'}
+              · ${item.done === item.total ? 'materia completa' : `${item.total - item.done} por completar`}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function fichaNextStepMarkup(missing) {
+  if (!missing) {
+    return `
+      <article class="ficha-card ficha-focus ficha-focus-done">
+        <span class="card-label">Siguiente paso</span>
+        <h3>🎉 ¡Al día!</h3>
+        <p class="card-sub">No le falta ninguna unidad por empezar. Aprovecha para reforzar las materias con menor precisión.</p>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="ficha-card ficha-focus">
+      <span class="card-label">Siguiente paso</span>
+      <h3>⏭️ ${escapeHtml(missing)}</h3>
+      <p class="card-sub">Recomendación: abrir esta unidad en la siguiente sesión y revisar los ejercicios con menor precisión.</p>
+      <span class="ficha-focus-chip">Enfoque sugerido</span>
+    </article>
+  `;
+}
+
+function fichaSubjectNameMap(data) {
+  return new Map((data.board || []).map((subject) => [subject.id, subject.name]));
+}
+
+function fichaUnitsMarkup(data, detail) {
+  const units = Array.isArray(detail?.units) ? detail.units : [];
+  const subjectNames = fichaSubjectNameMap(data);
+
+  if (!units.length) {
+    return '<p class="ficha-empty">Este alumno no tiene unidades asignadas.</p>';
+  }
+
+  return `
+    <div class="ficha-unit-list">
+      ${units.map((unit) => {
+        const status = unit.status || 'not_started';
+        const tone = status === 'completed' || status === 'mastered' ? 'success' : status === 'in_progress' ? 'pill-blue' : '';
+        return `
+          <div class="ficha-unit-row">
+            <div class="ficha-unit-main">
+              <strong>${escapeHtml(unit.unit || 'Unidad')}</strong>
+              <small>${escapeHtml(subjectNames.get(unit.subject) || 'Materia')} · ${unit.attempts || 0} intentos${unit.accuracy != null ? ` · 🎯 ${Math.round(unit.accuracy)}%` : ''}</small>
+            </div>
+            <span class="pill ${tone}">${escapeHtml(progressLabels[status] || status)}</span>
+            <small class="ficha-unit-when">${unit.last ? escapeHtml(formatRelative(unit.last)) : 'Sin actividad'}</small>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function fichaActivityMarkup(data, student, detail) {
+  const detailRecent = Array.isArray(detail?.recent) ? detail.recent : [];
+  const overviewRecent = (data.overview?.recent || [])
+    .filter((item) => item.student === student.student_code)
+    .map((item) => ({
+      ts: item.ts,
+      kind: item.kind === 'completed' ? 'unidad' : 'ejercicio',
+      text: item.text,
+      ok: item.ok
+    }));
+
+  const merged = [...detailRecent, ...overviewRecent]
+    .filter((item) => item.ts)
+    .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+    .slice(0, 10);
+
+  if (!merged.length) {
+    return '<p class="ficha-empty">Sin actividad registrada todavía.</p>';
+  }
+
+  return `
+    <div class="ficha-timeline">
+      ${merged.map((item) => {
+        const emoji = item.kind === 'quiz' ? '🧠' : item.kind === 'unidad' ? '📚' : '✏️';
+        return `
+          <div class="ficha-timeline-item">
+            <span class="ficha-timeline-dot ${item.ok ? 'ok' : 'bad'}" aria-hidden="true">${item.ok ? '✓' : '✗'}</span>
+            <div class="ficha-timeline-copy">
+              <strong>${escapeHtml(item.text)}</strong>
+              <small>${escapeHtml(formatRelative(item.ts))}</small>
+            </div>
+            <span class="ficha-timeline-emoji" aria-hidden="true">${emoji}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function fichaTagGroupMarkup(label, values) {
+  const list = Array.isArray(values) ? values.filter(Boolean) : [];
+  if (!list.length) return '';
+
+  return `
+    <div class="ficha-tag-group">
+      <span class="card-label">${escapeHtml(label)}</span>
+      <div class="ficha-tags">
+        ${list.map((value) => `<span class="ficha-tag">${escapeHtml(value)}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function fichaProfilePanelMarkup(student, profile) {
+  const tagGroups = [
+    ['Carreras sugeridas', profile.career_suggestions],
+    ['Intereses', profile.interests],
+    ['Aptitudes', profile.aptitudes],
+    ['Fortalezas', profile.strengths],
+    ['Áreas a trabajar', profile.weaknesses]
+  ].map(([label, values]) => fichaTagGroupMarkup(label, values)).filter(Boolean).join('');
+
+  return `
+    <div class="ficha-profile-summary">
+      <div class="ficha-profile-career">
+        <span class="card-label">Meta vocacional</span>
+        <h3>${escapeHtml(profile.career_choice || 'Aún sin definir')}</h3>
+        <p class="card-sub">${profile.career_choice ? 'Carrera objetivo registrada para orientar su ruta.' : 'Define la carrera que quiere estudiar para personalizar el acompañamiento.'}</p>
+      </div>
+      ${tagGroups ? `<div class="ficha-tag-groups">${tagGroups}</div>` : '<p class="ficha-empty">Todavía no hay intereses ni aptitudes registradas.</p>'}
+    </div>
+
+    <form class="form ficha-profile-form" data-save-profile="${escapeHtml(student.id)}">
+      <div class="ficha-form-grid">
+        <label class="field"><span>Carrera que quiere</span><input name="career_choice" value="${escapeHtml(profile.career_choice || '')}" placeholder="ej. Medicina"></label>
+        <label class="field"><span>Carreras sugeridas (separadas por coma)</span><input name="career_suggestions" value="${escapeHtml(fichaCsv(profile.career_suggestions))}" placeholder="ej. Enfermería, Biología"></label>
+        <label class="field"><span>Intereses (separados por coma)</span><input name="interests" value="${escapeHtml(fichaCsv(profile.interests))}" placeholder="ciencia, música…"></label>
+        <label class="field"><span>Aptitudes (separadas por coma)</span><input name="aptitudes" value="${escapeHtml(fichaCsv(profile.aptitudes))}" placeholder="razonamiento, lectura…"></label>
+        <label class="field"><span>Fortalezas (separadas por coma)</span><input name="strengths" value="${escapeHtml(fichaCsv(profile.strengths))}" placeholder="disciplina, constancia…"></label>
+        <label class="field"><span>Áreas a trabajar (separadas por coma)</span><input name="weaknesses" value="${escapeHtml(fichaCsv(profile.weaknesses))}" placeholder="organización, ansiedad…"></label>
+        <label class="field wide"><span>Notas de orientación vocacional</span><textarea name="vocational_notes" placeholder="Acuerdos, seguimiento y observaciones de orientación…">${escapeHtml(profile.vocational_notes || '')}</textarea></label>
+        <label class="field wide"><span>Test de personalidad (resultados)</span><textarea name="personality" placeholder="Resultado del test…">${escapeHtml(fichaJson(profile.personality))}</textarea></label>
+        <label class="field wide"><span>Test de aptitudes (resultados)</span><textarea name="aptitude" placeholder="Resultado del test…">${escapeHtml(fichaJson(profile.aptitude))}</textarea></label>
+      </div>
+      <div class="ficha-form-actions">
+        <button class="btn primary" type="submit">Guardar perfil profesional</button>
+      </div>
+    </form>
+  `;
+}
+
+function fichaObservationsPanelMarkup(student) {
+  return `
+    <div class="ficha-observations-layout">
+      <article class="ficha-card">
+        <div class="ficha-card-head">
+          <div><h3>✍️ Nueva observación</h3><p class="card-sub">Registra acuerdos, avances o situaciones a dar seguimiento.</p></div>
+        </div>
+        <form class="form" data-add-observation="${escapeHtml(student.id)}">
+          <div class="ficha-form-grid">
+            <label class="field">
+              <span>Categoría</span>
+              <select name="category">
+                <option value="">General</option>
+                <option value="académico">Académico</option>
+                <option value="conducta">Conducta</option>
+                <option value="emocional">Emocional</option>
+                <option value="vocacional">Vocacional</option>
+                <option value="asistencia">Asistencia</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Visible para</span>
+              <select name="visibility">
+                <option value="internal">Solo personal</option>
+                <option value="family">Personal y tutor</option>
+              </select>
+            </label>
+            <label class="field wide"><span>Observación</span><textarea name="body" required placeholder="Escribe la observación…"></textarea></label>
+          </div>
+          <div class="ficha-form-actions">
+            <button class="btn primary" type="submit">Agregar observación</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="ficha-card">
+        <div class="ficha-card-head">
+          <div><h3>📝 Historial</h3><p class="card-sub">Observaciones internas y compartidas con el tutor.</p></div>
+        </div>
+        <div data-observations-list="${escapeHtml(student.id)}">${fichaLoadingMarkup('Cargando observaciones…')}</div>
+      </article>
+    </div>
+  `;
+}
+
+function studentFichaMarkup(data, student, detail = null) {
+  const profile = data.studentProfiles?.get(student.id) || {};
+  const perSubject = subjectProgressForStudent(data, student.student_code);
+  const missing = nextUnitMissing(data, student.student_code);
+  const scoreRow = (data.overview?.scores?.students || []).find((item) => item.code === student.student_code) || {};
+  const stats = detail?.stats || {};
+  const score = Number(scoreRow.score ?? 0);
+  const xp = Number(stats.xp ?? scoreRow.xp ?? student.stats?.xp_total ?? 0);
+  const streak = Number(stats.streak ?? student.stats?.current_streak ?? 0);
+  const bestStreak = Number(stats.best ?? student.stats?.best_streak ?? 0);
+  const unitsDone = Number(stats.units ?? scoreRow.units_done ?? student.stats?.units_completed ?? 0);
+  const unitsTotal = Number(scoreRow.units_total ?? data.overview?.published_units_total ?? 0);
+  const accuracy = stats.accuracy ?? scoreRow.accuracy ?? null;
+  const absences = Number(scoreRow.absences ?? 0);
+  const last = stats.last || student.stats?.last_activity_date || null;
+  const initial = (student.full_name || 'A').trim().slice(0, 1).toUpperCase();
+  const status = student.status || 'active';
+  const statusLabel = status === 'active' ? 'Activa' : status === 'inactive' ? 'Inactiva' : status;
+
+  return `
+    <div class="ficha-overlay" data-ficha-overlay>
+      <section class="ficha-dialog" role="dialog" aria-modal="true" aria-labelledby="ficha-title" data-ficha-dialog="${escapeHtml(student.id)}" data-detail-loaded="${detail ? '1' : '0'}">
+        <button type="button" class="ficha-close" data-ficha-close aria-label="Cerrar ficha">✕</button>
+
+        <header class="ficha-hero">
+          <div class="ficha-hero-main">
+            <div class="ficha-avatar" aria-hidden="true">${escapeHtml(initial)}</div>
+            <div class="ficha-identity">
+              <span class="ficha-eyebrow">Ficha del alumno</span>
+              <h2 id="ficha-title">${escapeHtml(student.full_name || 'Alumno sin nombre')}</h2>
+              <div class="ficha-meta">
+                <span class="ficha-chip">🎓 ${escapeHtml(student.student_code || '—')}</span>
+                <span class="ficha-chip">👥 ${escapeHtml(student.group_name || 'Sin grupo')}</span>
+                <span class="ficha-chip ${status === 'active' ? 'success' : ''}">${escapeHtml(statusLabel)}</span>
+              </div>
+            </div>
+          </div>
+          <div class="ficha-score">
+            ${scoreRingMarkup(score)}
+            <span>Score general</span>
+            <small data-ficha-last>${last ? `Última actividad ${escapeHtml(formatRelative(last))}` : 'Sin actividad registrada'}</small>
+          </div>
+        </header>
+
+        <div class="ficha-stat-grid">
+          ${fichaStatMarkup('⚡', xp.toLocaleString('es-MX'), 'XP acumulados', 'violet', 'xp')}
+          ${fichaStatMarkup('🔥', streak, bestStreak ? `Racha actual · récord ${bestStreak}` : 'Racha actual', 'amber', 'streak')}
+          ${fichaStatMarkup('📚', unitsTotal ? `${unitsDone}/${unitsTotal}` : unitsDone, 'Unidades completadas', 'blue', 'units')}
+          ${fichaStatMarkup('🎯', accuracy != null ? `${Math.round(accuracy)}%` : '—', 'Precisión en ejercicios', 'green', 'accuracy')}
+          ${fichaStatMarkup('🗓️', absences, 'Faltas registradas', absences ? 'red' : 'green', 'absences')}
+        </div>
+
+        <nav class="ficha-tabs" role="tablist" aria-label="Secciones de la ficha">
+          <button type="button" class="ficha-tab active" data-ficha-tab="resumen" role="tab" aria-selected="true" aria-controls="ficha-panel-resumen">📊 Avance</button>
+          <button type="button" class="ficha-tab" data-ficha-tab="perfil" role="tab" aria-selected="false" aria-controls="ficha-panel-perfil">🧭 Perfil profesional</button>
+          <button type="button" class="ficha-tab" data-ficha-tab="observaciones" role="tab" aria-selected="false" aria-controls="ficha-panel-observaciones">📝 Observaciones</button>
+        </nav>
+
+        <div class="ficha-body">
+          <section class="ficha-panel" data-ficha-panel="resumen" id="ficha-panel-resumen" role="tabpanel">
+            <div class="ficha-overview-grid">
+              <article class="ficha-card">
+                <div class="ficha-card-head">
+                  <div><h3>📚 Cómo va por materia</h3><p class="card-sub">Avance sobre las unidades publicadas de cada materia.</p></div>
+                </div>
+                ${fichaSubjectProgressMarkup(perSubject)}
+              </article>
+
+              ${fichaNextStepMarkup(missing)}
+
+              <article class="ficha-card ficha-span-2">
+                <div class="ficha-card-head">
+                  <div><h3>🧩 Unidades asignadas</h3><p class="card-sub">Estatus, intentos y precisión por unidad.</p></div>
+                </div>
+                <div data-ficha-units>${detail ? fichaUnitsMarkup(data, detail) : fichaLoadingMarkup('Cargando unidades…')}</div>
+              </article>
+
+              <article class="ficha-card ficha-span-2">
+                <div class="ficha-card-head">
+                  <div><h3>🕒 Actividad reciente</h3><p class="card-sub">Últimos ejercicios y quizzes registrados.</p></div>
+                </div>
+                <div data-ficha-activity>${detail ? fichaActivityMarkup(data, student, detail) : fichaLoadingMarkup('Cargando actividad…')}</div>
+              </article>
+            </div>
+          </section>
+
+          <section class="ficha-panel hidden" data-ficha-panel="perfil" id="ficha-panel-perfil" role="tabpanel">
+            <div data-ficha-profile-panel>${fichaProfilePanelMarkup(student, profile)}</div>
+          </section>
+
+          <section class="ficha-panel hidden" data-ficha-panel="observaciones" id="ficha-panel-observaciones" role="tabpanel">
+            ${fichaObservationsPanelMarkup(student)}
+          </section>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function showFichaToast(message, kind = 'ok') {
+  const dialog = document.querySelector('.ficha-dialog');
+  if (!dialog) {
+    if (kind === 'error') setError(message);
+    else setNotice(message);
     return;
   }
 
-  const data = state.dashboard;
-  const student = (data.students || []).find((item) => item.id === studentId);
-  if (!student) return;
+  let toast = document.querySelector('[data-ficha-toast]');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.dataset.fichaToast = '';
+    document.body.appendChild(toast);
+  }
 
-  box.classList.remove('hidden');
-  button.textContent = 'Cerrar ficha';
-  box.innerHTML = studentFichaMarkup(data, student);
+  toast.className = `ficha-toast ${kind}`;
+  toast.textContent = message;
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.remove(), 4200);
+}
 
-  const profileForm = box.querySelector(`[data-save-profile="${studentId}"]`);
-  if (profileForm) profileForm.addEventListener('submit', (event) => saveStudentProfile(event, studentId));
+function bindFichaProfileForm(studentId, scope = document) {
+  const form = scope.querySelector(`[data-save-profile="${studentId}"]`);
+  if (form) form.addEventListener('submit', (event) => saveStudentProfile(event, studentId));
+}
 
-  const observationForm = box.querySelector(`[data-add-observation="${studentId}"]`);
+function bindFichaEvents(studentId) {
+  const overlay = document.querySelector('[data-ficha-overlay]');
+  if (!overlay) return;
+
+  const close = () => closeStudentFicha();
+
+  overlay.querySelectorAll('[data-ficha-close]').forEach((button) => {
+    button.addEventListener('click', close);
+  });
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) close();
+  });
+
+  overlay.querySelectorAll('[data-ficha-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tab = button.dataset.fichaTab;
+      overlay.querySelectorAll('[data-ficha-tab]').forEach((item) => {
+        const active = item === button;
+        item.classList.toggle('active', active);
+        item.setAttribute('aria-selected', String(active));
+      });
+      overlay.querySelectorAll('[data-ficha-panel]').forEach((panel) => {
+        panel.classList.toggle('hidden', panel.dataset.fichaPanel !== tab);
+      });
+    });
+  });
+
+  bindFichaProfileForm(studentId, overlay);
+
+  const observationForm = overlay.querySelector(`[data-add-observation="${studentId}"]`);
   if (observationForm) observationForm.addEventListener('submit', (event) => addObservation(event, studentId));
 
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKeyDown);
+  state.fichaEscHandler = onKeyDown;
+
   loadObservations(studentId);
+}
+
+function closeStudentFicha({ silent = false } = {}) {
+  const overlay = document.querySelector('[data-ficha-overlay]');
+  if (overlay) overlay.remove();
+  document.querySelectorAll('[data-ficha-toast]').forEach((toast) => toast.remove());
+
+  document.body.classList.remove('ficha-open');
+
+  if (state.fichaEscHandler) {
+    document.removeEventListener('keydown', state.fichaEscHandler);
+    state.fichaEscHandler = null;
+  }
+
+  const trigger = state.fichaTrigger;
+  state.fichaStudentId = null;
+  state.fichaTrigger = null;
+
+  if (!silent && trigger?.isConnected) trigger.focus();
+}
+
+function openStudentFicha(studentId, button = null) {
+  const data = state.dashboard;
+  const student = (data?.students || []).find((item) => item.id === studentId);
+  if (!student) return;
+
+  closeStudentFicha({ silent: true });
+  state.fichaStudentId = studentId;
+  state.fichaTrigger = button;
+
+  document.body.insertAdjacentHTML('beforeend', studentFichaMarkup(data, student));
+  document.body.classList.add('ficha-open');
+
+  bindFichaEvents(studentId);
+  loadFichaDetail(studentId);
+
+  requestAnimationFrame(() => {
+    document.querySelector('[data-ficha-close]')?.focus();
+  });
+}
+
+function applyStudentDetail(data, student, detail) {
+  const dialog = [...document.querySelectorAll('[data-ficha-dialog]')]
+    .find((item) => item.dataset.fichaDialog === student.id);
+  if (!dialog) return;
+
+  const stats = detail?.stats || {};
+  const scoreRow = (data.overview?.scores?.students || []).find((item) => item.code === student.student_code) || {};
+  const unitsTotal = Number(scoreRow.units_total ?? data.overview?.published_units_total ?? 0);
+
+  const setStat = (key, value) => {
+    const element = dialog.querySelector(`[data-ficha-stat="${key}"]`);
+    if (element) element.textContent = value;
+  };
+  const setStatLabel = (key, value) => {
+    const element = dialog.querySelector(`[data-ficha-stat-label="${key}"]`);
+    if (element) element.textContent = value;
+  };
+
+  setStat('xp', Number(stats.xp ?? scoreRow.xp ?? 0).toLocaleString('es-MX'));
+  setStat('streak', String(stats.streak ?? 0));
+  if (stats.best != null) setStatLabel('streak', `Racha actual · récord ${stats.best}`);
+  setStat('units', unitsTotal ? `${stats.units ?? 0}/${unitsTotal}` : String(stats.units ?? 0));
+  setStat('accuracy', stats.accuracy != null ? `${Math.round(stats.accuracy)}%` : '—');
+
+  const last = dialog.querySelector('[data-ficha-last]');
+  if (last) {
+    last.textContent = stats.last ? `Última actividad ${formatRelative(stats.last)}` : 'Sin actividad registrada';
+  }
+
+  const unitsBox = dialog.querySelector('[data-ficha-units]');
+  if (unitsBox) unitsBox.innerHTML = fichaUnitsMarkup(data, detail);
+
+  const activityBox = dialog.querySelector('[data-ficha-activity]');
+  if (activityBox) activityBox.innerHTML = fichaActivityMarkup(data, student, detail);
+
+  dialog.dataset.detailLoaded = '1';
+}
+
+async function loadFichaDetail(studentId) {
+  const { data, error } = await supabase.rpc('app_student_detail', { p_student_id: studentId });
+
+  const dialog = [...document.querySelectorAll('[data-ficha-dialog]')]
+    .find((item) => item.dataset.fichaDialog === studentId);
+  if (!dialog) return;
+
+  if (error || !data) {
+    const message = `No se pudo cargar el detalle: ${error?.message || 'error'}`;
+    const unitsBox = dialog.querySelector('[data-ficha-units]');
+    const activityBox = dialog.querySelector('[data-ficha-activity]');
+    if (unitsBox) unitsBox.innerHTML = `<p class="ficha-empty">${escapeHtml(message)}</p>`;
+    if (activityBox) activityBox.innerHTML = `<p class="ficha-empty">${escapeHtml(message)}</p>`;
+    return;
+  }
+
+  const student = (state.dashboard?.students || []).find((item) => item.id === studentId);
+  if (!student) return;
+
+  applyStudentDetail(state.dashboard, student, data);
 }
 
 async function saveStudentProfile(event, studentId) {
@@ -3145,19 +3504,35 @@ async function saveStudentProfile(event, studentId) {
   state.error = '';
   state.notice = '';
 
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+
   const { error } = await supabase.from('student_profiles').upsert(payload, { onConflict: 'student_id' });
 
+  if (submitButton) submitButton.disabled = false;
+
   if (error) {
-    setError(error?.message || 'No se pudo guardar el perfil profesional.');
+    showFichaToast(error?.message || 'No se pudo guardar el perfil profesional.', 'error');
     return;
   }
 
-  setNotice('Perfil profesional guardado.');
-  await loadDashboard(state.profile);
+  if (state.dashboard?.studentProfiles) {
+    const previous = state.dashboard.studentProfiles.get(studentId) || {};
+    state.dashboard.studentProfiles.set(studentId, { ...previous, ...payload });
+  }
+
+  const panel = document.querySelector('[data-ficha-profile-panel]');
+  const student = (state.dashboard?.students || []).find((item) => item.id === studentId);
+  if (panel && student && state.dashboard?.studentProfiles) {
+    panel.innerHTML = fichaProfilePanelMarkup(student, state.dashboard.studentProfiles.get(studentId) || {});
+    bindFichaProfileForm(studentId, panel);
+  }
+
+  showFichaToast('Perfil profesional guardado.', 'ok');
 }
 
 async function loadObservations(studentId) {
-  const list = appRoot.querySelector(`[data-observations-list="${studentId}"]`);
+  const list = document.querySelector(`[data-observations-list="${studentId}"]`);
   if (!list) return;
 
   const { data, error } = await supabase
@@ -3168,20 +3543,23 @@ async function loadObservations(studentId) {
     .order('created_at', { ascending: false });
 
   if (error || !data?.length) {
-    list.innerHTML = '<p class="empty-state">Sin observaciones todavía.</p>';
+    list.innerHTML = error
+      ? `<p class="ficha-empty">No se pudieron cargar las observaciones: ${escapeHtml(error.message || 'error')}</p>`
+      : '<p class="ficha-empty">Sin observaciones todavía. La primera que registres aparecerá aquí.</p>';
     return;
   }
 
   list.innerHTML = `
-    <div class="feed-list">
+    <div class="ficha-observation-list">
       ${data.map((item) => `
-        <div class="feed-item">
-          <span class="feed-emoji">${item.visibility === 'family' ? '👨‍👩‍👧' : '🔒'}</span>
-          <div>
-            ${item.category ? `<strong>${escapeHtml(item.category)}</strong> · ` : ''}${escapeHtml(item.body)}
-            <div><small>${escapeHtml(formatRelative(item.created_at))} · ${item.visibility === 'family' ? 'visible al tutor' : 'solo personal'}</small></div>
+        <article class="ficha-observation">
+          <div class="ficha-observation-head">
+            <span class="ficha-chip">${escapeHtml(item.category || 'General')}</span>
+            <span class="ficha-chip ${item.visibility === 'family' ? 'success' : ''}">${item.visibility === 'family' ? '👨‍👩‍👧 Tutor' : '🔒 Interno'}</span>
+            <small>${escapeHtml(formatRelative(item.created_at))}</small>
           </div>
-        </div>
+          <p>${escapeHtml(item.body)}</p>
+        </article>
       `).join('')}
     </div>
   `;
@@ -3213,7 +3591,7 @@ async function addObservation(event, studentId) {
   });
 
   if (error) {
-    setError(error?.message || 'No se pudo guardar la observación.');
+    showFichaToast(error?.message || 'No se pudo guardar la observación.', 'error');
     if (submitButton) submitButton.disabled = false;
     return;
   }
@@ -3221,7 +3599,7 @@ async function addObservation(event, studentId) {
   form.reset();
   if (submitButton) submitButton.disabled = false;
   await loadObservations(studentId);
-  setNotice('Observación guardada.');
+  showFichaToast('Observación guardada.', 'ok');
 }
 
 async function saveGrade(button) {
@@ -3533,6 +3911,7 @@ async function openAttendanceHistory(groupId, button) {
 }
 
 function renderDashboard() {
+  closeStudentFicha({ silent: true });
   appRoot.innerHTML = dashboardMarkup(state.profile);
 
   appRoot.querySelector('#logout-btn').addEventListener('click', signOut);
@@ -3641,7 +4020,7 @@ function renderDashboard() {
   });
 
   appRoot.querySelectorAll('[data-student-detail]').forEach((button) => {
-    button.addEventListener('click', () => openStudentDetail(button.dataset.studentDetail, button));
+    button.addEventListener('click', () => openStudentFicha(button.dataset.studentDetail, button));
   });
 
   appRoot.querySelectorAll('[data-activate-unit]').forEach((button) => {

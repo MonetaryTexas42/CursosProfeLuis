@@ -407,10 +407,17 @@ async function runTeacherFlow(pageEval, waitFor) {
 
   await waitFor(`document.querySelector('[data-ficha-toggle]')`, "botón de ficha");
   await pageEval(`document.querySelector('[data-ficha-toggle]').click(); true`);
-  await waitFor(`document.body.innerText.includes('Carrera que quiere')`, "perfil profesional");
-  await waitFor(`document.body.innerText.includes('Observaciones')`, "observaciones");
+  await waitFor(`document.querySelector('.ficha-dialog')`, "ventana emergente de la ficha");
   await waitFor(`document.body.innerText.includes('Cómo va por materia')`, "avance por materia");
-  console.log("  ✓ ficha completa: avance por materia, perfil profesional y observaciones");
+  await waitFor(`document.querySelector('.ficha-stat')`, "estadísticas de la ficha");
+  await pageEval(`document.querySelector('[data-ficha-tab="perfil"]').click(); true`);
+  await waitFor(`document.querySelector('[data-ficha-panel="perfil"]:not(.hidden)')`, "pestaña de perfil");
+  await waitFor(`document.body.innerText.includes('Carrera que quiere')`, "perfil profesional");
+  await pageEval(`document.querySelector('[data-ficha-tab="observaciones"]').click(); true`);
+  await waitFor(`document.querySelector('[data-ficha-panel="observaciones"]:not(.hidden)')`, "pestaña de observaciones");
+  await waitFor(`document.body.innerText.includes('Nueva observación')`, "observaciones");
+  await pageEval(`document.querySelector('[data-ficha-close]').click(); true`);
+  console.log("  ✓ ficha completa: modal con avance, perfil profesional y observaciones");
 
   console.log("Sección Materias…");
   await pageEval(`document.querySelector('[data-staff-tab="materias"]').click(); true`);
