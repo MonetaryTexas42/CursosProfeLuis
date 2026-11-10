@@ -88,8 +88,17 @@ app/
 - [x] Ficha visual del alumno en ventana emergente: score animado, XP,
       racha, asistencia, precisión, avance por materia, unidades asignadas,
       actividad reciente, perfil profesional editable y observaciones.
-- [x] Activación de unidades por tarjetas (activar con cierre opcional,
-      cerrar y reabrir desde la tarjeta).
+- [x] Activación de unidades **eligiendo a qué alumnos se activa cada una**:
+      al activar (o con "Alumnos" en una unidad activa) se abre una ventana
+      con la lista del grupo, botones Todos/Ninguno, fecha de cierre opcional;
+      los excluidos quedan con `student_unit_overrides` cerradas.
+- [x] Tests del alumno (`0016`): apartado **Mi orientación** con test de
+      personalidad (15 preguntas, escala de 5 botones) y test de orientación
+      vocacional (pasos de intereses/aptitudes/ambiente/valores con botones
+      de selección múltiple — series recientes, clásicas, anime…— y elección
+      de carrera). Se guardan con `app_save_student_test` y el personal ve
+      los resultados (rasgos, carreras sugeridas, intereses) en la ficha.
+- [x] Cerrar y reabrir unidades desde la tarjeta.
 - [x] Modo claro/oscuro con persistencia.
 - [x] Panel del staff de una sola página: barra lateral colapsable (se
       recuerda en el navegador), materias plegables y asistencia dinámica
@@ -137,6 +146,14 @@ node scripts/ui-smoke.mjs               # flujo del alumno
 MODE=teacher node scripts/ui-smoke.mjs  # flujo del profesor (tareas, asistencia, actividad)
 MODE=admin ADMIN_PASSWORD=... node scripts/ui-smoke.mjs  # flujo del admin
 MODE=curso node scripts/ui-smoke.mjs    # reproductor protegido
+
+# Los modos de alumno y profesor recorren los tests y la ventana de
+# activación en modo lectura. Para validar escrituras reales (guardar
+# tests del alumno y activar una unidad de verdad) usa TEST_WRITE=1 y
+# limpia después los datos de prueba (asignación creada y perfil del
+# alumno).
+TEST_WRITE=1 APP_URL=https://monetarytexas42.github.io/CursosProfeLuis/ MODE=student node scripts/ui-smoke.mjs
+TEST_WRITE=1 APP_URL=https://monetarytexas42.github.io/CursosProfeLuis/ MODE=teacher node scripts/ui-smoke.mjs
 
 # Prueba E2E de las Edge Functions desplegadas
 node scripts/test-functions.mjs
