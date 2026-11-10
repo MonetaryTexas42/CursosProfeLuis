@@ -359,6 +359,13 @@ async function runAdminFlow(pageEval, waitFor) {
   await waitFor(`document.querySelector('[data-reset-student]')`, "contraseña de alumno");
   console.log("  ✓ usuarios: crear profesor y contraseña de alumno");
 
+  console.log("Detección de colados…");
+  await waitFor(
+    `document.body.innerText.toLowerCase().includes('detección de colados')`,
+    "tarjeta del detector de cuentas externas",
+  );
+  console.log("  ✓ detector de cuentas externas visible (lista, bloqueo y vinculación)");
+
   console.log("Sección Contenido…");
   await pageEval(`document.querySelector('[data-staff-tab="contenido"]').click(); true`);
   await waitFor(`document.body.innerText.includes('Materias y unidades')`, "contenido");
@@ -425,6 +432,15 @@ async function runTeacherFlow(pageEval, waitFor) {
   await waitFor(`document.body.innerText.includes('Nueva observación')`, "observaciones");
   await pageEval(`document.querySelector('[data-ficha-close]').click(); true`);
   console.log("  ✓ ficha completa: modal con avance, perfil profesional y observaciones");
+
+  console.log("Alta con vinculación de cuenta existente…");
+  await waitFor(`document.querySelector('[data-link-toggle]')`, "casilla de cuenta existente en el alta");
+  await pageEval(`document.querySelector('[data-link-toggle]').click(); true`);
+  await waitFor(`!document.querySelector('[data-link-email-row]').classList.contains('hidden')`, "campo de correo visible");
+  await waitFor(`document.querySelector('[data-password-row]').classList.contains('hidden')`, "contraseña temporal oculta");
+  await pageEval(`document.querySelector('[data-link-toggle]').click(); true`);
+  await waitFor(`document.querySelector('[data-link-email-row]').classList.contains('hidden')`, "vuelta al alta normal");
+  console.log("  ✓ alta normal (usuario + contraseña temporal) y vinculación por correo se conmutan");
 
   console.log("Sección Materias…");
   await pageEval(`document.querySelector('[data-staff-tab="materias"]').click(); true`);

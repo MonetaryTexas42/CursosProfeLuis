@@ -318,6 +318,31 @@ h2 {
   font-weight: 700;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.checkbox-field span {
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
 .field input,
 .field select {
   width: 100%;
@@ -382,6 +407,11 @@ h2 {
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--text);
+}
+
+.btn.ghost.danger {
+  border-color: var(--bad);
+  color: var(--bad);
 }
 
 .btn:disabled {

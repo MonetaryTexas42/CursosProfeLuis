@@ -452,9 +452,9 @@ function renderLogin() {
             ${isStudent ? `
               <label class="field">
                 <span>Usuario</span>
-                <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ana.martinez" required>
+                <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ana.martinez o tu correo" required>
               </label>
-              <p class="hint">Se usará <strong>usuario@${escapeHtml(studentEmailDomain)}</strong> como identificador interno.</p>
+              <p class="hint">Entra con el usuario que te dio tu profesor, o con tu <strong>correo</strong> si ya tenías cuenta.</p>
               <label class="field">
                 <span>Contraseña</span>
                 <input name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
@@ -592,8 +592,9 @@ async function handleLogin(event) {
   button.textContent = 'Conectando…';
 
   try {
+    const rawUser = String(data.get('username') || '').trim();
     const email = state.mode === 'student'
-      ? toStudentEmail(data.get('username'))
+      ? (rawUser.includes('@') ? rawUser.toLowerCase() : toStudentEmail(rawUser))
       : String(data.get('email') || '').trim().toLowerCase();
 
     if (!email) throw new Error('Escribe un usuario válido.');
@@ -722,7 +723,7 @@ async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
-    unitVersionsRes, overridesRes, tasksRes, activityRes
+    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -754,7 +755,8 @@ async function fetchAdminDashboard() {
       .from('student_unit_overrides')
       .select('assignment_id,student_id,status,opens_at,closes_at'),
     supabase.rpc('app_staff_tasks'),
-    supabase.rpc('app_activity_log', { p_limit: 80 })
+    supabase.rpc('app_activity_log', { p_limit: 80 }),
+    supabase.rpc('app_external_accounts')
   ]);
 
   assertNoError(yearRes.error);
@@ -775,6 +777,7 @@ async function fetchAdminDashboard() {
   assertNoError(overridesRes.error);
   assertNoError(tasksRes.error);
   assertNoError(activityRes.error);
+  assertNoError(externalAccountsRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -853,6 +856,7 @@ async function fetchAdminDashboard() {
     publishedUnits,
     tasks: (tasksRes.data || {}).tasks || [],
     activity: (activityRes.data || {}).entries || [],
+    externalAccounts: externalAccountsRes.data || [],
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1309,6 +1313,13 @@ function adminResumenMarkup(data) {
 function adminUsersMarkup(data) {
   const teachers = data.profiles.filter((profile) => profile.role === 'teacher');
   const guardians = data.guardians;
+  const external = data.externalAccounts || [];
+  const linkedProfileIds = new Set(
+    (data.students || []).map((student) => student.profile_id)
+  );
+  const unlinkedStudents = data.profiles.filter(
+    (profile) => profile.role === 'student' && !linkedProfileIds.has(profile.id)
+  );
 
   const userRow = (profile) => `
     <li>
@@ -1401,6 +1412,67 @@ function adminUsersMarkup(data) {
         </ul>
       ` : '<p class="empty-state">Todavía no hay tutores. Invítalos desde el panel del profesor.</p>'}
     </article>
+
+    ${adminExternalAccountsMarkup(external, unlinkedStudents)}
+  `;
+}
+
+function adminExternalAccountsMarkup(external, unlinkedStudents) {
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Detección de colados</span>
+          <h2>Cuentas externas</h2>
+        </div>
+        <span class="pill ${external.length ? 'pill-red' : 'success'}">${external.length ? countLabel(external.length, 'cuenta', 'cuentas') : 'Ninguna'}</span>
+      </div>
+      <p class="muted">Cuentas creadas fuera de la plataforma (sin perfil ni grupo). No pueden ver nada del curso. Aquí puedes <strong>bloquearlas</strong> o vincularlas desde el alta de alumnos con su correo.</p>
+      ${external.length ? `
+        <ul class="data-list">
+          ${external.map((account) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(account.email)}</strong>
+                <small>
+                  ${account.banned ? '⛔ Bloqueada' : account.email_confirmed ? 'Correo confirmado' : '⚠️ Correo sin confirmar'}
+                  · Creada ${escapeHtml(formatRelative(account.created_at))}
+                  · Último acceso: ${account.last_sign_in_at ? escapeHtml(formatRelative(account.last_sign_in_at)) : 'nunca'}
+                </small>
+              </div>
+              <button class="btn ghost ${account.banned ? '' : 'danger'}" data-ban-account="${escapeHtml(account.id)}" data-ban="${account.banned ? '0' : '1'}">
+                ${account.banned ? 'Desbloquear' : 'Bloquear'}
+              </button>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">No hay cuentas externas detectadas. ¡Nadie colado! ✅</p>'}
+    </article>
+
+    ${unlinkedStudents.length ? `
+      <article class="card wide">
+        <div class="card-heading">
+          <div>
+            <span class="card-label">Revisar</span>
+            <h2>Perfiles de alumno sin ficha vinculada</h2>
+          </div>
+          <span class="pill pill-amber">${unlinkedStudents.length}</span>
+        </div>
+        <ul class="data-list">
+          ${unlinkedStudents.map((profile) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(profile.full_name)}</strong>
+                <small>${escapeHtml(profile.email || profile.username || 'Sin identificador')} · Sin ficha de alumno en ningún grupo</small>
+              </div>
+              <button class="btn ghost" data-toggle-user="${escapeHtml(profile.id)}" data-active="${profile.active ? '1' : '0'}">
+                ${profile.active ? 'Desactivar' : 'Activar'}
+              </button>
+            </li>
+          `).join('')}
+        </ul>
+      </article>
+    ` : ''}
   `;
 }
 
@@ -2123,7 +2195,15 @@ function staffCreateStudentMarkup(data) {
           <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
           <input name="username" autocomplete="off" placeholder="ej. alexa.mandujano">
         </label>
-        <label class="field">
+        <label class="field checkbox-field" data-link-toggle-row>
+          <input type="checkbox" name="existing_account" data-link-toggle>
+          <span>El alumno ya tiene cuenta (se registró por su cuenta)</span>
+        </label>
+        <label class="field hidden" data-link-email-row>
+          <span>Correo de su cuenta</span>
+          <input name="existing_email" type="email" autocomplete="off" placeholder="alumno@correo.com">
+        </label>
+        <label class="field" data-password-row>
           <span>Contraseña temporal (mín. 8 caracteres)</span>
           <input name="password" type="text" autocomplete="off" minlength="8" required>
         </label>
@@ -5308,12 +5388,20 @@ function renderDashboard() {
   const createTeacherForm = appRoot.querySelector('#create-teacher-form');
   if (createTeacherForm) createTeacherForm.addEventListener('submit', createTeacher);
 
+  appRoot.querySelectorAll('[data-link-toggle]').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => toggleLinkAccountFields(checkbox));
+  });
+
   appRoot.querySelectorAll('[data-reset-student]').forEach((button) => {
     button.addEventListener('click', () => resetStudentPassword(button.dataset.resetStudent, button));
   });
 
   appRoot.querySelectorAll('[data-toggle-user]').forEach((button) => {
     button.addEventListener('click', () => toggleUserActive(button));
+  });
+
+  appRoot.querySelectorAll('[data-ban-account]').forEach((button) => {
+    button.addEventListener('click', () => banExternalAccount(button));
   });
 
   appRoot.querySelectorAll('[data-save-setting]').forEach((button) => {
@@ -5541,6 +5629,41 @@ async function toggleUserActive(button) {
   }
 }
 
+async function banExternalAccount(button) {
+  const userId = button.dataset.banAccount;
+  const ban = button.dataset.ban === '1';
+
+  if (!userId || button.disabled) return;
+
+  const email = button.closest('li')?.querySelector('strong')?.textContent || 'la cuenta';
+
+  if (!window.confirm(
+    ban
+      ? `¿Bloquear ${email}? No podrá iniciar sesión con esa cuenta.`
+      : `¿Desbloquear ${email}? Volverá a poder iniciar sesión (seguirá sin ver contenido hasta que se vincule).`
+  )) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+
+  try {
+    const { data: result, error } = await supabase.rpc('app_ban_account', {
+      p_user_id: userId,
+      p_ban: ban
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo actualizar la cuenta');
+
+    setNotice(`Cuenta ${email} ${ban ? 'bloqueada' : 'desbloqueada'}.`);
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo actualizar la cuenta.');
+    button.disabled = false;
+  }
+}
+
 async function saveSetting(key, button) {
   const input = appRoot.querySelector(`[data-setting-value="${key}"]`);
   if (!input || button.disabled) return;
@@ -5575,6 +5698,29 @@ async function saveSetting(key, button) {
   }
 }
 
+function toggleLinkAccountFields(checkbox) {
+  if (!checkbox) return;
+  const form = checkbox.closest('form');
+  if (!form) return;
+
+  const linked = checkbox.checked;
+  const passwordRow = form.querySelector('[data-password-row]');
+  const emailRow = form.querySelector('[data-link-email-row]');
+  const passwordInput = form.querySelector('input[name="password"]');
+  const emailInput = form.querySelector('input[name="existing_email"]');
+
+  if (passwordRow) passwordRow.classList.toggle('hidden', linked);
+  if (emailRow) emailRow.classList.toggle('hidden', !linked);
+  if (passwordInput) {
+    passwordInput.disabled = linked;
+    passwordInput.required = !linked;
+  }
+  if (emailInput) {
+    emailInput.disabled = !linked;
+    emailInput.required = linked;
+  }
+}
+
 async function createStudent(event, groupId) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -5584,13 +5730,25 @@ async function createStudent(event, groupId) {
   const username = String(data.get('username') || '').trim().toLowerCase();
   const password = String(data.get('password') || '');
   const studentCode = String(data.get('student_code') || '').trim().toUpperCase();
+  const existingEmail = String(data.get('existing_email') || '').trim();
+  const linkExisting = Boolean(form.querySelector('input[name="existing_account"]')?.checked);
 
   if (!groupId) {
     setError('Selecciona un grupo para el alumno.');
     return;
   }
 
-  if (!fullName || password.length < 8) {
+  if (!fullName) {
+    setError('Escribe el nombre completo del alumno.');
+    return;
+  }
+
+  if (linkExisting) {
+    if (!existingEmail) {
+      setError('Escribe el correo de la cuenta que ya tiene el alumno.');
+      return;
+    }
+  } else if (password.length < 8) {
     setError('Completa los datos: nombre y contraseña temporal (8+ caracteres). El usuario se genera del nombre si lo dejas vacío.');
     return;
   }
@@ -5598,40 +5756,73 @@ async function createStudent(event, groupId) {
   const submitButton = form.querySelector('button[type="submit"]');
   if (submitButton) {
     submitButton.disabled = true;
-    submitButton.textContent = 'Dando de alta…';
+    submitButton.textContent = linkExisting ? 'Vinculando…' : 'Dando de alta…';
   }
 
   state.error = '';
   state.notice = '';
 
   try {
-    const { data: result, error } = await supabase.functions.invoke('admin-create-student', {
-      body: {
-        full_name: fullName,
-        username: username || null,
-        password,
-        group_id: groupId,
-        student_code: studentCode || null
-      }
-    });
-
-    if (error) throw error;
-    if (!result?.ok) throw new Error(result?.error || 'No se pudo dar de alta al alumno');
-
     const resultBox = form.querySelector('[data-create-result]');
-    if (resultBox) {
-      resultBox.innerHTML = `
-        <div class="answer-box correct">
-          <strong>Alumno dado de alta</strong>
-          <p>Usuario: <b>${escapeHtml(result.access.username)}</b><br>
-          Contraseña temporal: <b>${escapeHtml(password)}</b><br>
-          <small>Entrégaselas una vez. En su primer ingreso, el alumno deberá crear su propia contraseña.</small></p>
-        </div>
-      `;
+    let result = null;
+
+    if (linkExisting) {
+      const rpcRes = await supabase.rpc('app_link_student_account', {
+        p_email: existingEmail,
+        p_full_name: fullName,
+        p_group_id: groupId,
+        p_student_code: studentCode || null,
+        p_username: username || null
+      });
+
+      if (rpcRes.error) throw rpcRes.error;
+      result = rpcRes.data;
+
+      if (resultBox) {
+        const emailConfirmed = Boolean(result?.email_confirmed);
+        resultBox.innerHTML = `
+          <div class="answer-box ${emailConfirmed ? 'correct' : ''}">
+            <strong>Cuenta vinculada al curso</strong>
+            <p>El alumno entra en la pestaña <b>Alumno</b> con su correo:<br>
+            <b>${escapeHtml(result?.email || existingEmail)}</b></p>
+            ${emailConfirmed ? '' : '<p><small>⚠️ Su correo aún no está confirmado: que revise su bandeja y el spam para confirmarlo antes de entrar.</small></p>'}
+            <p><small>Matrícula: ${escapeHtml(result?.student_code || '')} · Usuario interno: ${escapeHtml(result?.username || '')}</small></p>
+          </div>
+        `;
+      }
+
+      setNotice(`Cuenta de ${fullName} vinculada al grupo como alumno.`);
+    } else {
+      const { data: invokeResult, error } = await supabase.functions.invoke('admin-create-student', {
+        body: {
+          full_name: fullName,
+          username: username || null,
+          password,
+          group_id: groupId,
+          student_code: studentCode || null
+        }
+      });
+
+      if (error) throw error;
+      if (!invokeResult?.ok) throw new Error(invokeResult?.error || 'No se pudo dar de alta al alumno');
+      result = invokeResult;
+
+      if (resultBox) {
+        resultBox.innerHTML = `
+          <div class="answer-box correct">
+            <strong>Alumno dado de alta</strong>
+            <p>Usuario: <b>${escapeHtml(result.access.username)}</b><br>
+            Contraseña temporal: <b>${escapeHtml(password)}</b><br>
+            <small>Entrégaselas una vez. En su primer ingreso, el alumno deberá crear su propia contraseña.</small></p>
+          </div>
+        `;
+      }
+
+      setNotice(`Alumno ${result.student?.student_code || username} dado de alta en el grupo.`);
     }
 
-    setNotice(`Alumno ${result.student?.student_code || username} dado de alta en el grupo.`);
     form.reset();
+    toggleLinkAccountFields(form.querySelector('[data-link-toggle]'));
     await loadDashboard(state.profile);
   } catch (error) {
     setError(error?.message || 'No se pudo dar de alta al alumno.');
