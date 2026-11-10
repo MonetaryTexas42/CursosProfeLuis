@@ -65,6 +65,209 @@ const assessmentTypeLabels = {
   other: 'Otra'
 };
 
+/* ---------------- Tests del alumno: personalidad y orientación ---------------- */
+
+const personalityDimensionLabels = {
+  apertura: {
+    label: 'Apertura a la experiencia',
+    emoji: '💡',
+    copy: 'Curiosidad, imaginación y ganas de aprender cosas nuevas.'
+  },
+  responsabilidad: {
+    label: 'Responsabilidad',
+    emoji: '🎯',
+    copy: 'Constancia, orden y cumplimiento de tus metas.'
+  },
+  extraversion: {
+    label: 'Extraversión',
+    emoji: '🗣️',
+    copy: 'Energía social y facilidad para conectar con otras personas.'
+  },
+  amabilidad: {
+    label: 'Amabilidad',
+    emoji: '🤝',
+    copy: 'Empatía, respeto y ganas de colaborar.'
+  },
+  estabilidad: {
+    label: 'Estabilidad emocional',
+    emoji: '🌊',
+    copy: 'Calma y manejo de la presión en momentos difíciles.'
+  }
+};
+
+const personalityQuestions = [
+  { id: 'p1', dim: 'apertura', text: 'Me gusta probar cosas nuevas y aprender temas distintos.' },
+  { id: 'p2', dim: 'apertura', text: 'Soy imaginativo/a y disfruto crear ideas, historias o proyectos.' },
+  { id: 'p3', dim: 'apertura', reverse: true, text: 'Prefiero quedarme con las rutinas de siempre antes que probar novedades.' },
+  { id: 'p4', dim: 'responsabilidad', text: 'Cumplo mis tareas aunque no tenga muchas ganas.' },
+  { id: 'p5', dim: 'responsabilidad', text: 'Organizo mi tiempo y mis materiales con anticipación.' },
+  { id: 'p6', dim: 'responsabilidad', reverse: true, text: 'Dejo las cosas para el último momento.' },
+  { id: 'p7', dim: 'extraversion', text: 'Disfruto hablar con gente nueva y hacer amigos.' },
+  { id: 'p8', dim: 'extraversion', text: 'Me siento con energía cuando estoy en grupo.' },
+  { id: 'p9', dim: 'extraversion', reverse: true, text: 'Prefiero quedarme callado/a en reuniones grandes.' },
+  { id: 'p10', dim: 'amabilidad', text: 'Escucho y ayudo cuando alguien tiene un problema.' },
+  { id: 'p11', dim: 'amabilidad', reverse: true, text: 'Me cuesta ponerme en el lugar de los demás.' },
+  { id: 'p12', dim: 'amabilidad', text: 'Trato con respeto a quienes piensan distinto a mí.' },
+  { id: 'p13', dim: 'estabilidad', text: 'Me recupero rápido cuando algo me sale mal.' },
+  { id: 'p14', dim: 'estabilidad', reverse: true, text: 'Me preocupo mucho por cosas que todavía no pasan.' },
+  { id: 'p15', dim: 'estabilidad', text: 'Mantengo la calma en situaciones de presión.' }
+];
+
+const personalityScale = [
+  { label: 'Nada', emoji: '😐' },
+  { label: 'Poco', emoji: '🙂' },
+  { label: 'A veces', emoji: '😌' },
+  { label: 'Bastante', emoji: '😄' },
+  { label: 'Mucho', emoji: '🤩' }
+];
+
+const vocationalSteps = [
+  {
+    id: 'series',
+    title: 'Series y contenido',
+    prompt: '¿Qué tipo de series, películas o videos disfrutas más?',
+    help: 'Elige todas las que quieras. Tus gustos nos ayudan a detectar áreas de interés.',
+    options: [
+      { label: 'Series recientes', tags: ['actualidad', 'tendencias'] },
+      { label: 'Series clásicas', tags: ['cultura', 'historia'] },
+      { label: 'Anime', tags: ['creatividad', 'arte'] },
+      { label: 'Ciencia ficción', tags: ['ciencia', 'tecnología'] },
+      { label: 'Documentales', tags: ['ciencia', 'naturaleza', 'sociedad'] },
+      { label: 'Comedia', tags: ['creatividad', 'personas'] },
+      { label: 'Drama', tags: ['personas', 'emociones'] },
+      { label: 'Terror o suspenso', tags: ['análisis', 'creatividad'] },
+      { label: 'Deportes', tags: ['deporte', 'salud', 'equipo'] },
+      { label: 'Reality shows', tags: ['personas', 'actualidad'] },
+      { label: 'Superhéroes', tags: ['justicia', 'creatividad'] },
+      { label: 'Misterio', tags: ['lógica', 'análisis'] }
+    ]
+  },
+  {
+    id: 'activities',
+    title: 'Actividades',
+    prompt: '¿Qué actividades disfrutas hacer en tu tiempo libre o en la escuela?',
+    help: 'Marca todas las que realmente disfrutes, no las que creas que deberías elegir.',
+    options: [
+      { label: 'Leer', tags: ['lectura', 'cultura'] },
+      { label: 'Escribir', tags: ['escritura', 'creatividad'] },
+      { label: 'Resolver problemas matemáticos', tags: ['cálculo', 'lógica'] },
+      { label: 'Hacer experimentos', tags: ['ciencia', 'experimentos'] },
+      { label: 'Dibujar o diseñar', tags: ['arte', 'diseño'] },
+      { label: 'Tocar un instrumento o cantar', tags: ['música', 'arte'] },
+      { label: 'Hacer deporte', tags: ['deporte', 'salud'] },
+      { label: 'Ayudar a otras personas', tags: ['ayudar', 'empatía'] },
+      { label: 'Usar computadoras o programar', tags: ['tecnología', 'lógica'] },
+      { label: 'Cuidar plantas o animales', tags: ['naturaleza', 'animales'] },
+      { label: 'Cocinar', tags: ['cocina', 'creatividad'] },
+      { label: 'Armar o reparar cosas', tags: ['manualidades', 'construcción'] },
+      { label: 'Debatir', tags: ['debate', 'sociedad'] },
+      { label: 'Organizar eventos', tags: ['organización', 'liderazgo'] },
+      { label: 'Aprender idiomas', tags: ['idiomas', 'cultura'] },
+      { label: 'Vender o emprender', tags: ['negocios', 'emprendimiento'] }
+    ]
+  },
+  {
+    id: 'aptitudes',
+    title: 'Aptitudes',
+    prompt: '¿En qué te sientes bueno/a o crees que destacas?',
+    help: 'Piensa en lo que profesores, familiares o amigos te han reconocido.',
+    options: [
+      { label: 'Cálculo mental', tags: ['cálculo'] },
+      { label: 'Comprensión de lectura', tags: ['lectura'] },
+      { label: 'Escritura', tags: ['escritura'] },
+      { label: 'Memorizar', tags: ['memoria'] },
+      { label: 'Creatividad', tags: ['creatividad'] },
+      { label: 'Comunicación', tags: ['comunicación'] },
+      { label: 'Liderazgo', tags: ['liderazgo'] },
+      { label: 'Organización', tags: ['organización'] },
+      { label: 'Tecnología', tags: ['tecnología'] },
+      { label: 'Deporte', tags: ['deporte'] },
+      { label: 'Música', tags: ['música'] },
+      { label: 'Dibujo o arte', tags: ['arte'] },
+      { label: 'Empatía', tags: ['empatía'] },
+      { label: 'Resolver conflictos', tags: ['sociedad', 'empatía'] },
+      { label: 'Manualidades', tags: ['manualidades'] },
+      { label: 'Análisis de datos', tags: ['datos', 'análisis'] }
+    ]
+  },
+  {
+    id: 'preferences',
+    title: 'Ambiente de trabajo',
+    prompt: '¿Cómo te imaginas trabajando en el futuro?',
+    help: 'Puedes elegir varios ambientes. No hay respuestas correctas o incorrectas.',
+    options: [
+      { label: 'Solo/a', tags: ['autonomía'] },
+      { label: 'En equipo', tags: ['equipo'] },
+      { label: 'Al aire libre', tags: ['naturaleza'] },
+      { label: 'En oficina', tags: ['organización'] },
+      { label: 'En laboratorio', tags: ['experimentos'] },
+      { label: 'Con personas', tags: ['personas'] },
+      { label: 'Con animales', tags: ['animales'] },
+      { label: 'Con números y datos', tags: ['datos', 'cálculo'] },
+      { label: 'Con tecnología', tags: ['tecnología'] },
+      { label: 'Creando cosas', tags: ['creatividad', 'diseño'] },
+      { label: 'Ayudando a la comunidad', tags: ['ayudar', 'sociedad'] },
+      { label: 'Liderando proyectos', tags: ['liderazgo'] }
+    ]
+  },
+  {
+    id: 'values',
+    title: 'Lo que valoras',
+    prompt: '¿Qué es lo más importante para ti en un futuro trabajo?',
+    help: 'Elige hasta tres opciones que más te importen.',
+    options: [
+      { label: 'Ayudar a los demás', tags: ['ayudar'] },
+      { label: 'Creatividad', tags: ['creatividad'] },
+      { label: 'Estabilidad económica', tags: ['estabilidad'] },
+      { label: 'Libertad', tags: ['autonomía'] },
+      { label: 'Aprender siempre', tags: ['ciencia', 'cultura'] },
+      { label: 'Liderar', tags: ['liderazgo'] },
+      { label: 'Impacto social', tags: ['sociedad'] },
+      { label: 'Trabajo seguro', tags: ['estabilidad'] },
+      { label: 'Reconocimiento', tags: ['liderazgo'] },
+      { label: 'Tiempo libre', tags: ['bienestar'] }
+    ]
+  }
+];
+
+const careerCatalog = [
+  { name: 'Medicina', tags: ['salud', 'ciencia', 'ayudar', 'personas'] },
+  { name: 'Enfermería', tags: ['salud', 'ayudar', 'personas', 'equipo'] },
+  { name: 'Psicología', tags: ['personas', 'emociones', 'ayudar', 'ciencia'] },
+  { name: 'Nutrición', tags: ['salud', 'ciencia', 'ayudar', 'bienestar'] },
+  { name: 'Veterinaria', tags: ['animales', 'salud', 'ciencia', 'naturaleza'] },
+  { name: 'Biología', tags: ['ciencia', 'naturaleza', 'experimentos', 'análisis'] },
+  { name: 'Química', tags: ['ciencia', 'experimentos', 'análisis', 'cálculo'] },
+  { name: 'Física', tags: ['ciencia', 'cálculo', 'análisis', 'tecnología'] },
+  { name: 'Matemáticas', tags: ['cálculo', 'análisis', 'datos', 'lógica'] },
+  { name: 'Ingeniería en sistemas', tags: ['tecnología', 'cálculo', 'lógica', 'datos'] },
+  { name: 'Ciencia de datos', tags: ['datos', 'cálculo', 'tecnología', 'análisis'] },
+  { name: 'Ingeniería civil', tags: ['cálculo', 'construcción', 'naturaleza', 'organización'] },
+  { name: 'Ingeniería mecánica', tags: ['cálculo', 'construcción', 'tecnología', 'manualidades'] },
+  { name: 'Arquitectura', tags: ['arte', 'construcción', 'creatividad', 'diseño'] },
+  { name: 'Diseño gráfico', tags: ['arte', 'creatividad', 'tecnología', 'diseño'] },
+  { name: 'Comunicación', tags: ['escritura', 'personas', 'creatividad', 'actualidad'] },
+  { name: 'Periodismo', tags: ['escritura', 'lectura', 'actualidad', 'sociedad'] },
+  { name: 'Derecho', tags: ['lectura', 'debate', 'sociedad', 'lógica'] },
+  { name: 'Administración', tags: ['organización', 'liderazgo', 'negocios', 'datos'] },
+  { name: 'Contaduría', tags: ['cálculo', 'organización', 'datos', 'negocios'] },
+  { name: 'Docencia', tags: ['ayudar', 'personas', 'comunicación', 'lectura'] },
+  { name: 'Trabajo social', tags: ['ayudar', 'sociedad', 'personas', 'empatía'] },
+  { name: 'Gastronomía', tags: ['cocina', 'creatividad', 'manualidades', 'emprendimiento'] },
+  { name: 'Música', tags: ['música', 'arte', 'creatividad', 'disciplina'] },
+  { name: 'Artes escénicas', tags: ['arte', 'creatividad', 'personas', 'comunicación'] },
+  { name: 'Ciencias del deporte', tags: ['deporte', 'salud', 'equipo', 'disciplina'] },
+  { name: 'Turismo', tags: ['personas', 'idiomas', 'organización', 'actualidad'] },
+  { name: 'Mercadotecnia', tags: ['creatividad', 'negocios', 'personas', 'actualidad'] },
+  { name: 'Relaciones internacionales', tags: ['idiomas', 'sociedad', 'debate', 'actualidad'] }
+];
+
+const testKindLabels = {
+  personality: 'Test de personalidad',
+  vocational: 'Test de orientación vocacional'
+};
+
+
 const state = {
   mode: 'student',
   session: null,
@@ -82,6 +285,9 @@ const state = {
   fichaStudentId: null,
   fichaTrigger: null,
   fichaEscHandler: null,
+  unitAssign: null,
+  subjectsGroupId: null,
+  activeTest: null,
   loading: true
 };
 
@@ -516,7 +722,7 @@ async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
-    tasksRes, activityRes
+    unitVersionsRes, overridesRes, tasksRes, activityRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -539,6 +745,14 @@ async function fetchAdminDashboard() {
     supabase.from('student_profiles').select('*'),
     supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on'),
     supabase.from('unit_assignments').select('id,group_id,unit_id,unit_version_id,status,visible,opens_at,closes_at'),
+    supabase
+      .from('unit_versions')
+      .select('id,unit_id,version,published_at')
+      .not('published_at', 'is', null)
+      .order('version', { ascending: false }),
+    supabase
+      .from('student_unit_overrides')
+      .select('assignment_id,student_id,status,opens_at,closes_at'),
     supabase.rpc('app_staff_tasks'),
     supabase.rpc('app_activity_log', { p_limit: 80 })
   ]);
@@ -557,6 +771,8 @@ async function fetchAdminDashboard() {
   assertNoError(studentProfilesRes.error);
   assertNoError(termsRes.error);
   assertNoError(assignmentsRes.error);
+  assertNoError(unitVersionsRes.error);
+  assertNoError(overridesRes.error);
   assertNoError(tasksRes.error);
   assertNoError(activityRes.error);
 
@@ -565,6 +781,32 @@ async function fetchAdminDashboard() {
   const guardians = guardiansRes.data || [];
   const groups = groupsRes.data || [];
   const units = unitsRes.data || [];
+
+  const subjectNameMap = new Map(
+    (statsRes.data || []).map((row) => [row.subject_id, row.subject_name])
+  );
+
+  const versionsByUnit = new Map();
+  for (const version of unitVersionsRes.data || []) {
+    if (!versionsByUnit.has(version.unit_id)) versionsByUnit.set(version.unit_id, []);
+    versionsByUnit.get(version.unit_id).push(version);
+  }
+
+  const publishedUnits = units
+    .filter((unit) => unit.status === 'published')
+    .map((unit) => ({
+      ...unit,
+      subject_name: subjectNameMap.get(unit.subject_id) || unit.subject_id,
+      versions: versionsByUnit.get(unit.id) || []
+    }));
+
+  const overridesByAssignment = new Map();
+  for (const override of overridesRes.data || []) {
+    if (!overridesByAssignment.has(override.assignment_id)) {
+      overridesByAssignment.set(override.assignment_id, []);
+    }
+    overridesByAssignment.get(override.assignment_id).push(override);
+  }
 
   const roleCounts = profiles.reduce((counts, item) => {
     counts[item.role] = (counts[item.role] || 0) + 1;
@@ -604,7 +846,11 @@ async function fetchAdminDashboard() {
     units,
     overview: overviewRes.data || null,
     board: (boardRes.data || {}).subjects || [],
-    assignments: assignmentsRes.data || [],
+    assignments: (assignmentsRes.data || []).map((assignment) => ({
+      ...assignment,
+      overrides: overridesByAssignment.get(assignment.id) || []
+    })),
+    publishedUnits,
     tasks: (tasksRes.data || {}).tasks || [],
     activity: (activityRes.data || {}).entries || [],
     studentProfiles: new Map(
@@ -661,7 +907,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -678,6 +924,11 @@ async function fetchTeacherDashboard(teacherId) {
           .select('id,group_id,unit_id,unit_version_id,status,visible,opens_at,closes_at')
           .in('group_id', groupIds)
           .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase
+          .from('student_unit_overrides')
+          .select('assignment_id,student_id,status,opens_at,closes_at')
       : Promise.resolve({ data: [], error: null }),
     supabase.from('subjects').select('id,name').order('name'),
     supabase.rpc('app_staff_dashboard'),
@@ -703,6 +954,7 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(unitsRes.error);
   assertNoError(versionsRes.error);
   assertNoError(assignmentsRes.error);
+  assertNoError(overridesRes.error);
   assertNoError(subjectsRes.error);
   assertNoError(overviewRes.error);
   assertNoError(statsRes.error);
@@ -730,9 +982,18 @@ async function fetchTeacherDashboard(teacherId) {
   }));
 
   const unitTitles = new Map(publishedUnits.map((unit) => [unit.id, unit.title]));
+  const overridesByAssignment = new Map();
+  for (const override of overridesRes.data || []) {
+    if (!overridesByAssignment.has(override.assignment_id)) {
+      overridesByAssignment.set(override.assignment_id, []);
+    }
+    overridesByAssignment.get(override.assignment_id).push(override);
+  }
+
   const assignments = (assignmentsRes.data || []).map((assignment) => ({
     ...assignment,
-    unit_title: unitTitles.get(assignment.unit_id) || 'Unidad'
+    unit_title: unitTitles.get(assignment.unit_id) || 'Unidad',
+    overrides: overridesByAssignment.get(assignment.id) || []
   }));
 
   const statsByStudent = new Map((statsRes.data || []).map((stats) => [stats.student_id, stats]));
@@ -801,7 +1062,7 @@ async function fetchStudentDashboard(studentId) {
     return { kind: 'student', student: null, group: null, units: [], activeAssignments: 0 };
   }
 
-  const [groupRes, assignmentsRes] = await Promise.all([
+  const [groupRes, assignmentsRes, profileRes] = await Promise.all([
     supabase
       .from('groups')
       .select('name,level,schedule')
@@ -809,19 +1070,56 @@ async function fetchStudentDashboard(studentId) {
       .maybeSingle(),
     supabase
       .from('unit_assignments')
-      .select('id,unit_id,unit_version_id,instructions,opens_at,closes_at')
+      .select('id,unit_id,unit_version_id,instructions,opens_at,closes_at,status,visible')
       .eq('group_id', studentRes.data.group_id)
-      .eq('status', 'active')
+      .in('status', ['active', 'closed'])
       .eq('visible', true)
-      .order('created_at')
+      .order('created_at'),
+    supabase
+      .from('student_profiles')
+      .select('*')
+      .eq('student_id', studentRes.data.id)
+      .maybeSingle()
   ]);
 
   assertNoError(groupRes.error);
   assertNoError(assignmentsRes.error);
+  assertNoError(profileRes.error);
 
-  const assignments = assignmentsRes.data || [];
+  const allAssignments = assignmentsRes.data || [];
+  const assignmentIds = allAssignments.map((assignment) => assignment.id);
+
+  let overrides = [];
+
+  if (assignmentIds.length) {
+    const overridesRes = await supabase
+      .from('student_unit_overrides')
+      .select('assignment_id,status,opens_at,closes_at')
+      .eq('student_id', studentRes.data.id)
+      .in('assignment_id', assignmentIds);
+
+    assertNoError(overridesRes.error);
+    overrides = overridesRes.data || [];
+  }
+
+  const overrideMap = new Map(overrides.map((override) => [override.assignment_id, override]));
+  const now = Date.now();
+
+  const assignments = allAssignments.filter((assignment) => {
+    const override = overrideMap.get(assignment.id);
+    const effectiveStatus = override?.status || assignment.status;
+    if (effectiveStatus !== 'active') return false;
+
+    const opensAt = override?.opens_at || assignment.opens_at;
+    const closesAt = override?.closes_at || assignment.closes_at;
+    if (opensAt && new Date(opensAt).getTime() > now) return false;
+    if (closesAt && new Date(closesAt).getTime() <= now) return false;
+
+    return true;
+  });
+
   const unitIds = [...new Set(assignments.map((assignment) => assignment.unit_id))];
-  const assignmentIds = assignments.map((assignment) => assignment.id);
+  const visibleAssignmentIds = assignments.map((assignment) => assignment.id);
 
   let unitRows = [];
   let subjectRows = [];
@@ -838,7 +1136,7 @@ async function fetchStudentDashboard(studentId) {
         .from('unit_progress')
         .select('assignment_id,status,attempts_count,best_accuracy,completed_at')
         .eq('student_id', studentRes.data.id)
-        .in('assignment_id', assignmentIds)
+        .in('assignment_id', visibleAssignmentIds)
     ]);
 
     assertNoError(unitsRes.error);
@@ -872,6 +1170,7 @@ async function fetchStudentDashboard(studentId) {
     kind: 'student',
     student: studentRes.data,
     group: groupRes.data,
+    profile: profileRes.data || {},
     units,
     activeAssignments: units.length
   };
@@ -1494,12 +1793,18 @@ function unitActivationMarkup(group, data) {
             <button class="btn-mini primary" data-activate-unit="${escapeHtml(unit.id)}:${escapeHtml(version.id)}">Activar</button>
           ` : '<span class="muted"><small>Sin versión publicada</small></span>';
         } else if (assignment.status === 'active') {
+          const excluded = (assignment.overrides || []).filter((override) => override.status === 'closed').length;
+          const activeCount = Math.max(0, group.students.length - excluded);
           meta = `
             <span class="pill pill-green">Activa</span>
+            <span class="pill">${activeCount}/${group.students.length} alumnos</span>
             ${assignment.opens_at ? `<span>desde ${escapeHtml(formatDate(String(assignment.opens_at).slice(0, 10)))}</span>` : ''}
             ${assignment.closes_at ? `<span>hasta ${escapeHtml(formatDate(String(assignment.closes_at).slice(0, 10)))}</span>` : '<span>sin cierre</span>'}
           `;
-          actions = `<button class="btn-mini danger" data-close-assignment="${escapeHtml(assignment.id)}">Cerrar</button>`;
+          actions = `
+            <button class="btn-mini" data-manage-assignment="${escapeHtml(assignment.id)}" data-unit-group="${escapeHtml(group.id)}">Alumnos</button>
+            <button class="btn-mini danger" data-close-assignment="${escapeHtml(assignment.id)}">Cerrar</button>
+          `;
         } else {
           meta = `
             <span class="pill pill-red">Cerrada</span>
@@ -1835,14 +2140,25 @@ function staffCreateStudentMarkup(data) {
   `;
 }
 
+function unitVersionId(data, unitId) {
+  const unit = (data.publishedUnits || []).find((item) => item.id === unitId);
+  if (unit?.versions?.length) return unit.versions[0].id;
+  return '';
+}
+
 function staffSubjectsTabMarkup(data) {
   const subjects = data.board || [];
   const groups = data.groups || [];
-  const groupId = groups[0]?.id || null;
+  const groupId = groups.some((group) => group.id === state.subjectsGroupId)
+    ? state.subjectsGroupId
+    : groups[0]?.id || null;
   const students = data.students || [];
   const assignmentsByUnit = new Map();
   for (const assignment of data.assignments || []) {
-    assignmentsByUnit.set(assignment.unit_id, assignment);
+    if (assignment.group_id !== groupId) continue;
+    if (!assignmentsByUnit.has(assignment.unit_id)) {
+      assignmentsByUnit.set(assignment.unit_id, assignment);
+    }
   }
 
   const termOptions = data.terms || [];
@@ -1860,7 +2176,17 @@ function staffSubjectsTabMarkup(data) {
         <span class="card-label">Materias</span>
         <h2>Unidades, exámenes y calificaciones</h2>
       </div>
-      <span class="pill">${subjects.length} materias</span>
+      <div class="row">
+        ${groups.length > 1 ? `
+          <label class="field inline-field">
+            <span>Grupo</span>
+            <select data-subjects-group>
+              ${groups.map((group) => `<option value="${escapeHtml(group.id)}" ${group.id === groupId ? 'selected' : ''}>${escapeHtml(group.name)}</option>`).join('')}
+            </select>
+          </label>
+        ` : ''}
+        <span class="pill">${subjects.length} materias</span>
+      </div>
     </div>
 
     ${subjects.map((subject) => {
@@ -1886,6 +2212,10 @@ function staffSubjectsTabMarkup(data) {
           ${(subject.units || []).map((unit) => {
             const assignment = assignmentsByUnit.get(unit.id);
             const unitStudents = unit.students || [];
+            const groupStudents = students.filter((student) => student.group_id === groupId);
+            const excluded = (assignment?.overrides || []).filter((override) => override.status === 'closed').length;
+            const activeCount = Math.max(0, groupStudents.length - excluded);
+            const versionId = unitVersionId(data, unit.id);
             return `
               <div class="board-unit">
                 <span class="pill pill-blue">U${String(unit.num).padStart(2, '0')}</span>
@@ -1895,11 +2225,15 @@ function staffSubjectsTabMarkup(data) {
                 </div>
                 <div class="row">
                   ${assignment && assignment.status === 'active'
-                    ? `<span class="pill success">Activa</span>${data.kind === 'teacher' ? `<button class="btn-mini danger" data-close-assignment="${escapeHtml(assignment.id)}">Cerrar</button>` : ''}`
+                    ? `<span class="pill success">Activa</span>
+                       <span class="pill">${activeCount}/${groupStudents.length} alumnos</span>
+                       <button class="btn-mini" data-manage-assignment="${escapeHtml(assignment.id)}" data-unit-group="${escapeHtml(groupId)}">Alumnos</button>
+                       <button class="btn-mini danger" data-close-assignment="${escapeHtml(assignment.id)}">Cerrar</button>`
                     : assignment && assignment.status === 'closed'
-                      ? `<span class="pill pill-red">Cerrada</span>${data.kind === 'teacher' ? `<button class="btn-mini" data-reopen-assignment="${escapeHtml(assignment.id)}">Reabrir</button>` : ''}`
-                      : data.kind === 'teacher' && groupId
-                        ? `<button class="btn-mini primary" data-activate-unit="${escapeHtml(unit.id)}:${escapeHtml((data.publishedUnits?.find((u) => u.id === unit.id)?.versions || [])[0]?.id || '')}">Activar</button>`
+                      ? `<span class="pill pill-red">Cerrada</span>
+                         <button class="btn-mini" data-reopen-assignment="${escapeHtml(assignment.id)}">Reabrir</button>`
+                      : groupId
+                        ? `<button class="btn-mini primary" data-activate-unit="${escapeHtml(unit.id)}:${escapeHtml(versionId)}" data-unit-group="${escapeHtml(groupId)}">Activar</button>`
                         : '<span class="pill">Sin activar</span>'
                   }
                 </div>
@@ -2235,7 +2569,628 @@ function studentDashboardMarkup(data) {
         </ul>
       ` : '<p class="empty-state">Tus unidades aparecerán aquí cuando el profesor las active.</p>'}
     </article>
+
+    ${studentTestsMarkup(data)}
   `;
+}
+
+function testResultFor(profile, kind) {
+  const value = kind === 'personality' ? profile?.personality : profile?.aptitude;
+  return value && typeof value === 'object' ? value : null;
+}
+
+function testIsComplete(profile, kind) {
+  const result = testResultFor(profile, kind);
+  return Boolean(result?.completed_at);
+}
+
+function studentTestsMarkup(data) {
+  const profile = data.profile || {};
+  const personality = testResultFor(profile, 'personality');
+  const vocational = testResultFor(profile, 'vocational');
+  const personalityDone = Boolean(personality?.completed_at);
+  const vocationalDone = Boolean(vocational?.completed_at);
+  const interests = Array.isArray(profile.interests) ? profile.interests : [];
+  const aptitudes = Array.isArray(profile.aptitudes) ? profile.aptitudes : [];
+  const careers = Array.isArray(profile.career_suggestions) ? profile.career_suggestions : [];
+  const topCareers = careers
+    .slice(0, 3)
+    .map((career) => (typeof career === 'string' ? career : career?.name))
+    .filter(Boolean);
+
+  return `
+    <article class="card wide student-tests">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Mi orientación</span>
+          <h2>Conócete y descubre tu camino</h2>
+        </div>
+        <span class="pill">${personalityDone && vocationalDone ? '2 de 2 completados' : `${Number(personalityDone) + Number(vocationalDone)} de 2 completados`}</span>
+      </div>
+      <p class="muted">Responde con calma y honestidad. No hay respuestas correctas: tus resultados ayudan a tu profesor a acompañarte mejor.</p>
+
+      <div class="test-grid">
+        <div class="test-card ${personalityDone ? 'done' : ''}">
+          <span class="test-emoji" aria-hidden="true">🧠</span>
+          <div class="test-copy">
+            <strong>Test de personalidad</strong>
+            <p>15 preguntas sobre tu forma de ser, aprender y convivir.</p>
+            <span class="pill ${personalityDone ? 'success' : ''}">${personalityDone ? 'Completado' : 'Pendiente'}</span>
+          </div>
+          <button class="btn ${personalityDone ? 'ghost' : 'primary'}" data-start-test="personality">${personalityDone ? 'Volver a hacerlo' : 'Comenzar'}</button>
+        </div>
+
+        <div class="test-card ${vocationalDone ? 'done' : ''}">
+          <span class="test-emoji" aria-hidden="true">🧭</span>
+          <div class="test-copy">
+            <strong>Test de orientación vocacional</strong>
+            <p>Intereses, aptitudes y carreras que podrían encajar contigo.</p>
+            <span class="pill ${vocationalDone ? 'success' : ''}">${vocationalDone ? 'Completado' : 'Pendiente'}</span>
+          </div>
+          <button class="btn ${vocationalDone ? 'ghost' : 'primary'}" data-start-test="vocational">${vocationalDone ? 'Volver a hacerlo' : 'Comenzar'}</button>
+        </div>
+      </div>
+
+      ${(interests.length || aptitudes.length || topCareers.length) ? `
+        <div class="test-summary">
+          ${topCareers.length ? `
+            <div class="test-summary-block">
+              <span class="card-label">Carreras que podrían interesarte</span>
+              <div class="ficha-tags">
+                ${topCareers.map((career) => `<span class="ficha-tag">🎓 ${escapeHtml(career)}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          ${interests.length ? `
+            <div class="test-summary-block">
+              <span class="card-label">Tus intereses</span>
+              <div class="ficha-tags">
+                ${interests.slice(0, 8).map((item) => `<span class="ficha-tag">${escapeHtml(item)}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          ${aptitudes.length ? `
+            <div class="test-summary-block">
+              <span class="card-label">Tus aptitudes</span>
+              <div class="ficha-tags">
+                ${aptitudes.slice(0, 8).map((item) => `<span class="ficha-tag">${escapeHtml(item)}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+    </article>
+  `;
+}
+
+function personalityScores(answers) {
+  const sums = {};
+  const counts = {};
+
+  for (const question of personalityQuestions) {
+    const index = answers[question.id];
+    if (index == null) continue;
+    const value = question.reverse ? 5 - index : index + 1;
+    sums[question.dim] = (sums[question.dim] || 0) + value;
+    counts[question.dim] = (counts[question.dim] || 0) + 1;
+  }
+
+  const scores = {};
+  for (const dimension of Object.keys(personalityDimensionLabels)) {
+    const count = counts[dimension] || 0;
+    const sum = sums[dimension] || 0;
+    scores[dimension] = count
+      ? Math.max(0, Math.min(100, Math.round(((sum - count) / Math.max(1, count * 4)) * 100)))
+      : 0;
+  }
+  return scores;
+}
+
+function vocationalResult(answers) {
+  const tagSet = new Set();
+  const selected = {};
+
+  for (const step of vocationalSteps) {
+    const labels = Array.isArray(answers[step.id]) ? answers[step.id] : [];
+    selected[step.id] = labels;
+    for (const label of labels) {
+      const option = step.options.find((item) => item.label === label);
+      for (const tag of option?.tags || []) tagSet.add(tag);
+    }
+  }
+
+  const interests = [...new Set([...(answers.series || []), ...(answers.activities || [])])];
+  const aptitudes = [...new Set(answers.aptitudes || [])];
+  const preferences = [...new Set(answers.preferences || [])];
+  const values = [...new Set(answers.values || [])];
+
+  const careerSuggestions = careerCatalog
+    .map((career) => {
+      const matches = career.tags.filter((tag) => tagSet.has(tag));
+      return {
+        name: career.name,
+        score: Math.min(100, Math.round((matches.length / career.tags.length) * 100)),
+        matches
+      };
+    })
+    .filter((career) => career.score > 0)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .slice(0, 6);
+
+  return {
+    version: 1,
+    completed_at: new Date().toISOString(),
+    interests,
+    aptitudes,
+    preferences,
+    values,
+    tags: [...tagSet],
+    career_suggestions: careerSuggestions,
+    career_choice: answers.career_choice || null
+  };
+}
+
+function testTopDimensions(scores) {
+  return Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([key]) => key);
+}
+
+function testModalStepCount(active) {
+  return active.kind === 'personality' ? personalityQuestions.length : vocationalSteps.length + 1;
+}
+
+function testModalCurrentQuestion(active) {
+  if (active.kind === 'personality') {
+    return personalityQuestions[active.step] || null;
+  }
+  return vocationalSteps[active.step] || null;
+}
+
+function testModalOptionsMarkup(active) {
+  if (active.kind === 'personality') {
+    const question = personalityQuestions[active.step];
+    if (!question) return '';
+    const selected = active.answers[question.id];
+
+    return `
+      <div class="test-scale">
+        ${personalityScale.map((item, index) => `
+          <button type="button" class="test-option ${selected === index ? 'selected' : ''}" data-test-option="${index}">
+            <span aria-hidden="true">${item.emoji}</span>
+            <strong>${escapeHtml(item.label)}</strong>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  if (active.step >= vocationalSteps.length) {
+    const result = vocationalResult(active.answers);
+    const options = result.career_suggestions.map((career) => career.name);
+    const choice = active.answers.career_choice || '';
+
+    return `
+      <div class="test-career-grid">
+        ${options.map((name) => `
+          <button type="button" class="test-option ${choice === name ? 'selected' : ''}" data-test-option="${escapeHtml(name)}">
+            <span aria-hidden="true">🎓</span>
+            <strong>${escapeHtml(name)}</strong>
+          </button>
+        `).join('')}
+        <button type="button" class="test-option ${choice === 'Aún no lo sé' ? 'selected' : ''}" data-test-option="Aún no lo sé">
+          <span aria-hidden="true">🤔</span>
+          <strong>Aún no lo sé</strong>
+        </button>
+      </div>
+      ${options.length ? '<p class="hint">Estas carreras salen de tus intereses y aptitudes. Puedes elegir una o decir que aún no lo sabes.</p>' : ''}
+    `;
+  }
+
+  const step = vocationalSteps[active.step];
+  const selected = active.answers[step.id] || [];
+  const max = step.id === 'values' ? 3 : null;
+
+  return `
+    <div class="test-choice-grid">
+      ${step.options.map((option) => `
+        <button type="button" class="test-option ${selected.includes(option.label) ? 'selected' : ''}" data-test-option="${escapeHtml(option.label)}">
+          <span class="test-check" aria-hidden="true">${selected.includes(option.label) ? '✓' : '+'}</span>
+          <strong>${escapeHtml(option.label)}</strong>
+        </button>
+      `).join('')}
+    </div>
+    <div class="test-choice-foot">
+      <span class="pill">${selected.length} seleccionados${max ? ` · máximo ${max}` : ''}</span>
+      ${selected.length ? '<button type="button" class="btn-mini" data-test-clear>Limpiar selección</button>' : ''}
+    </div>
+  `;
+}
+
+function testResultMarkup(active) {
+  const result = active.result || {};
+  const payload = active.kind === 'personality' ? result.personality : result.aptitude;
+  const profile = state.dashboard?.profile || {};
+
+  if (active.kind === 'personality') {
+    const scores = payload?.scores || {};
+    const top = testTopDimensions(scores);
+    const topLabels = top.map((key) => personalityDimensionLabels[key]?.label).filter(Boolean);
+
+    return `
+      <div class="test-result">
+        <div class="test-result-hero">
+          <span class="test-result-emoji" aria-hidden="true">🧠</span>
+          <div>
+            <span class="card-label">Test completado</span>
+            <h2>Tu perfil de personalidad</h2>
+            <p class="muted">${topLabels.length ? `Tus rasgos más marcados son ${topLabels.join(' y ')}.` : 'Gracias por responder con honestidad.'}</p>
+          </div>
+        </div>
+
+        <div class="test-score-list">
+          ${Object.entries(personalityDimensionLabels).map(([key, meta]) => {
+            const value = scores[key] ?? 0;
+            return `
+              <div class="test-score">
+                <div class="test-score-head">
+                  <span>${meta.emoji} ${escapeHtml(meta.label)}</span>
+                  <strong>${value}%</strong>
+                </div>
+                <div class="ficha-bar" aria-hidden="true">
+                  <div class="ficha-bar-fill" style="--bar-color:${value >= 70 ? 'var(--good)' : value >= 40 ? 'var(--brand)' : 'var(--amber)'};--bar-scale:${(value / 100).toFixed(3)}"></div>
+                </div>
+                <small>${escapeHtml(meta.copy)}</small>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="test-result-note">
+          <strong>Tu profesor ya puede ver este resultado en tu ficha.</strong>
+          <span>Puedes volver a hacer el test cuando quieras; se guardará la versión más reciente.</span>
+        </div>
+
+        <div class="test-result-actions">
+          <button type="button" class="btn ghost" data-test-retry>Volver a hacerlo</button>
+          <button type="button" class="btn primary" data-test-close>Cerrar</button>
+        </div>
+      </div>
+    `;
+  }
+
+  const careers = Array.isArray(payload?.career_suggestions) ? payload.career_suggestions : [];
+  const interests = Array.isArray(payload?.interests) ? payload.interests : [];
+  const aptitudes = Array.isArray(payload?.aptitudes) ? payload.aptitudes : [];
+  const choice = payload?.career_choice || profile.career_choice;
+
+  return `
+    <div class="test-result">
+      <div class="test-result-hero">
+        <span class="test-result-emoji" aria-hidden="true">🧭</span>
+        <div>
+          <span class="card-label">Test completado</span>
+          <h2>Tu orientación vocacional</h2>
+          <p class="muted">${choice ? `Elegiste ${escapeHtml(choice)} como una carrera que te llama la atención.` : 'Estas son las carreras que mejor combinan con tus respuestas.'}</p>
+        </div>
+      </div>
+
+      ${careers.length ? `
+        <div class="test-career-results">
+          <span class="card-label">Carreras sugeridas</span>
+          ${careers.map((career) => `
+            <div class="test-career-row">
+              <div>
+                <strong>${escapeHtml(career.name)}</strong>
+                <small>${(career.matches || []).map((tag) => escapeHtml(tag)).join(' · ') || 'Coincide con tu perfil'}</small>
+              </div>
+              <div class="test-career-score">
+                <div class="ficha-bar" aria-hidden="true">
+                  <div class="ficha-bar-fill" style="--bar-color:var(--brand-2);--bar-scale:${(Math.max(0, Math.min(100, career.score)) / 100).toFixed(3)}"></div>
+                </div>
+                <strong>${career.score}%</strong>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p class="ficha-empty">Todavía no hay suficientes coincidencias. Puedes repetir el test eligiendo más intereses.</p>'}
+
+      <div class="test-tag-columns">
+        ${interests.length ? `
+          <div class="test-summary-block">
+            <span class="card-label">Intereses que elegiste</span>
+            <div class="ficha-tags">${interests.map((item) => `<span class="ficha-tag">${escapeHtml(item)}</span>`).join('')}</div>
+          </div>
+        ` : ''}
+        ${aptitudes.length ? `
+          <div class="test-summary-block">
+            <span class="card-label">Aptitudes que reconociste</span>
+            <div class="ficha-tags">${aptitudes.map((item) => `<span class="ficha-tag">${escapeHtml(item)}</span>`).join('')}</div>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="test-result-note">
+        <strong>Tu profesor ya puede ver estos intereses y carreras en tu ficha.</strong>
+        <span>Puedes repetir el test si tus gustos cambian.</span>
+      </div>
+
+      <div class="test-result-actions">
+        <button type="button" class="btn ghost" data-test-retry>Volver a hacerlo</button>
+        <button type="button" class="btn primary" data-test-close>Cerrar</button>
+      </div>
+    </div>
+  `;
+}
+
+function testModalMarkup() {
+  const active = state.activeTest;
+  if (!active) return '';
+
+  if (active.saved) {
+    return `
+      <div class="test-overlay" data-test-overlay>
+        <section class="test-dialog" role="dialog" aria-modal="true" aria-labelledby="test-title">
+          <button type="button" class="ficha-close" data-test-close aria-label="Cerrar test">✕</button>
+          <div class="test-body">${testResultMarkup(active)}</div>
+        </section>
+      </div>
+    `;
+  }
+
+  const total = testModalStepCount(active);
+  const step = Math.min(active.step, total - 1);
+  const progress = Math.round(((step + 1) / total) * 100);
+  const question = testModalCurrentQuestion(active);
+  const isCareerStep = active.kind === 'vocational' && step >= vocationalSteps.length;
+  const title = active.kind === 'personality' ? 'Test de personalidad' : 'Test de orientación vocacional';
+  const stepTitle = active.kind === 'personality' ? `Pregunta ${step + 1}` : (isCareerStep ? 'Tu carrera ideal' : vocationalSteps[step].title);
+  const prompt = active.kind === 'personality' ? question.text : (isCareerStep ? '¿Cuál de estas carreras te llama más la atención?' : vocationalSteps[step].prompt);
+  const help = active.kind === 'personality'
+    ? 'Elige la opción que mejor te describa. No hay respuestas buenas o malas.'
+    : (isCareerStep ? 'Puedes elegir una carrera o decir que aún no lo sabes.' : vocationalSteps[step].help);
+
+  const canContinue = active.kind === 'personality'
+    ? active.answers[question.id] != null
+    : isCareerStep
+      ? Boolean(active.answers.career_choice)
+      : (active.answers[vocationalSteps[step].id] || []).length > 0;
+
+  return `
+    <div class="test-overlay" data-test-overlay>
+      <section class="test-dialog" role="dialog" aria-modal="true" aria-labelledby="test-title">
+        <button type="button" class="ficha-close" data-test-close aria-label="Cerrar test">✕</button>
+
+        <header class="test-header">
+          <div>
+            <span class="card-label">${escapeHtml(title)}</span>
+            <h2 id="test-title">${escapeHtml(stepTitle)}</h2>
+          </div>
+          <span class="pill">${step + 1} / ${total}</span>
+        </header>
+
+        <div class="test-progress" aria-hidden="true">
+          <div class="test-progress-fill" style="width:${progress}%"></div>
+        </div>
+
+        <div class="test-body">
+          <h3 class="test-prompt">${escapeHtml(prompt)}</h3>
+          <p class="test-help">${escapeHtml(help)}</p>
+          ${testModalOptionsMarkup(active)}
+          <div class="test-error" data-test-error hidden></div>
+        </div>
+
+        <footer class="test-footer">
+          <button type="button" class="btn ghost" data-test-back ${step === 0 ? 'disabled' : ''}>← Atrás</button>
+          <button type="button" class="btn primary" data-test-next ${canContinue ? '' : 'disabled'}>
+            ${step === total - 1 ? 'Guardar resultados' : 'Siguiente →'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  `;
+}
+
+function bindTestModalEvents() {
+  const overlay = document.querySelector('[data-test-overlay]');
+  if (!overlay) return;
+
+  const active = state.activeTest;
+  if (!active) return;
+
+  const close = () => closeTestModal({ refresh: true });
+
+  overlay.querySelectorAll('[data-test-close]').forEach((button) => {
+    button.addEventListener('click', close);
+  });
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) close();
+  });
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKeyDown);
+  state.activeTest.escHandler = onKeyDown;
+
+  if (active.saved) {
+    overlay.querySelectorAll('[data-test-retry]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const kind = active.kind;
+        closeTestModal({ silent: true });
+        startStudentTest(kind);
+      });
+    });
+    return;
+  }
+
+  overlay.querySelectorAll('[data-test-option]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const value = button.dataset.testOption;
+      if (active.kind === 'personality') {
+        const question = personalityQuestions[active.step];
+        active.answers[question.id] = Number(value);
+      } else if (active.step >= vocationalSteps.length) {
+        active.answers.career_choice = value;
+      } else {
+        const step = vocationalSteps[active.step];
+        const current = Array.isArray(active.answers[step.id]) ? [...active.answers[step.id]] : [];
+        const index = current.indexOf(value);
+        const max = step.id === 'values' ? 3 : null;
+
+        if (index >= 0) {
+          current.splice(index, 1);
+        } else if (!max || current.length < max) {
+          current.push(value);
+        }
+        active.answers[step.id] = current;
+      }
+      renderTestModal();
+    });
+  });
+
+  const clearButton = overlay.querySelector('[data-test-clear]');
+  if (clearButton) {
+    clearButton.addEventListener('click', () => {
+      const step = vocationalSteps[active.step];
+      if (step) active.answers[step.id] = [];
+      renderTestModal();
+    });
+  }
+
+  overlay.querySelector('[data-test-back]')?.addEventListener('click', () => {
+    if (active.step > 0) {
+      active.step -= 1;
+      renderTestModal();
+    }
+  });
+
+  overlay.querySelector('[data-test-next]')?.addEventListener('click', async (event) => {
+    const total = testModalStepCount(active);
+    if (active.step < total - 1) {
+      active.step += 1;
+      renderTestModal();
+      return;
+    }
+    await saveStudentTest(event.currentTarget);
+  });
+}
+
+function renderTestModal() {
+  document.querySelectorAll('[data-test-overlay]').forEach((overlay) => overlay.remove());
+
+  if (state.activeTest?.escHandler) {
+    document.removeEventListener('keydown', state.activeTest.escHandler);
+    state.activeTest.escHandler = null;
+  }
+
+  const markup = testModalMarkup();
+  if (!markup) {
+    document.body.classList.remove('test-open');
+    return;
+  }
+
+  document.body.insertAdjacentHTML('beforeend', markup);
+  document.body.classList.add('test-open');
+  bindTestModalEvents();
+
+  requestAnimationFrame(() => {
+    document.querySelector('[data-test-close]')?.focus();
+  });
+}
+
+function startStudentTest(kind) {
+  state.activeTest = {
+    kind,
+    step: 0,
+    answers: {},
+    saved: false,
+    result: null,
+    escHandler: null
+  };
+  renderTestModal();
+}
+
+function closeTestModal({ silent = false, refresh = false } = {}) {
+  if (state.activeTest?.escHandler) {
+    document.removeEventListener('keydown', state.activeTest.escHandler);
+  }
+  state.activeTest = null;
+  document.querySelectorAll('[data-test-overlay]').forEach((overlay) => overlay.remove());
+  document.body.classList.remove('test-open');
+
+  if (refresh && !silent) {
+    renderDashboard();
+  }
+}
+
+async function saveStudentTest(button) {
+  const active = state.activeTest;
+  if (!active || button?.disabled) return;
+
+  const errorBox = document.querySelector('[data-test-error]');
+  if (errorBox) {
+    errorBox.hidden = true;
+    errorBox.textContent = '';
+  }
+
+  let payload;
+  if (active.kind === 'personality') {
+    const scores = personalityScores(active.answers);
+    payload = {
+      version: 1,
+      completed_at: new Date().toISOString(),
+      scores,
+      top: testTopDimensions(scores),
+      answers: active.answers
+    };
+  } else {
+    payload = vocationalResult(active.answers);
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Guardando…';
+  }
+
+  const { data, error } = await supabase.rpc('app_save_student_test', {
+    p_kind: active.kind,
+    p_payload: payload
+  });
+
+  if (error) {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Guardar resultados';
+    }
+    if (errorBox) {
+      errorBox.hidden = false;
+      errorBox.textContent = error.message || 'No se pudieron guardar los resultados.';
+    }
+    return;
+  }
+
+  active.saved = true;
+  active.result = data || {};
+  active.savedAt = new Date().toISOString();
+
+  if (state.dashboard) {
+    state.dashboard.profile = state.dashboard.profile || {};
+    if (active.kind === 'personality') {
+      state.dashboard.profile.personality = payload;
+    } else {
+      state.dashboard.profile.aptitude = payload;
+      state.dashboard.profile.interests = payload.interests;
+      state.dashboard.profile.aptitudes = payload.aptitudes;
+      state.dashboard.profile.strengths = payload.aptitudes;
+      state.dashboard.profile.career_suggestions = payload.career_suggestions;
+      if (payload.career_choice) state.dashboard.profile.career_choice = payload.career_choice;
+    }
+  }
+
+  renderTestModal();
 }
 
 function guardianDashboardMarkup(data) {
@@ -2867,44 +3822,333 @@ async function completeUnit() {
   renderUnit();
 }
 
-async function activateUnitCard(button) {
+/* ---------------- Activar unidad y elegir alumnos ---------------- */
+
+function unitAssignStudents(groupId, assignment) {
+  const group = (state.dashboard?.groups || []).find((item) => item.id === groupId);
+  const closedIds = new Set(
+    (assignment?.overrides || [])
+      .filter((override) => override.status === 'closed')
+      .map((override) => override.student_id)
+  );
+
+  return (group?.students || []).map((student) => ({
+    id: student.id,
+    full_name: student.full_name || 'Alumno sin nombre',
+    student_code: student.student_code || '',
+    selected: !closedIds.has(student.id)
+  }));
+}
+
+function openUnitAssignDialog({ mode, unitId, versionId, groupId, assignmentId = null }) {
+  const data = state.dashboard;
+  const assignment = assignmentId
+    ? (data?.assignments || []).find((item) => item.id === assignmentId)
+    : null;
+
+  const resolvedGroupId = groupId || assignment?.group_id;
+  const resolvedUnitId = unitId || assignment?.unit_id;
+  const resolvedVersionId = versionId || assignment?.unit_version_id;
+  const group = (data?.groups || []).find((item) => item.id === resolvedGroupId);
+
+  if (!group || !resolvedUnitId) {
+    setError('No se pudo identificar la unidad o el grupo.');
+    return;
+  }
+
+  const unit = (data?.publishedUnits || []).find((item) => item.id === resolvedUnitId);
+  const students = unitAssignStudents(resolvedGroupId, assignment);
+
+  state.unitAssign = {
+    mode,
+    unitId: resolvedUnitId,
+    versionId: resolvedVersionId || unitVersionId(data, resolvedUnitId),
+    groupId: resolvedGroupId,
+    assignmentId,
+    unitTitle: unit?.title || 'Unidad',
+    groupName: group.name,
+    students,
+    closesAt: assignment?.closes_at ? String(assignment.closes_at).slice(0, 10) : '',
+    saving: false,
+    escHandler: null
+  };
+
+  renderUnitAssignDialog();
+}
+
+function unitAssignDialogMarkup() {
+  const active = state.unitAssign;
+  if (!active) return '';
+
+  const selectedCount = active.students.filter((student) => student.selected).length;
+  const allSelected = selectedCount === active.students.length;
+  const noneSelected = selectedCount === 0;
+
+  return `
+    <div class="unit-assign-overlay" data-unit-assign-overlay>
+      <section class="unit-assign-dialog" role="dialog" aria-modal="true" aria-labelledby="unit-assign-title">
+        <button type="button" class="ficha-close" data-unit-assign-close aria-label="Cerrar">✕</button>
+
+        <header class="unit-assign-head">
+          <span class="card-label">${active.mode === 'activate' ? 'Activar unidad' : 'Alumnos de la unidad'}</span>
+          <h2 id="unit-assign-title">${escapeHtml(active.unitTitle)}</h2>
+          <p class="muted">${escapeHtml(active.groupName)} · elige a qué alumnos se activa esta unidad.</p>
+        </header>
+
+        <div class="unit-assign-toolbar">
+          <span class="pill ${selectedCount ? 'success' : 'pill-red'}">${selectedCount}/${active.students.length} alumnos seleccionados</span>
+          <div class="row">
+            <button type="button" class="btn-mini" data-unit-assign-all ${allSelected ? 'disabled' : ''}>Todos</button>
+            <button type="button" class="btn-mini" data-unit-assign-none ${noneSelected ? 'disabled' : ''}>Ninguno</button>
+          </div>
+        </div>
+
+        ${active.students.length ? `
+          <div class="unit-assign-list">
+            ${active.students.map((student) => `
+              <label class="unit-assign-row ${student.selected ? 'selected' : ''}">
+                <input type="checkbox" data-unit-assign-student="${escapeHtml(student.id)}" ${student.selected ? 'checked' : ''}>
+                <span class="unit-assign-avatar" aria-hidden="true">${escapeHtml((student.full_name || 'A').trim().slice(0, 1).toUpperCase())}</span>
+                <span class="unit-assign-name">
+                  <strong>${escapeHtml(student.full_name)}</strong>
+                  <small>${escapeHtml(student.student_code || 'Sin matrícula')}</small>
+                </span>
+                <span class="unit-assign-state">${student.selected ? 'Incluido' : 'Excluido'}</span>
+              </label>
+            `).join('')}
+          </div>
+        ` : '<p class="ficha-empty">Este grupo todavía no tiene alumnos.</p>'}
+
+        <label class="field unit-assign-date">
+          <span>Fecha de cierre (opcional)</span>
+          <input type="date" data-unit-assign-closes value="${escapeHtml(active.closesAt)}">
+          <small class="hint">Si la dejas vacía, la unidad quedará abierta hasta que la cierres.</small>
+        </label>
+
+        <div class="unit-assign-error" data-unit-assign-error hidden></div>
+
+        <footer class="unit-assign-foot">
+          <button type="button" class="btn ghost" data-unit-assign-close>Cancelar</button>
+          <button type="button" class="btn primary" data-unit-assign-save ${selectedCount ? '' : 'disabled'}>
+            ${active.mode === 'activate' ? `Activar para ${selectedCount} ${selectedCount === 1 ? 'alumno' : 'alumnos'}` : 'Guardar cambios'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  `;
+}
+
+function bindUnitAssignDialog() {
+  const overlay = document.querySelector('[data-unit-assign-overlay]');
+  const active = state.unitAssign;
+  if (!overlay || !active) return;
+
+  const close = () => closeUnitAssignDialog();
+
+  overlay.querySelectorAll('[data-unit-assign-close]').forEach((button) => {
+    button.addEventListener('click', close);
+  });
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) close();
+  });
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKeyDown);
+  active.escHandler = onKeyDown;
+
+  overlay.querySelectorAll('[data-unit-assign-student]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const student = active.students.find((item) => item.id === input.dataset.unitAssignStudent);
+      if (student) student.selected = input.checked;
+      renderUnitAssignDialog();
+    });
+  });
+
+  overlay.querySelector('[data-unit-assign-all]')?.addEventListener('click', () => {
+    active.students.forEach((student) => { student.selected = true; });
+    renderUnitAssignDialog();
+  });
+
+  overlay.querySelector('[data-unit-assign-none]')?.addEventListener('click', () => {
+    active.students.forEach((student) => { student.selected = false; });
+    renderUnitAssignDialog();
+  });
+
+  const closesInput = overlay.querySelector('[data-unit-assign-closes]');
+  if (closesInput) {
+    closesInput.addEventListener('change', () => {
+      active.closesAt = closesInput.value;
+    });
+  }
+
+  overlay.querySelector('[data-unit-assign-save]')?.addEventListener('click', (event) => {
+    saveUnitAssignment(event.currentTarget);
+  });
+}
+
+function renderUnitAssignDialog() {
+  document.querySelectorAll('[data-unit-assign-overlay]').forEach((overlay) => overlay.remove());
+
+  if (state.unitAssign?.escHandler) {
+    document.removeEventListener('keydown', state.unitAssign.escHandler);
+    state.unitAssign.escHandler = null;
+  }
+
+  const markup = unitAssignDialogMarkup();
+  if (!markup) {
+    document.body.classList.remove('unit-assign-open');
+    return;
+  }
+
+  document.body.insertAdjacentHTML('beforeend', markup);
+  document.body.classList.add('unit-assign-open');
+  bindUnitAssignDialog();
+
+  requestAnimationFrame(() => {
+    document.querySelector('[data-unit-assign-close]')?.focus();
+  });
+}
+
+function closeUnitAssignDialog() {
+  if (state.unitAssign?.escHandler) {
+    document.removeEventListener('keydown', state.unitAssign.escHandler);
+  }
+  state.unitAssign = null;
+  document.querySelectorAll('[data-unit-assign-overlay]').forEach((overlay) => overlay.remove());
+  document.body.classList.remove('unit-assign-open');
+}
+
+async function saveUnitAssignment(button) {
+  const active = state.unitAssign;
+  if (!active || active.saving) return;
+
+  const selected = active.students.filter((student) => student.selected);
+  if (!selected.length) return;
+
+  const errorBox = document.querySelector('[data-unit-assign-error]');
+  const resetButton = () => {
+    active.saving = false;
+    if (button) {
+      button.disabled = false;
+      button.textContent = active.mode === 'activate'
+        ? `Activar para ${selected.length} ${selected.length === 1 ? 'alumno' : 'alumnos'}`
+        : 'Guardar cambios';
+    }
+  };
+
+  if (errorBox) {
+    errorBox.hidden = true;
+    errorBox.textContent = '';
+  }
+
+  active.saving = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Guardando…';
+  }
+
+  const closesAt = active.closesAt ? `${active.closesAt}T23:59:59` : null;
+
+  try {
+    let assignmentId = active.assignmentId;
+
+    if (active.mode === 'activate') {
+      if (!active.versionId) throw new Error('La unidad no tiene una versión publicada.');
+
+      const { data, error } = await supabase
+        .from('unit_assignments')
+        .insert({
+          group_id: active.groupId,
+          unit_id: active.unitId,
+          unit_version_id: active.versionId,
+          status: 'active',
+          visible: true,
+          opens_at: new Date().toISOString(),
+          closes_at: closesAt,
+          created_by: state.profile?.id ?? null
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      assignmentId = data.id;
+    } else {
+      const { error } = await supabase
+        .from('unit_assignments')
+        .update({ closes_at: closesAt })
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+    }
+
+    const excluded = active.students.filter((student) => !student.selected);
+    if (excluded.length) {
+      const rows = excluded.map((student) => ({
+        assignment_id: assignmentId,
+        student_id: student.id,
+        status: 'closed',
+        created_by: state.profile?.id ?? null
+      }));
+
+      const { error } = await supabase
+        .from('student_unit_overrides')
+        .upsert(rows, { onConflict: 'assignment_id,student_id' });
+
+      if (error) throw error;
+    }
+
+    if (active.mode === 'manage' && selected.length) {
+      const { error } = await supabase
+        .from('student_unit_overrides')
+        .update({ status: 'active' })
+        .eq('assignment_id', assignmentId)
+        .in('student_id', selected.map((student) => student.id));
+
+      if (error) throw error;
+    }
+
+    const count = selected.length;
+    closeUnitAssignDialog();
+    setNotice(active.mode === 'activate'
+      ? `Unidad activada para ${count} ${count === 1 ? 'alumno' : 'alumnos'}.`
+      : 'Alumnos de la unidad actualizados.');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    resetButton();
+    if (errorBox) {
+      errorBox.hidden = false;
+      errorBox.textContent = error?.message || 'No se pudo guardar la activación.';
+    }
+  }
+}
+
+function activateUnitCard(button) {
   const [unitId, versionId] = String(button.dataset.activateUnit || '').split(':');
-  if (!unitId || !versionId || button.disabled) return;
+  const groupId = button.dataset.unitGroup
+    || button.closest('[data-group-id]')?.dataset.groupId
+    || state.subjectsGroupId;
 
-  const container = button.closest('[data-group-id]');
-  const groupId = container?.dataset.groupId;
-  if (!groupId) return;
-
-  const dateInput = container.querySelector(`[data-closes-date="${unitId}"]`);
-  const closesDate = dateInput?.value || '';
-  const closesAt = closesDate ? `${closesDate}T23:59:59` : null;
+  if (!unitId || !versionId || !groupId || button.disabled) {
+    setError('No se pudo identificar la unidad o el grupo.');
+    return;
+  }
 
   state.error = '';
   state.notice = '';
-  button.disabled = true;
-  button.textContent = 'Activando…';
+  openUnitAssignDialog({ mode: 'activate', unitId, versionId, groupId });
+}
 
-  try {
-    const { error } = await supabase.from('unit_assignments').insert({
-      group_id: groupId,
-      unit_id: unitId,
-      unit_version_id: versionId,
-      status: 'active',
-      visible: true,
-      opens_at: new Date().toISOString(),
-      closes_at: closesAt,
-      created_by: state.profile?.id ?? null
-    });
+function manageUnitAssignment(button) {
+  const assignmentId = button.dataset.manageAssignment;
+  const groupId = button.dataset.unitGroup;
+  if (!assignmentId || button.disabled) return;
 
-    if (error) throw error;
-
-    setNotice(closesAt ? 'Unidad activada con fecha de cierre.' : 'Unidad activada. Quedará abierta hasta que la cierres.');
-    await loadDashboard(state.profile);
-  } catch (error) {
-    setError(error?.message || 'No se pudo activar la unidad.');
-    button.disabled = false;
-    button.textContent = 'Activar';
-  }
+  state.error = '';
+  state.notice = '';
+  openUnitAssignDialog({ mode: 'manage', assignmentId, groupId });
 }
 
 async function setAssignmentStatus(button, status) {
@@ -3117,6 +4361,88 @@ function fichaTagGroupMarkup(label, values) {
   `;
 }
 
+function fichaTestResultsMarkup(profile) {
+  const personality = profile.personality && typeof profile.personality === 'object' ? profile.personality : null;
+  const vocational = profile.aptitude && typeof profile.aptitude === 'object' ? profile.aptitude : null;
+  const personalityDone = Boolean(personality?.completed_at);
+  const vocationalDone = Boolean(vocational?.completed_at);
+  const scores = personality?.scores || {};
+  const careers = Array.isArray(vocational?.career_suggestions) ? vocational.career_suggestions : [];
+  const interests = Array.isArray(vocational?.interests) ? vocational.interests : [];
+
+  return `
+    <div class="ficha-test-results">
+      <article class="ficha-card">
+        <div class="ficha-card-head">
+          <div>
+            <h3>🧠 Test de personalidad</h3>
+            <p class="card-sub">${personalityDone ? `Respondido ${escapeHtml(formatRelative(personality.completed_at))}` : 'El alumno todavía no ha respondido este test.'}</p>
+          </div>
+          <span class="pill ${personalityDone ? 'success' : ''}">${personalityDone ? 'Completado' : 'Pendiente'}</span>
+        </div>
+        ${personalityDone ? `
+          <div class="test-score-list">
+            ${Object.entries(personalityDimensionLabels).map(([key, meta]) => {
+              const value = Number(scores[key] ?? 0);
+              return `
+                <div class="test-score">
+                  <div class="test-score-head">
+                    <span>${meta.emoji} ${escapeHtml(meta.label)}</span>
+                    <strong>${value}%</strong>
+                  </div>
+                  <div class="ficha-bar" aria-hidden="true">
+                    <div class="ficha-bar-fill" style="--bar-color:${value >= 70 ? 'var(--good)' : value >= 40 ? 'var(--brand)' : 'var(--amber)'};--bar-scale:${(Math.max(0, Math.min(100, value)) / 100).toFixed(3)}"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : '<p class="ficha-empty">Cuando lo complete, aquí verás sus rasgos principales.</p>'}
+      </article>
+
+      <article class="ficha-card">
+        <div class="ficha-card-head">
+          <div>
+            <h3>🧭 Orientación vocacional</h3>
+            <p class="card-sub">${vocationalDone ? `Respondido ${escapeHtml(formatRelative(vocational.completed_at))}` : 'El alumno todavía no ha respondido este test.'}</p>
+          </div>
+          <span class="pill ${vocationalDone ? 'success' : ''}">${vocationalDone ? 'Completado' : 'Pendiente'}</span>
+        </div>
+        ${vocationalDone ? `
+          ${careers.length ? `
+            <div class="test-career-results">
+              ${careers.slice(0, 6).map((career) => {
+                const name = typeof career === 'string' ? career : career?.name;
+                const score = typeof career === 'object' ? Number(career?.score ?? 0) : 0;
+                return `
+                  <div class="test-career-row">
+                    <div>
+                      <strong>${escapeHtml(name || 'Carrera')}</strong>
+                      <small>${(career?.matches || []).map((tag) => escapeHtml(tag)).join(' · ') || 'Coincide con su perfil'}</small>
+                    </div>
+                    <div class="test-career-score">
+                      <div class="ficha-bar" aria-hidden="true">
+                        <div class="ficha-bar-fill" style="--bar-color:var(--brand-2);--bar-scale:${(Math.max(0, Math.min(100, score)) / 100).toFixed(3)}"></div>
+                      </div>
+                      <strong>${score}%</strong>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+          ${interests.length ? `
+            <div class="test-summary-block">
+              <span class="card-label">Intereses detectados</span>
+              <div class="ficha-tags">${interests.slice(0, 12).map((item) => `<span class="ficha-tag">${escapeHtml(item)}</span>`).join('')}</div>
+            </div>
+          ` : ''}
+        ` : '<p class="ficha-empty">Cuando lo complete, aquí verás sus intereses y carreras sugeridas.</p>'}
+      </article>
+    </div>
+  `;
+}
+
 function fichaProfilePanelMarkup(student, profile) {
   const tagGroups = [
     ['Carreras sugeridas', profile.career_suggestions],
@@ -3136,6 +4462,8 @@ function fichaProfilePanelMarkup(student, profile) {
       ${tagGroups ? `<div class="ficha-tag-groups">${tagGroups}</div>` : '<p class="ficha-empty">Todavía no hay intereses ni aptitudes registradas.</p>'}
     </div>
 
+    ${fichaTestResultsMarkup(profile)}
+
     <form class="form ficha-profile-form" data-save-profile="${escapeHtml(student.id)}">
       <div class="ficha-form-grid">
         <label class="field"><span>Carrera que quiere</span><input name="career_choice" value="${escapeHtml(profile.career_choice || '')}" placeholder="ej. Medicina"></label>
@@ -3145,8 +4473,6 @@ function fichaProfilePanelMarkup(student, profile) {
         <label class="field"><span>Fortalezas (separadas por coma)</span><input name="strengths" value="${escapeHtml(fichaCsv(profile.strengths))}" placeholder="disciplina, constancia…"></label>
         <label class="field"><span>Áreas a trabajar (separadas por coma)</span><input name="weaknesses" value="${escapeHtml(fichaCsv(profile.weaknesses))}" placeholder="organización, ansiedad…"></label>
         <label class="field wide"><span>Notas de orientación vocacional</span><textarea name="vocational_notes" placeholder="Acuerdos, seguimiento y observaciones de orientación…">${escapeHtml(profile.vocational_notes || '')}</textarea></label>
-        <label class="field wide"><span>Test de personalidad (resultados)</span><textarea name="personality" placeholder="Resultado del test…">${escapeHtml(fichaJson(profile.personality))}</textarea></label>
-        <label class="field wide"><span>Test de aptitudes (resultados)</span><textarea name="aptitude" placeholder="Resultado del test…">${escapeHtml(fichaJson(profile.aptitude))}</textarea></label>
       </div>
       <div class="ficha-form-actions">
         <button class="btn primary" type="submit">Guardar perfil profesional</button>
@@ -3495,11 +4821,14 @@ async function saveStudentProfile(event, studentId) {
     aptitudes: split(data.get('aptitudes')),
     strengths: split(data.get('strengths')),
     weaknesses: split(data.get('weaknesses')),
-    personality: parseJson(data.get('personality')),
-    aptitude: parseJson(data.get('aptitude')),
     vocational_notes: String(data.get('vocational_notes') || '').trim() || null,
     updated_at: new Date().toISOString()
   };
+
+  // Los tests se guardan con app_save_student_test. Solo incluirlos si el
+  // formulario los expone para no borrar resultados ya guardados.
+  if (data.has('personality')) payload.personality = parseJson(data.get('personality'));
+  if (data.has('aptitude')) payload.aptitude = parseJson(data.get('aptitude'));
 
   state.error = '';
   state.notice = '';
@@ -3912,6 +5241,8 @@ async function openAttendanceHistory(groupId, button) {
 
 function renderDashboard() {
   closeStudentFicha({ silent: true });
+  closeTestModal({ silent: true });
+  closeUnitAssignDialog();
   appRoot.innerHTML = dashboardMarkup(state.profile);
 
   appRoot.querySelector('#logout-btn').addEventListener('click', signOut);
@@ -4023,9 +5354,25 @@ function renderDashboard() {
     button.addEventListener('click', () => openStudentFicha(button.dataset.studentDetail, button));
   });
 
+  appRoot.querySelectorAll('[data-start-test]').forEach((button) => {
+    button.addEventListener('click', () => startStudentTest(button.dataset.startTest));
+  });
+
   appRoot.querySelectorAll('[data-activate-unit]').forEach((button) => {
     button.addEventListener('click', () => activateUnitCard(button));
   });
+
+  appRoot.querySelectorAll('[data-manage-assignment]').forEach((button) => {
+    button.addEventListener('click', () => manageUnitAssignment(button));
+  });
+
+  const subjectsGroupSelect = appRoot.querySelector('[data-subjects-group]');
+  if (subjectsGroupSelect) {
+    subjectsGroupSelect.addEventListener('change', () => {
+      state.subjectsGroupId = subjectsGroupSelect.value;
+      renderDashboard();
+    });
+  }
 
   appRoot.querySelectorAll('[data-close-assignment]').forEach((button) => {
     button.addEventListener('click', () => setAssignmentStatus(button, 'closed'));

@@ -336,6 +336,12 @@ async function runAdminFlow(pageEval, waitFor) {
   await waitFor(`document.querySelector('.board-subject')`, "materias");
   const subjects = await pageEval(`document.querySelectorAll('.board-subject').length`);
   console.log(`  ✓ ${subjects} materias con unidades y evaluaciones`);
+  const adminActivateButtons = await pageEval(`document.querySelectorAll('[data-activate-unit]').length`);
+  const adminManageButtons = await pageEval(`document.querySelectorAll('[data-manage-assignment]').length`);
+  if (adminActivateButtons < 1 || adminManageButtons < 1) {
+    throw new Error(`Faltan botones de activación para el admin: activar=${adminActivateButtons}, alumnos=${adminManageButtons}`);
+  }
+  console.log(`  ✓ el admin también puede activar (${adminActivateButtons} unidades) y elegir alumnos (${adminManageButtons} asignaciones)`);
 
   console.log("Sección Tareas…");
   await pageEval(`document.querySelector('[data-staff-tab="tareas"]').click(); true`);
@@ -368,6 +374,7 @@ async function runAdminFlow(pageEval, waitFor) {
 
 async function runTeacherFlow(pageEval, waitFor) {
   const teacher = readTestUser("teacher");
+  const writeMode = process.env.TEST_WRITE === "1";
 
   console.log(`Entrando como profesor (${teacher.email})…`);
   await pageEval(`document.querySelector('[data-mode="teacher"]').click(); true`);
@@ -435,6 +442,60 @@ async function runTeacherFlow(pageEval, waitFor) {
   await waitFor(`!document.querySelector('.board-subject').classList.contains('collapsed')`, "materia expandida");
   console.log("  ✓ las materias se pueden colapsar y expandir");
 
+  console.log("Activación de unidad eligiendo alumnos…");
+  await waitFor(`document.querySelector('[data-activate-unit]')`, "botón Activar de una unidad sin asignación");
+  await pageEval(`document.querySelector('[data-activate-unit]').click(); true`);
+  await waitFor(`document.querySelector('.unit-assign-dialog')`, "ventana de activación");
+  await waitFor(`document.querySelectorAll('.unit-assign-row').length >= 1`, "lista de alumnos en la ventana");
+  const assignDialogTitle = await pageEval(`document.querySelector('.unit-assign-dialog h2').textContent`);
+  const assignRows = await pageEval(`document.querySelectorAll('.unit-assign-row').length`);
+  console.log(`  ✓ ventana de activación para "${assignDialogTitle.trim()}" con ${assignRows} alumnos`);
+  await pageEval(`document.querySelector('[data-unit-assign-student]').click(); true`);
+  await waitFor(
+    `document.querySelector('[data-unit-assign-save]').textContent.includes('alumno')`,
+    "contador de alumnos tras deseleccionar",
+  );
+  await pageEval(`document.querySelector('[data-unit-assign-all]').click(); true`);
+  await waitFor(
+    `document.querySelectorAll('.unit-assign-row.selected').length === document.querySelectorAll('.unit-assign-row').length`,
+    "todos los alumnos seleccionados de nuevo",
+  );
+  console.log("  ✓ se pueden seleccionar y deseleccionar alumnos con botones Todos/Ninguno");
+
+  if (writeMode) {
+    console.log("  (TEST_WRITE=1) activando la unidad para todo el grupo…");
+    await pageEval(`document.querySelector('[data-unit-assign-save]').click(); true`);
+    await waitFor(`document.body.innerText.includes('Unidad activada')`, "aviso de unidad activada");
+    console.log("  ✓ la unidad se activó de verdad y el aviso se mostró");
+
+    console.log("  (TEST_WRITE=1) abriendo la edición de alumnos de la unidad activa…");
+    await waitFor(`document.querySelector('[data-manage-assignment]')`, "botón Alumnos de la unidad activa");
+    await pageEval(`document.querySelector('[data-manage-assignment]').click(); true`);
+    await waitFor(`document.querySelector('.unit-assign-dialog')`, "ventana de edición de alumnos");
+    await waitFor(
+      `document.querySelectorAll('.unit-assign-row.selected').length === document.querySelectorAll('.unit-assign-row').length`,
+      "alumnos preseleccionados en la edición",
+    );
+    await pageEval(`document.querySelector('[data-unit-assign-close]').click(); true`);
+    console.log("  ✓ la edición muestra a los alumnos incluidos y se cierra sin cambios");
+  } else {
+    await pageEval(`document.querySelector('[data-unit-assign-close]').click(); true`);
+    await waitFor(`!document.querySelector('.unit-assign-dialog')`, "ventana cerrada sin cambios");
+    console.log("  ✓ la ventana se cierra sin activar nada (modo lectura)");
+  }
+
+  console.log("Resultados de tests en la ficha…");
+  await pageEval(`document.querySelector('[data-staff-tab="alumnos"]').click(); true`);
+  await waitFor(`document.querySelector('[data-ficha-toggle]')`, "botón de ficha");
+  await pageEval(`document.querySelector('[data-ficha-toggle]').click(); true`);
+  await waitFor(`document.querySelector('.ficha-dialog')`, "ventana emergente de la ficha");
+  await pageEval(`document.querySelector('[data-ficha-tab="perfil"]').click(); true`);
+  await waitFor(`document.querySelector('.ficha-test-results')`, "resultados de tests en la ficha");
+  await waitFor(`document.body.innerText.includes('Test de personalidad')`, "panel del test de personalidad");
+  await waitFor(`document.body.innerText.includes('Orientación vocacional')`, "panel del test vocacional");
+  await pageEval(`document.querySelector('[data-ficha-close]').click(); true`);
+  console.log("  ✓ la ficha muestra los paneles de personalidad y orientación vocacional");
+
   console.log("Barra lateral colapsable…");
   await pageEval(`document.querySelector('#sidebar-toggle').click(); true`);
   await waitFor(`document.querySelector('.staff-app').classList.contains('collapsed')`, "barra lateral colapsada");
@@ -483,6 +544,8 @@ async function runTeacherFlow(pageEval, waitFor) {
 }
 
 async function runStudentFlow(pageEval, waitFor) {
+  const writeMode = process.env.TEST_WRITE === "1";
+
   console.log("Entrando como alumno…");
   await loginAsStudent(pageEval, waitFor);
 
@@ -498,6 +561,97 @@ async function runStudentFlow(pageEval, waitFor) {
 
     if (unitLinkCount < 1) {
       throw new Error("El alumno no ve ninguna unidad activa");
+    }
+
+    console.log("Apartado Mi orientación…");
+    await waitFor(`document.querySelector('.student-tests')`, "sección Mi orientación");
+    const testCards = await pageEval(`document.querySelectorAll('.test-card').length`);
+    if (testCards < 2) {
+      throw new Error(`Se esperaban 2 tests en Mi orientación, hay ${testCards}`);
+    }
+    console.log(`  ✓ 2 tests disponibles: personalidad y orientación vocacional`);
+
+    console.log("Test de personalidad (recorrido)…");
+    await pageEval(`document.querySelector('[data-start-test="personality"]').click(); true`);
+    await waitFor(`document.querySelector('.test-dialog')`, "ventana del test");
+    await waitFor(
+      `document.querySelectorAll('[data-test-option]').length >= 5`,
+      "escala de 5 opciones",
+    );
+    const scaleLabels = await pageEval(`[...document.querySelectorAll('.test-option strong')].map((el) => el.textContent).join('|')`);
+    if (!scaleLabels.includes('Nada') || !scaleLabels.includes('Mucho')) {
+      throw new Error(`Escala del test incompleta: ${scaleLabels}`);
+    }
+    console.log(`  ✓ escala de respuesta con botones (${scaleLabels})`);
+    await pageEval(`document.querySelector('[data-test-option="1"]').click(); true`);
+    await pageEval(`document.querySelector('[data-test-next]').click(); true`);
+    await waitFor(`document.body.innerText.includes('2 / 15')`, "avance a la pregunta 2");
+    await pageEval(`document.querySelector('[data-test-back]').click(); true`);
+    await waitFor(`document.body.innerText.includes('1 / 15')`, "regreso a la pregunta 1");
+    await pageEval(`document.querySelector('[data-test-close]').click(); true`);
+    await waitFor(`!document.querySelector('.test-dialog')`, "test cerrado");
+    console.log("  ✓ navegación entre preguntas, atrás y cierre");
+
+    console.log("Test vocacional (recorrido)…");
+    await pageEval(`document.querySelector('[data-start-test="vocational"]').click(); true`);
+    await waitFor(`document.querySelector('.test-dialog')`, "ventana del test vocacional");
+    await waitFor(
+      `document.body.innerText.includes('Series y contenido')`,
+      "primer paso de series",
+    );
+    const seriesOptions = await pageEval(`document.querySelectorAll('[data-test-option]').length`);
+    if (seriesOptions < 8) {
+      throw new Error(`Pocas opciones de series: ${seriesOptions}`);
+    }
+    console.log(`  ✓ paso de series con ${seriesOptions} botones de selección múltiple`);
+    await pageEval(`document.querySelector('[data-test-close]').click(); true`);
+    await waitFor(`!document.querySelector('.test-dialog')`, "test vocacional cerrado");
+
+    if (writeMode) {
+      console.log("  (TEST_WRITE=1) completando el test de personalidad…");
+      await pageEval(`document.querySelector('[data-start-test="personality"]').click(); true`);
+      await waitFor(`document.querySelector('.test-dialog')`, "ventana del test");
+      const personalityDone = await pageEval(`(async () => {
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < 80 && !document.querySelector('.test-result'); i += 1) {
+          const option = document.querySelector('[data-test-option]');
+          if (option) option.click();
+          const next = document.querySelector('[data-test-next]');
+          if (next && !next.disabled) next.click();
+          await sleep(140);
+        }
+        return !!document.querySelector('.test-result');
+      })()`);
+      if (!personalityDone) throw new Error("El test de personalidad no terminó");
+      await waitFor(`document.body.innerText.includes('Tu perfil de personalidad')`, "resultado de personalidad");
+      await pageEval(`document.querySelector('[data-test-close]').click(); true`);
+      await waitFor(`!document.querySelector('.test-dialog')`, "resultado cerrado");
+      await waitFor(`document.body.innerText.toLowerCase().includes('completado')`, "resumen actualizado");
+      console.log("  ✓ test de personalidad guardado y resumen visible");
+
+      console.log("  (TEST_WRITE=1) completando el test vocacional…");
+      await pageEval(`document.querySelector('[data-start-test="vocational"]').click(); true`);
+      await waitFor(`document.querySelector('.test-dialog')`, "ventana del test vocacional");
+      const vocationalDone = await pageEval(`(async () => {
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < 120 && !document.querySelector('.test-result'); i += 1) {
+          const option = document.querySelector('[data-test-option]');
+          if (option) option.click();
+          const next = document.querySelector('[data-test-next]');
+          if (next && !next.disabled) next.click();
+          await sleep(140);
+        }
+        return !!document.querySelector('.test-result');
+      })()`);
+      if (!vocationalDone) throw new Error("El test vocacional no terminó");
+      await waitFor(`document.body.innerText.includes('Tu orientación vocacional')`, "resultado vocacional");
+      await pageEval(`document.querySelector('[data-test-close]').click(); true`);
+      await waitFor(`!document.querySelector('.test-dialog')`, "resultado cerrado");
+      await waitFor(
+        `document.body.innerText.toLowerCase().includes('carreras que podrían interesarte')`,
+        "carreras sugeridas en Mi orientación",
+      );
+      console.log("  ✓ test vocacional guardado con intereses, aptitudes y carreras sugeridas");
     }
 
     console.log("Abriendo la unidad real…");
