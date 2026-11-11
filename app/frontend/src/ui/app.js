@@ -36,6 +36,10 @@ const assignmentStatusLabels = {
 // Debe coincidir con settings.privacy_document_version de la base.
 const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
 
+// Etiqueta de versión visible en la cabecera: sirve para confirmar que el
+// navegador cargó el build más reciente (no una versión en caché).
+const APP_BUILD = 'v4-tests';
+
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
   alumnos: '👥 Alumnos',
@@ -359,6 +363,7 @@ function headerMarkup() {
       </a>
       <div class="top-actions">
         <span class="env-pill">${escapeHtml(appEnv)}</span>
+        <span class="env-pill" title="Versión del build">${escapeHtml(APP_BUILD)}</span>
         <button class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema" title="Cambiar entre modo oscuro y claro">🌓</button>
       </div>
     </header>
