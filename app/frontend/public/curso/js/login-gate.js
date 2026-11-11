@@ -227,28 +227,83 @@
                 return;
               }
 
-              return Promise.all([
-                supabase.from("subjects")
-                  .select("id,name,short,color,icon,badge,sort_order")
-                  .eq("active", true)
-                  .order("sort_order"),
-                supabase.from("units")
-                  .select("id,subject_id,num,title,status")
-                  .eq("status", "published")
-                  .order("num"),
-                supabase.from("unit_versions")
-                  .select("unit_id,version,content")
-                  .eq("version", 1)
-                  .not("published_at", "is", null)
-              ]).then(function (results) {
-                window.DATA = buildData(
-                  results[0].data || [],
-                  results[1].data || [],
-                  results[2].data || []
-                );
-                window.ECOEMS_STUDENT = { id: profile.id, name: profile.full_name };
-                startPlayer(profile, supabase, sessionToken);
-              });
+              // El alumno solo ve las unidades que su profesor le activó.
+              supabase
+                .from("students")
+                .select("id,group_id,status")
+                .eq("profile_id", profile.id)
+                .maybeSingle()
+                .then(function (stu) {
+                  var student = stu.data;
+                  if (stu.error || !student || student.status !== "active") {
+                    redirectToPortal();
+                    return;
+                  }
+
+                  return Promise.all([
+                    supabase.from("subjects")
+                      .select("id,name,short,color,icon,badge,sort_order")
+                      .eq("active", true)
+                      .order("sort_order"),
+                    supabase.from("units")
+                      .select("id,subject_id,num,title,status")
+                      .eq("status", "published")
+                      .order("num"),
+                    supabase.from("unit_versions")
+                      .select("unit_id,version,content")
+                      .eq("version", 1)
+                      .not("published_at", "is", null),
+                    supabase.from("unit_assignments")
+                      .select("id,unit_id,status,opens_at,closes_at")
+                      .eq("group_id", student.group_id)
+                      .in("status", ["active", "closed"])
+                      .eq("visible", true),
+                    supabase.from("student_unit_overrides")
+                      .select("assignment_id,status,opens_at,closes_at")
+                      .eq("student_id", student.id)
+                  ]).then(function (results) {
+                    var allSubjects = results[0].data || [];
+                    var allUnits = results[1].data || [];
+                    var versions = results[2].data || [];
+                    var assignments = results[3].data || [];
+                    var overrides = results[4].data || [];
+
+                    var overrideByAssignment = {};
+                    overrides.forEach(function (o) {
+                      overrideByAssignment[o.assignment_id] = o;
+                    });
+
+                    var now = Date.now();
+                    var allowed = {};
+                    assignments.forEach(function (a) {
+                      var o = overrideByAssignment[a.id] || {};
+                      var status = o.status || a.status;
+                      if (status !== "active") return;
+                      var opensAt = o.opens_at || a.opens_at;
+                      var closesAt = o.closes_at || a.closes_at;
+                      if (opensAt && new Date(opensAt).getTime() > now) return;
+                      if (closesAt && new Date(closesAt).getTime() <= now) return;
+                      allowed[a.unit_id] = true;
+                    });
+
+                    var allowedUnits = allUnits.filter(function (u) {
+                      return allowed[u.id] === true;
+                    });
+
+                    var allowedSubjectIds = {};
+                    allowedUnits.forEach(function (u) {
+                      allowedSubjectIds[u.subject_id] = true;
+                    });
+                    var visibleSubjects = allSubjects.filter(function (s) {
+                      return allowedSubjectIds[s.id] === true;
+                    });
+
+                    window.DATA = buildData(visibleSubjects, allowedUnits, versions);
+                    window.ECOEMS_STUDENT = { id: profile.id, name: profile.full_name };
+                    startPlayer(profile, supabase, sessionToken);
+                  });
+                })
+                .catch(fail);
             })
             .catch(fail);
         }).catch(fail);

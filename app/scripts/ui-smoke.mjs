@@ -252,12 +252,29 @@ async function runCourseFlow(pageEval, waitFor) {
   );
 
   const shellText = await pageEval(`document.body.innerText.toLowerCase()`);
-  for (const fragment of ["español", "matemáticas", "materias"]) {
-    if (!shellText.includes(fragment)) {
-      throw new Error(`El curso no muestra "${fragment}" (contenido de Supabase)`);
-    }
-    console.log(`  ✓ materia visible: "${fragment}"`);
+
+  // Solo deben aparecer las materias con unidades ACTIVADAS por el profesor.
+  if (!shellText.includes("español")) {
+    throw new Error('El curso no muestra "español" (materia con unidades activas)');
   }
+  console.log('  ✓ solo aparecen materias con unidades activas ("español")');
+
+  if (shellText.includes("matemáticas") || shellText.includes("habilidad verbal")) {
+    throw new Error("El curso muestra materias sin unidades activas (se adelantaría el alumno)");
+  }
+  console.log("  ✓ las materias sin unidades activas quedan ocultas (matemáticas, habilidad verbal)");
+
+  // Dentro de Español: unidades activas visibles y las demás ocultas.
+  await pageEval(`document.querySelector('.subject-card').click(); true`);
+  await waitFor(
+    `document.body.innerText.includes('Funciones de la lengua')`,
+    "unidad activada visible dentro de la materia",
+  );
+  const subjectText = await pageEval(`document.body.innerText`);
+  if (subjectText.includes("Categorías gramaticales") || subjectText.includes("Analogías entre palabras")) {
+    throw new Error("El curso muestra unidades que el profesor no ha activado");
+  }
+  console.log("  ✓ dentro de la materia solo se ven las unidades activadas, no las demás");
 
   const badge = await pageEval(
     `(document.querySelector('.session-chip') || {}).textContent || ''`,
@@ -271,21 +288,7 @@ async function runCourseFlow(pageEval, waitFor) {
   if (!urlOk) throw new Error("El reproductor no está en /curso/");
   console.log("  ✓ el contenido se sirve desde Supabase (sin data.js público)");
 
-  if (process.env.SYNC_TEST === "1") {
-    console.log("Probando sincronización de progreso (XP → Supabase)…");
-    await pageEval(`(() => {
-      state.xp = 150;
-      state.racha = 3;
-      state.best = 3;
-      state.done = ['espanol-u01', 'espanol-u02'];
-      saveState();
-      return true;
-    })()`);
-    await sleep(4000);
-    console.log("  ✓ estado guardado y enviado a Supabase (verificar contra la base)");
-  }
-
-  console.log("\nPASS · Reproductor del curso con login y contenido protegido verificado.");
+  console.log("\nPASS · Reproductor del curso con login, contenido protegido y solo unidades activadas.");
 }
 
 async function runAdminFlow(pageEval, waitFor) {

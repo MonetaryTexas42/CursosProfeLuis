@@ -376,7 +376,7 @@ function route() {
   const r = currentRoute();
   renderNav();
   if (r.view === "404") { render404(); return; }
-  if (r.view === "mate") { setAccent(DATA.subjects.find(s=>s.id==='matematicas').color); renderMate(); return; }
+  if (r.view === "mate") { const mateSub = DATA.subjects.find(s=>s.id==='matematicas'); setAccent(mateSub ? mateSub.color : null); renderMate(); return; }
   if (r.view === "lectura") { setAccent(null); renderLectura(); return; }
   if (r.view === "asistencia") { setAccent('#2563EB'); renderAsistencia(); return; }
   if (r.view === "pagos") { setAccent('#059669'); renderPagos(); return; }
@@ -404,8 +404,9 @@ function saveNav() {
 }
 function renderNav() {
   const r = currentRoute();
+  const tieneLectura = DATA.subjects.some(s => s.id === "habilidad-verbal" || s.id === "espanol");
   const lectOpen = r.view === "lectura" || !!navOpen["lectura"];
-  const lectGroup =
+  const lectGroup = tieneLectura ?
     '<div class="nav-group">' +
       '<a class="nav-sub' + (r.view === "lectura" ? " active" : "") + '" href="#/lectura" data-sub="lectura">' +
         '<span class="nav-icon">\u{1F4D6}</span>' +
@@ -418,9 +419,10 @@ function renderNav() {
           '<span class="nav-lesson-name">Herramientas de lectura</span>' +
         "</a>" +
       "</div>" +
-    "</div>";
+    "</div>" : "";
+  const tieneMate = DATA.subjects.some(s => s.id === "matematicas");
   const mateOpen = r.view === "mate" || !!navOpen["mate"];
-  const mateGroup =
+  const mateGroup = tieneMate ?
     '<div class="nav-group">' +
       '<a class="nav-sub' + (r.view === "mate" ? " active" : "") + '" href="#/mate" data-sub="mate">' +
         '<span class="nav-icon">\u{1F4DD}</span>' +
@@ -433,7 +435,7 @@ function renderNav() {
           '<span class="nav-lesson-name">Banco de ejercicios</span>' +
         "</a>" +
       "</div>" +
-    "</div>";
+    "</div>" : "";
   const sistViews = ["asistencia", "pagos", "planificacion", "taller", "perfil", "concentrado", "catalogo"];
   const sistOpen = sistViews.indexOf(r.view) >= 0 || !!navOpen["sistema"];
   const sistLink = (view, href, label) =>
@@ -517,6 +519,13 @@ function initSidebarCollapse() {
 /* ---------------- LECTURA (herramientas embebidas) ---------------- */
 function renderLectura() {
   breadcrumbs([{ label: "Lectura y velocidad", href: "#/lectura" }]);
+  const tieneLectura = DATA.subjects.some(s => s.id === "habilidad-verbal" || s.id === "espanol");
+  if (!tieneLectura) {
+    $("#view").innerHTML =
+      '<div class="card"><b>\u{1F512} A\u00fan no disponible</b>' +
+      '<p style="margin:6px 0 0">Estas pr\u00e1cticas se abren cuando el profesor active las unidades de lectura.</p></div>';
+    return;
+  }
 $("#view").innerHTML =
     '<section class="subject-hero">' +
       '<span class="sh-icon" style="background:#0284C7">\u{1F4D6}</span>' +
@@ -1119,7 +1128,14 @@ function handleSistemaChange(ev) {
 /* ---------------- BANCO DE EJERCICIOS (Matemáticas) ---------------- */
 function renderMate() {
   breadcrumbs([{ label: "Matem\u00e1ticas", href: "#/m/matematicas" }, { label: "Banco de ejercicios" }]);
-  const col = DATA.subjects.find(s=>s.id==="matematicas").color;
+  const mateSub = DATA.subjects.find(s=>s.id==="matematicas");
+  if (!mateSub) {
+    $("#view").innerHTML =
+      '<div class="card"><b>\u{1F512} A\u00fan no disponible</b>' +
+      '<p style="margin:6px 0 0">Este banco de ejercicios se abre cuando el profesor active la materia de Matem\u00e1ticas.</p></div>';
+    return;
+  }
+  const col = mateSub.color;
   $("#view").innerHTML =
     '<section class="subject-hero">' +
       '<span class="sh-icon" style="background:' + col + '">\u{1F4D6}</span>' +
@@ -1145,6 +1161,19 @@ function breadcrumbs(parts) {
 /* ---------------- HOME ---------------- */
 function renderHome() {
   lastSubject = null;
+
+  if (!DATA.subjects.length) {
+    breadcrumbs([{ label: "Inicio" }]);
+    $("#view").innerHTML =
+      '<section class="hero">' +
+        "<h1>" + esc(DATA.title) + "</h1>" +
+        '<p class="sh-desc" style="margin:10px 0 18px">' + esc(DATA.subtitle) + "</p>" +
+      "</section>" +
+      '<div class="card"><b>\u{1F512} A\u00fan no hay unidades activas</b>' +
+      '<p style="margin:6px 0 0">Tu profesor ir\u00e1 activando las unidades poco a poco. En cuanto abra una, aparecer\u00e1 aqu\u00ed para que la estudies.</p></div>';
+    return;
+  }
+
   const ready = totalReadyUnits(), doneU = totalDoneUnits();
   const pct = ready ? Math.round((doneU / ready) * 100) : 0;
   const next = nextStudyTarget();
