@@ -343,6 +343,11 @@ async function runAdminFlow(pageEval, waitFor) {
   }
   console.log(`  ✓ el admin también puede activar (${adminActivateButtons} unidades) y elegir alumnos (${adminManageButtons} asignaciones)`);
 
+  console.log("Sección Pagos…");
+  await pageEval(`document.querySelector('[data-staff-tab="pagos"]').click(); true`);
+  await waitFor(`document.querySelector('.pay-summary')`, "finanzas del admin");
+  console.log("  ✓ finanzas disponibles para el admin");
+
   console.log("Sección Tareas…");
   await pageEval(`document.querySelector('[data-staff-tab="tareas"]').click(); true`);
   await waitFor(`document.querySelector('#create-task-form')`, "formulario de tareas");
@@ -528,6 +533,23 @@ async function runTeacherFlow(pageEval, waitFor) {
   const attendanceRows = await pageEval(`document.querySelectorAll('[data-attendance-row]').length`);
   console.log(`  ✓ asistencia dinámica lista (${attendanceRows} alumnos, estados por botón y contadores)`);
 
+  console.log("Sección Pagos…");
+  await pageEval(`document.querySelector('[data-staff-tab="pagos"]').click(); true`);
+  await waitFor(`document.querySelector('.pay-summary')`, "resumen de finanzas");
+  await waitFor(`document.body.innerText.includes('Estado de cuentas')`, "estado de cuentas por alumno");
+  await waitFor(`document.querySelector('[data-open-pay-dialog]')`, "botón de registrar pago");
+  await pageEval(`document.querySelector('[data-open-pay-dialog][data-pay-mode="payment"]').click(); true`);
+  await waitFor(`document.querySelector('.pay-dialog')`, "ventana de registrar pago");
+  await waitFor(`document.body.innerText.includes('Monto')`, "campos del pago");
+  await pageEval(`document.querySelector('[data-pay-close]').click(); true`);
+  await waitFor(`!document.querySelector('.pay-dialog')`, "ventana de pago cerrada");
+  await pageEval(`document.querySelector('[data-open-pay-dialog][data-pay-mode="plan"]').click(); true`);
+  await waitFor(`document.querySelector('.pay-dialog')`, "ventana del plan");
+  await waitFor(`document.body.innerText.includes('Cuota')`, "campos del plan");
+  await pageEval(`document.querySelector('[data-pay-close]').click(); true`);
+  await waitFor(`!document.querySelector('.pay-dialog')`, "ventana de plan cerrada");
+  console.log("  ✓ finanzas: resumen, estado de cuentas, registrar pago y editar plan");
+
   console.log("Sección Tareas…");
   await pageEval(`document.querySelector('[data-staff-tab="tareas"]').click(); true`);
   await waitFor(`document.querySelector('#create-task-form')`, "formulario de tareas");
@@ -612,17 +634,17 @@ async function runStudentFlow(pageEval, waitFor) {
     await pageEval(`document.querySelector('[data-start-test="vocational"]').click(); true`);
     await waitFor(`document.querySelector('.test-dialog')`, "ventana del test vocacional");
     await waitFor(
-      `document.body.innerText.includes('Series y contenido')`,
-      "primer paso de series",
+      `document.body.innerText.includes('Contenido que disfrutas')`,
+      "primer paso de contenido",
     );
     const seriesOptions = await pageEval(`document.querySelectorAll('[data-test-option]').length`);
-    if (seriesOptions < 8) {
-      throw new Error(`Pocas opciones de series: ${seriesOptions}`);
+    if (seriesOptions < 15) {
+      throw new Error(`Pocas opciones de contenido: ${seriesOptions}`);
     }
-    console.log(`  ✓ paso de series con ${seriesOptions} botones de selección múltiple`);
-    await pageEval(`document.querySelector('[data-test-option="Series recientes"]').click(); true`);
+    console.log(`  ✓ primer paso de contenido con ${seriesOptions} opciones realistas (series, anime, deportes, videojuegos…)`);
+    await pageEval(`document.querySelector('[data-test-option="Anime"]').click(); true`);
     await waitFor(
-      `document.querySelector('[data-test-option="Series recientes"]').classList.contains('selected')`,
+      `document.querySelector('[data-test-option="Anime"]').classList.contains('selected')`,
       "opción marcada en el sitio",
     );
     await waitFor(

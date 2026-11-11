@@ -38,13 +38,14 @@ const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
 
 // Etiqueta de versión visible en la cabecera: sirve para confirmar que el
 // navegador cargó el build más reciente (no una versión en caché).
-const APP_BUILD = 'v5-autopaso';
+const APP_BUILD = 'v6-pagos';
 
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
   alumnos: '👥 Alumnos',
   materias: '📚 Materias',
   asistencia: '📅 Asistencia',
+  pagos: '💳 Pagos',
   tareas: '📝 Tareas',
   actividad: '📈 Actividad',
   tutores: '💬 Tutores',
@@ -128,27 +129,56 @@ const personalityScale = [
 const vocationalSteps = [
   {
     id: 'series',
-    title: 'Series y contenido',
-    prompt: '¿Qué tipo de series, películas o videos disfrutas más?',
-    help: 'Elige todas las que quieras. Tus gustos nos ayudan a detectar áreas de interés.',
+    title: 'Contenido que disfrutas',
+    prompt: '¿Qué series, películas o videos sueles ver?',
+    help: 'Elige todo lo que de verdad ves. Tus gustos nos ayudan a detectar áreas de interés.',
     options: [
-      { label: 'Series recientes', tags: ['actualidad', 'tendencias'] },
-      { label: 'Series clásicas', tags: ['cultura', 'historia'] },
+      { label: 'Novelas y K-dramas', tags: ['personas', 'emociones'] },
+      { label: 'Series de policías, crimen o misterio', tags: ['análisis', 'lógica', 'justicia'] },
       { label: 'Anime', tags: ['creatividad', 'arte'] },
-      { label: 'Ciencia ficción', tags: ['ciencia', 'tecnología'] },
-      { label: 'Documentales', tags: ['ciencia', 'naturaleza', 'sociedad'] },
+      { label: 'Ciencia ficción y fantasía', tags: ['ciencia', 'tecnología', 'creatividad'] },
+      { label: 'Documentales de naturaleza', tags: ['ciencia', 'naturaleza'] },
+      { label: 'Documentales de historia', tags: ['historia', 'cultura'] },
+      { label: 'Deportes', tags: ['deporte', 'equipo', 'salud'] },
       { label: 'Comedia', tags: ['creatividad', 'personas'] },
       { label: 'Drama', tags: ['personas', 'emociones'] },
       { label: 'Terror o suspenso', tags: ['análisis', 'creatividad'] },
-      { label: 'Deportes', tags: ['deporte', 'salud', 'equipo'] },
+      { label: 'Caricaturas', tags: ['arte', 'creatividad'] },
       { label: 'Reality shows', tags: ['personas', 'actualidad'] },
       { label: 'Superhéroes', tags: ['justicia', 'creatividad'] },
-      { label: 'Misterio', tags: ['lógica', 'análisis'] }
+      { label: 'Videos de YouTube', tags: ['actualidad', 'tecnología'] },
+      { label: 'Podcasts', tags: ['cultura', 'actualidad'] },
+      { label: 'Videojuegos', tags: ['tecnología', 'lógica'] },
+      { label: 'Contenido de cocina', tags: ['cocina', 'creatividad'] },
+      { label: 'Música y conciertos', tags: ['música', 'arte'] },
+      { label: 'Moda y belleza', tags: ['diseño', 'creatividad'] },
+      { label: 'Tecnología y gadgets', tags: ['tecnología', 'ciencia'] }
+    ]
+  },
+  {
+    id: 'subjects',
+    title: 'Materias favoritas',
+    prompt: '¿Qué materias de la escuela disfrutas o se te dan mejor?',
+    help: 'Piensa en las clases que más te gustan, aunque no seas el mejor de tu grupo.',
+    options: [
+      { label: 'Español y Literatura', tags: ['lectura', 'escritura'] },
+      { label: 'Matemáticas', tags: ['cálculo', 'lógica'] },
+      { label: 'Física y Química', tags: ['ciencia', 'experimentos'] },
+      { label: 'Biología', tags: ['ciencia', 'naturaleza'] },
+      { label: 'Historia', tags: ['historia', 'cultura'] },
+      { label: 'Geografía', tags: ['naturaleza', 'cultura'] },
+      { label: 'Inglés u otros idiomas', tags: ['idiomas', 'cultura'] },
+      { label: 'Computación', tags: ['tecnología', 'lógica'] },
+      { label: 'Artes', tags: ['arte', 'creatividad'] },
+      { label: 'Música', tags: ['música', 'arte'] },
+      { label: 'Educación física', tags: ['deporte', 'salud'] },
+      { label: 'Civismo o Ética', tags: ['sociedad', 'debate'] },
+      { label: 'Tecnología o taller', tags: ['manualidades', 'construcción'] }
     ]
   },
   {
     id: 'activities',
-    title: 'Actividades',
+    title: 'Actividades favoritas',
     prompt: '¿Qué actividades disfrutas hacer en tu tiempo libre o en la escuela?',
     help: 'Marca todas las que realmente disfrutes, no las que creas que deberías elegir.',
     options: [
@@ -159,8 +189,10 @@ const vocationalSteps = [
       { label: 'Dibujar o diseñar', tags: ['arte', 'diseño'] },
       { label: 'Tocar un instrumento o cantar', tags: ['música', 'arte'] },
       { label: 'Hacer deporte', tags: ['deporte', 'salud'] },
+      { label: 'Bailar', tags: ['arte', 'deporte'] },
       { label: 'Ayudar a otras personas', tags: ['ayudar', 'empatía'] },
       { label: 'Usar computadoras o programar', tags: ['tecnología', 'lógica'] },
+      { label: 'Jugar videojuegos', tags: ['tecnología', 'lógica'] },
       { label: 'Cuidar plantas o animales', tags: ['naturaleza', 'animales'] },
       { label: 'Cocinar', tags: ['cocina', 'creatividad'] },
       { label: 'Armar o reparar cosas', tags: ['manualidades', 'construcción'] },
@@ -195,7 +227,31 @@ const vocationalSteps = [
     ]
   },
   {
-    id: 'preferences',
+    id: 'workdays',
+    title: 'Un día de trabajo',
+    prompt: '¿Qué te gustaría hacer en un día de trabajo?',
+    help: 'Imagina tu rutina ideal. Elige las actividades que más te emocionen.',
+    options: [
+      { label: 'Atender y ayudar personas', tags: ['ayudar', 'personas'] },
+      { label: 'Resolver problemas con números', tags: ['cálculo', 'análisis'] },
+      { label: 'Crear diseños o contenido', tags: ['creatividad', 'diseño'] },
+      { label: 'Construir o reparar cosas', tags: ['construcción', 'manualidades'] },
+      { label: 'Investigar y experimentar', tags: ['ciencia', 'experimentos'] },
+      { label: 'Vender o negociar', tags: ['negocios', 'comunicación'] },
+      { label: 'Enseñar o capacitar', tags: ['comunicación', 'personas'] },
+      { label: 'Organizar equipos o eventos', tags: ['organización', 'liderazgo'] },
+      { label: 'Cuidar animales', tags: ['animales', 'naturaleza'] },
+      { label: 'Cuidar la salud de personas', tags: ['salud', 'ayudar'] },
+      { label: 'Programar o crear apps', tags: ['tecnología', 'lógica'] },
+      { label: 'Escribir historias o noticias', tags: ['escritura', 'lectura'] },
+      { label: 'Defender causas o personas', tags: ['justicia', 'debate'] },
+      { label: 'Cocinar o preparar alimentos', tags: ['cocina', 'creatividad'] },
+      { label: 'Producir música o videos', tags: ['música', 'creatividad'] },
+      { label: 'Entrenar o competir', tags: ['deporte', 'salud'] }
+    ]
+  },
+  {
+    id: 'environment',
     title: 'Ambiente de trabajo',
     prompt: '¿Cómo te imaginas trabajando en el futuro?',
     help: 'Puedes elegir varios ambientes. No hay respuestas correctas o incorrectas.',
@@ -231,6 +287,26 @@ const vocationalSteps = [
       { label: 'Reconocimiento', tags: ['liderazgo'] },
       { label: 'Tiempo libre', tags: ['bienestar'] }
     ]
+  },
+  {
+    id: 'future',
+    title: 'Tu futuro',
+    prompt: '¿Cómo te imaginas en el futuro?',
+    help: 'Elige las escenas que más te gustaría vivir dentro de unos años.',
+    options: [
+      { label: 'Ayudando a mi comunidad', tags: ['ayudar', 'sociedad'] },
+      { label: 'Con mi propio negocio', tags: ['negocios', 'liderazgo'] },
+      { label: 'Viviendo de mi arte', tags: ['arte', 'creatividad'] },
+      { label: 'Siendo reconocido en mi profesión', tags: ['liderazgo'] },
+      { label: 'Viajando por mi trabajo', tags: ['idiomas', 'actualidad'] },
+      { label: 'Trabajando con tecnología', tags: ['tecnología'] },
+      { label: 'En un hospital o laboratorio', tags: ['salud', 'ciencia'] },
+      { label: 'En una oficina', tags: ['organización', 'negocios'] },
+      { label: 'Al aire libre', tags: ['naturaleza', 'deporte'] },
+      { label: 'Dando clases', tags: ['comunicación', 'personas'] },
+      { label: 'En un juzgado o despacho', tags: ['justicia', 'debate'] },
+      { label: 'Con estabilidad económica', tags: ['estabilidad'] }
+    ]
   }
 ];
 
@@ -248,11 +324,15 @@ const careerCatalog = [
   { name: 'Ciencia de datos', tags: ['datos', 'cálculo', 'tecnología', 'análisis'] },
   { name: 'Ingeniería civil', tags: ['cálculo', 'construcción', 'naturaleza', 'organización'] },
   { name: 'Ingeniería mecánica', tags: ['cálculo', 'construcción', 'tecnología', 'manualidades'] },
+  { name: 'Ingeniería industrial', tags: ['cálculo', 'organización', 'negocios', 'liderazgo'] },
   { name: 'Arquitectura', tags: ['arte', 'construcción', 'creatividad', 'diseño'] },
   { name: 'Diseño gráfico', tags: ['arte', 'creatividad', 'tecnología', 'diseño'] },
+  { name: 'Animación y videojuegos', tags: ['arte', 'tecnología', 'creatividad', 'lógica'] },
+  { name: 'Diseño de modas', tags: ['diseño', 'arte', 'creatividad', 'actualidad'] },
   { name: 'Comunicación', tags: ['escritura', 'personas', 'creatividad', 'actualidad'] },
   { name: 'Periodismo', tags: ['escritura', 'lectura', 'actualidad', 'sociedad'] },
-  { name: 'Derecho', tags: ['lectura', 'debate', 'sociedad', 'lógica'] },
+  { name: 'Derecho', tags: ['lectura', 'debate', 'sociedad', 'justicia'] },
+  { name: 'Criminología', tags: ['justicia', 'análisis', 'sociedad', 'lógica'] },
   { name: 'Administración', tags: ['organización', 'liderazgo', 'negocios', 'datos'] },
   { name: 'Contaduría', tags: ['cálculo', 'organización', 'datos', 'negocios'] },
   { name: 'Docencia', tags: ['ayudar', 'personas', 'comunicación', 'lectura'] },
@@ -263,7 +343,11 @@ const careerCatalog = [
   { name: 'Ciencias del deporte', tags: ['deporte', 'salud', 'equipo', 'disciplina'] },
   { name: 'Turismo', tags: ['personas', 'idiomas', 'organización', 'actualidad'] },
   { name: 'Mercadotecnia', tags: ['creatividad', 'negocios', 'personas', 'actualidad'] },
-  { name: 'Relaciones internacionales', tags: ['idiomas', 'sociedad', 'debate', 'actualidad'] }
+  { name: 'Relaciones internacionales', tags: ['idiomas', 'sociedad', 'debate', 'actualidad'] },
+  { name: 'Ciencias políticas', tags: ['sociedad', 'debate', 'actualidad', 'liderazgo'] },
+  { name: 'Historia', tags: ['historia', 'cultura', 'lectura', 'sociedad'] },
+  { name: 'Literatura', tags: ['lectura', 'escritura', 'cultura', 'creatividad'] },
+  { name: 'Lenguas extranjeras', tags: ['idiomas', 'cultura', 'comunicación', 'lectura'] }
 ];
 
 const testKindLabels = {
@@ -290,6 +374,7 @@ const state = {
   fichaTrigger: null,
   fichaEscHandler: null,
   unitAssign: null,
+  payDialog: null,
   subjectsGroupId: null,
   activeTest: null,
   loading: true
@@ -728,7 +813,7 @@ async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
-    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes
+    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -761,7 +846,13 @@ async function fetchAdminDashboard() {
       .select('assignment_id,student_id,status,opens_at,closes_at'),
     supabase.rpc('app_staff_tasks'),
     supabase.rpc('app_activity_log', { p_limit: 80 }),
-    supabase.rpc('app_external_accounts')
+    supabase.rpc('app_external_accounts'),
+    supabase.from('student_billing').select('*'),
+    supabase
+      .from('payments')
+      .select('id,student_id,amount,paid_at,method,period,notes')
+      .order('paid_at', { ascending: false })
+      .limit(600)
   ]);
 
   assertNoError(yearRes.error);
@@ -783,6 +874,8 @@ async function fetchAdminDashboard() {
   assertNoError(tasksRes.error);
   assertNoError(activityRes.error);
   assertNoError(externalAccountsRes.error);
+  assertNoError(billingRes.error);
+  assertNoError(paymentsRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -862,6 +955,10 @@ async function fetchAdminDashboard() {
     tasks: (tasksRes.data || {}).tasks || [],
     activity: (activityRes.data || {}).entries || [],
     externalAccounts: externalAccountsRes.data || [],
+    billingByStudent: new Map(
+      (billingRes.data || []).map((row) => [row.student_id, row])
+    ),
+    payments: paymentsRes.data || [],
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -916,7 +1013,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -957,7 +1054,18 @@ async function fetchTeacherDashboard(teacherId) {
       : Promise.resolve({ data: [], error: null }),
     supabase.from('terms').select('id,academic_year_id,name,starts_on,ends_on').order('starts_on'),
     supabase.rpc('app_staff_tasks'),
-    supabase.rpc('app_activity_log', { p_limit: 80 })
+    supabase.rpc('app_activity_log', { p_limit: 80 }),
+    studentIds.length
+      ? supabase.from('student_billing').select('*').in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('payments')
+          .select('id,student_id,amount,paid_at,method,period,notes')
+          .in('student_id', studentIds)
+          .order('paid_at', { ascending: false })
+          .limit(400)
+      : Promise.resolve({ data: [], error: null })
   ]);
 
   assertNoError(unitsRes.error);
@@ -974,6 +1082,8 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(termsRes.error);
   assertNoError(tasksRes.error);
   assertNoError(activityRes.error);
+  assertNoError(billingRes.error);
+  assertNoError(paymentsRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const subjectMap = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
@@ -1024,6 +1134,10 @@ async function fetchTeacherDashboard(teacherId) {
     board: (boardRes.data || {}).subjects || [],
     tasks: (tasksRes.data || {}).tasks || [],
     activity: (activityRes.data || {}).entries || [],
+    billingByStudent: new Map(
+      (billingRes.data || []).map((row) => [row.student_id, row])
+    ),
+    payments: paymentsRes.data || [],
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1198,7 +1312,7 @@ async function fetchGuardianDashboard() {
   const groupIds = [...new Set(students.map((student) => student.group_id))];
   const studentIds = students.map((student) => student.id);
 
-  const [profilesRes, groupsRes, consentsRes] = await Promise.all([
+  const [profilesRes, groupsRes, consentsRes, billingRes, paymentsRes] = await Promise.all([
     profileIds.length
       ? supabase.from('profiles').select('id,full_name').in('id', profileIds)
       : Promise.resolve({ data: [], error: null }),
@@ -1210,12 +1324,25 @@ async function fetchGuardianDashboard() {
           .from('privacy_consents')
           .select('student_id,document_version,accepted_at,revoked_at')
           .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase.from('student_billing').select('*').in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('payments')
+          .select('id,student_id,amount,paid_at,method,period')
+          .in('student_id', studentIds)
+          .order('paid_at', { ascending: false })
+          .limit(120)
       : Promise.resolve({ data: [], error: null })
   ]);
 
   assertNoError(profilesRes.error);
   assertNoError(groupsRes.error);
   assertNoError(consentsRes.error);
+  assertNoError(billingRes.error);
+  assertNoError(paymentsRes.error);
 
   const names = new Map((profilesRes.data || []).map((profile) => [profile.id, profile.full_name]));
   const groupNames = new Map((groupsRes.data || []).map((group) => [group.id, group.name]));
@@ -1229,6 +1356,10 @@ async function fetchGuardianDashboard() {
 
   return {
     kind: 'guardian',
+    billingByStudent: new Map(
+      (billingRes.data || []).map((row) => [row.student_id, row])
+    ),
+    payments: paymentsRes.data || [],
     children: students.map((student) => ({
       ...student,
       full_name: names.get(student.profile_id) || 'Alumno sin nombre',
@@ -1910,8 +2041,8 @@ function staffShellMarkup(data) {
   const tab = state.staffTab || 'dashboard';
   const collapsed = Boolean(state.sidebarCollapsed);
 
-  const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tareas', 'actividad', 'tutores'];
-  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'tareas', 'actividad', 'usuarios', 'contenido', 'configuracion'];
+  const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
+  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'configuracion'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
   return `
@@ -1981,6 +2112,7 @@ function staffTabContentMarkup(data, tab) {
   if (tab === 'alumnos') return staffStudentsTabMarkup(data);
   if (tab === 'materias') return staffSubjectsTabMarkup(data);
   if (tab === 'asistencia') return staffAttendanceTabMarkup(data);
+  if (tab === 'pagos') return staffPaymentsTabMarkup(data);
   if (tab === 'tareas') return staffTasksTabMarkup(data);
   if (tab === 'actividad') return staffActivityTabMarkup(data);
   if (tab === 'tutores') return staffTutoresTabMarkup(data);
@@ -2420,8 +2552,331 @@ function staffAttendanceTabMarkup(data) {
   `;
 }
 
-function staffTasksTabMarkup(data) {
-  const tasks = data.tasks || [];
+/* ---------------- Finanzas: pagos y planes ---------------- */
+
+const paymentPlanLabels = {
+  semanal: 'Semanal',
+  quincenal: 'Quincenal',
+  mensual: 'Mensual',
+  contado: 'Contado',
+  beca: 'Beca',
+  otro: 'Otro'
+};
+
+const paymentMethodLabels = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  tarjeta: 'Tarjeta',
+  otro: 'Otro'
+};
+
+function paymentsOf(studentId, payments) {
+  return (payments || []).filter((payment) => payment.student_id === studentId);
+}
+
+function paymentsTotal(studentId, payments) {
+  return paymentsOf(studentId, payments).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+}
+
+function paymentsLast(studentId, payments) {
+  const list = paymentsOf(studentId, payments)
+    .slice()
+    .sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)));
+  return list[0] || null;
+}
+
+function money(value) {
+  const number = Number(value || 0);
+  return number.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+}
+
+function staffPaymentsTabMarkup(data) {
+  const students = data.students || [];
+  const billing = data.billingByStudent || new Map();
+  const payments = data.payments || [];
+
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthPayments = payments.filter((payment) => String(payment.paid_at || '').slice(0, 7) === monthKey);
+  const monthIncome = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalIncome = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Finanzas</span>
+        <h2>Pagos y planes por alumno</h2>
+      </div>
+      <span class="pill">${students.length} ${students.length === 1 ? 'alumno' : 'alumnos'}</span>
+    </div>
+
+    <div class="pay-summary">
+      <article class="card pay-stat">
+        <span class="card-label">Pagos de este mes</span>
+        <h2>${money(monthIncome)}</h2>
+        <p class="muted">${monthPayments.length} ${monthPayments.length === 1 ? 'pago registrado' : 'pagos registrados'} en ${now.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</p>
+      </article>
+      <article class="card pay-stat">
+        <span class="card-label">Ingresos totales</span>
+        <h2>${money(totalIncome)}</h2>
+        <p class="muted">Todo lo registrado en la plataforma</p>
+      </article>
+      <article class="card pay-stat">
+        <span class="card-label">Planes</span>
+        <h2>${[...new Set([...billing.values()].map((row) => row.plan))].length}</h2>
+        <p class="muted">Tipos de plan activos en el grupo</p>
+      </article>
+    </div>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Alumnos</span>
+          <h2>Estado de cuentas</h2>
+        </div>
+      </div>
+      ${students.length ? `
+        <ul class="data-list pay-list">
+          ${students.map((student) => {
+            const planRow = billing.get(student.id) || {};
+            const plan = planRow.plan || 'mensual';
+            const total = paymentsTotal(student.id, payments);
+            const last = paymentsLast(student.id, payments);
+            return `
+              <li>
+                <div>
+                  <strong>${escapeHtml(student.full_name)}</strong>
+                  <small>${escapeHtml(student.student_code)} · ${escapeHtml(student.group_name || '')}</small>
+                </div>
+                <div class="pay-cells">
+                  <span class="pill">${escapeHtml(paymentPlanLabels[plan] || plan)}${planRow.fee ? ` · ${money(planRow.fee)}` : ''}</span>
+                  <span class="pill ${total > 0 ? 'success' : ''}">Pagado: ${money(total)}</span>
+                  ${last ? `<span class="pill">Último: ${escapeHtml(formatDate(String(last.paid_at).slice(0, 10)))}</span>` : '<span class="pill">Sin pagos</span>'}
+                </div>
+                <div class="row pay-actions">
+                  <button class="btn-mini primary" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="payment">Registrar pago</button>
+                  <button class="btn-mini" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="plan">Plan</button>
+                </div>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      ` : '<p class="empty-state">Todavía no hay alumnos en tus grupos.</p>'}
+    </article>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Historial</span>
+          <h2>Últimos pagos registrados</h2>
+        </div>
+      </div>
+      ${payments.length ? `
+        <ul class="data-list pay-list">
+          ${payments.slice(0, 20).map((payment) => {
+            const student = students.find((item) => item.id === payment.student_id);
+            return `
+              <li>
+                <div>
+                  <strong>${escapeHtml(student?.full_name || 'Alumno')}</strong>
+                  <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period ? ` · ${escapeHtml(payment.period)}` : ''}</small>
+                </div>
+                <span class="pill success">${money(payment.amount)}</span>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      ` : '<p class="empty-state">Aún no hay pagos registrados. Usa "Registrar pago" en cada alumno.</p>'}
+    </article>
+  `;
+}
+
+function payDialogMarkup() {
+  const dialog = state.payDialog;
+  if (!dialog) return '';
+
+  const data = state.dashboard;
+  const student = (data?.students || []).find((item) => item.id === dialog.studentId);
+  const planRow = (data?.billingByStudent || new Map()).get(dialog.studentId) || {};
+  const today = new Date().toISOString().slice(0, 10);
+
+  const isPlan = dialog.mode === 'plan';
+
+  return `
+    <div class="unit-assign-overlay" data-pay-overlay>
+      <section class="unit-assign-dialog pay-dialog" role="dialog" aria-modal="true" aria-labelledby="pay-title">
+        <button type="button" class="ficha-close" data-pay-close aria-label="Cerrar">✕</button>
+
+        <header class="unit-assign-head">
+          <span class="card-label">${isPlan ? 'Plan de pago' : 'Registrar pago'}</span>
+          <h2 id="pay-title">${escapeHtml(student?.full_name || 'Alumno')}</h2>
+          <p class="muted">${escapeHtml(student?.student_code || '')} · ${escapeHtml(student?.group_name || '')}</p>
+        </header>
+
+        <form class="form pay-form" data-pay-form>
+          ${isPlan ? `
+            <label class="field">
+              <span>Plan</span>
+              <select name="plan">
+                ${Object.entries(paymentPlanLabels).map(([value, label]) => `
+                  <option value="${value}" ${(planRow.plan || 'mensual') === value ? 'selected' : ''}>${escapeHtml(label)}</option>
+                `).join('')}
+              </select>
+            </label>
+            <label class="field">
+              <span>Cuota por periodo (pesos)</span>
+              <input name="fee" type="number" min="0" step="0.01" value="${planRow.fee ?? ''}" placeholder="ej. 250">
+            </label>
+            <label class="field">
+              <span>Notas (opcional)</span>
+              <textarea name="notes" placeholder="ej. beca del 20%, incluye material…">${escapeHtml(planRow.notes || '')}</textarea>
+            </label>
+          ` : `
+            <label class="field">
+              <span>Monto (pesos)</span>
+              <input name="amount" type="number" min="1" step="0.01" required placeholder="ej. 250">
+            </label>
+            <label class="field">
+              <span>Fecha del pago</span>
+              <input name="paid_at" type="date" required value="${today}">
+            </label>
+            <label class="field">
+              <span>Método</span>
+              <select name="method">
+                ${Object.entries(paymentMethodLabels).map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join('')}
+              </select>
+            </label>
+            <label class="field">
+              <span>Concepto (opcional)</span>
+              <input name="period" placeholder="ej. semana del 2 nov, noviembre, inscripción">
+            </label>
+            <label class="field">
+              <span>Notas (opcional)</span>
+              <textarea name="notes" placeholder="ej. pagó el tutor en efectivo"></textarea>
+            </label>
+          `}
+
+          <div class="pay-error" data-pay-error hidden></div>
+
+          <footer class="unit-assign-foot">
+            <button type="button" class="btn ghost" data-pay-close>Cancelar</button>
+            <button type="submit" class="btn primary">${isPlan ? 'Guardar plan' : 'Registrar pago'}</button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function openPayDialog(studentId, mode) {
+  state.payDialog = { studentId, mode, escHandler: null };
+  renderPayDialog();
+}
+
+function renderPayDialog() {
+  document.querySelectorAll('[data-pay-overlay]').forEach((overlay) => overlay.remove());
+
+  if (state.payDialog?.escHandler) {
+    document.removeEventListener('keydown', state.payDialog.escHandler);
+    state.payDialog.escHandler = null;
+  }
+
+  const markup = payDialogMarkup();
+  if (!markup) {
+    document.body.classList.remove('unit-assign-open');
+    return;
+  }
+
+  document.body.insertAdjacentHTML('beforeend', markup);
+  document.body.classList.add('unit-assign-open');
+
+  const overlay = document.querySelector('[data-pay-overlay]');
+  const close = () => closePayDialog();
+
+  overlay.querySelectorAll('[data-pay-close]').forEach((button) => {
+    button.addEventListener('click', close);
+  });
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) close();
+  });
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKeyDown);
+  state.payDialog.escHandler = onKeyDown;
+
+  const form = overlay.querySelector('[data-pay-form]');
+  if (form) form.addEventListener('submit', (event) => savePayDialog(event, form));
+
+  requestAnimationFrame(() => {
+    overlay.querySelector('[data-pay-close]')?.focus();
+  });
+}
+
+function closePayDialog() {
+  if (state.payDialog?.escHandler) {
+    document.removeEventListener('keydown', state.payDialog.escHandler);
+  }
+  state.payDialog = null;
+  document.querySelectorAll('[data-pay-overlay]').forEach((overlay) => overlay.remove());
+  document.body.classList.remove('unit-assign-open');
+}
+
+async function savePayDialog(event, form) {
+  event.preventDefault();
+  const dialog = state.payDialog;
+  if (!dialog) return;
+
+  const data = new FormData(form);
+  const submitButton = form.querySelector('button[type="submit"]');
+  const errorBox = form.querySelector('[data-pay-error]');
+  if (submitButton) submitButton.disabled = true;
+
+  try {
+    if (dialog.mode === 'plan') {
+      const fee = String(data.get('fee') || '').trim();
+      const { error } = await supabase.from('student_billing').upsert({
+        student_id: dialog.studentId,
+        plan: String(data.get('plan') || 'mensual'),
+        fee: fee ? Number(fee) : null,
+        notes: String(data.get('notes') || '').trim() || null,
+        updated_by: state.profile?.id ?? null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'student_id' });
+
+      if (error) throw error;
+      closePayDialog();
+      setNotice('Plan de pago guardado.');
+    } else {
+      const amount = Number(data.get('amount'));
+      if (!amount || amount <= 0) throw new Error('Escribe un monto válido.');
+
+      const { error } = await supabase.from('payments').insert({
+        student_id: dialog.studentId,
+        amount,
+        paid_at: String(data.get('paid_at') || new Date().toISOString().slice(0, 10)),
+        method: String(data.get('method') || 'efectivo'),
+        period: String(data.get('period') || '').trim() || null,
+        notes: String(data.get('notes') || '').trim() || null,
+        recorded_by: state.profile?.id ?? null
+      });
+
+      if (error) throw error;
+      closePayDialog();
+      setNotice('Pago registrado.');
+    }
+
+    await loadDashboard(state.profile);
+  } catch (error) {
+    if (submitButton) submitButton.disabled = false;
+    if (errorBox) {
+      errorBox.hidden = false;
+      errorBox.textContent = error?.message || 'No se pudo guardar.';
+    }
+  }
+}
+
+function staffTasksTabMarkup(data) {  const tasks = data.tasks || [];
   const groups = data.groups || [];
   const subjects = data.board || [];
   const units = data.publishedUnits || data.units || [];
@@ -2784,10 +3239,18 @@ function vocationalResult(answers) {
     }
   }
 
-  const interests = [...new Set([...(answers.series || []), ...(answers.activities || [])])];
+  const interests = [
+    ...new Set([
+      ...(answers.series || []),
+      ...(answers.subjects || []),
+      ...(answers.activities || [])
+    ])
+  ];
   const aptitudes = [...new Set(answers.aptitudes || [])];
-  const preferences = [...new Set(answers.preferences || [])];
+  const workdays = [...new Set(answers.workdays || [])];
+  const environment = [...new Set(answers.environment || [])];
   const values = [...new Set(answers.values || [])];
+  const future = [...new Set(answers.future || [])];
 
   const careerSuggestions = careerCatalog
     .map((career) => {
@@ -2807,8 +3270,10 @@ function vocationalResult(answers) {
     completed_at: new Date().toISOString(),
     interests,
     aptitudes,
-    preferences,
+    workdays,
+    environment,
     values,
+    future,
     tags: [...tagSet],
     career_suggestions: careerSuggestions,
     career_choice: answers.career_choice || null
@@ -3393,6 +3858,64 @@ function guardianDashboardMarkup(data) {
         </ul>
         <p class="muted"><small>Aviso de privacidad versión ${escapeHtml(PRIVACY_DOCUMENT_VERSION)}. Al aceptar, autorizas el tratamiento de los datos del alumno con fines educativos. Puedes revocarlo cuando quieras.</small></p>
       ` : '<p class="empty-state">Cuando la institución vincule a tus hijos, aparecerán aquí.</p>'}
+    </article>
+
+    ${data.children.length ? guardianPaymentsMarkup(data) : ''}
+  `;
+}
+
+function guardianPaymentsMarkup(data) {
+  const billing = data.billingByStudent || new Map();
+
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Cuentas</span>
+          <h2>Plan y pagos de tus hijos</h2>
+        </div>
+        <span class="pill">Solo lectura</span>
+      </div>
+      ${data.children.map((child) => {
+        const planRow = billing.get(child.id) || {};
+        const plan = planRow.plan || 'mensual';
+        const total = paymentsTotal(child.id, data.payments);
+        const last = paymentsLast(child.id, data.payments);
+        const recent = paymentsOf(child.id, data.payments)
+          .slice()
+          .sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)))
+          .slice(0, 3);
+
+        return `
+          <div class="guardian-pay">
+            <div class="guardian-pay-head">
+              <div>
+                <strong>${escapeHtml(child.full_name)}</strong>
+                <small>${escapeHtml(child.student_code)}</small>
+              </div>
+              <div class="pay-cells">
+                <span class="pill">${escapeHtml(paymentPlanLabels[plan] || plan)}${planRow.fee ? ` · ${money(planRow.fee)}` : ''}</span>
+                <span class="pill ${total > 0 ? 'success' : ''}">Pagado: ${money(total)}</span>
+                ${last ? `<span class="pill">Último pago: ${escapeHtml(formatDate(String(last.paid_at).slice(0, 10)))}</span>` : '<span class="pill">Sin pagos registrados</span>'}
+              </div>
+            </div>
+            ${recent.length ? `
+              <ul class="data-list">
+                ${recent.map((payment) => `
+                  <li>
+                    <div>
+                      <strong>${money(payment.amount)}</strong>
+                      <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period ? ` · ${escapeHtml(payment.period)}` : ''}</small>
+                    </div>
+                  </li>
+                `).join('')}
+              </ul>
+            ` : ''}
+            ${planRow.notes ? `<p class="muted"><small>📝 ${escapeHtml(planRow.notes)}</small></p>` : ''}
+            <p class="muted"><small>¿Algo no cuadra? Escribe a la institución para revisar tu estado de cuenta.</small></p>
+          </div>
+        `;
+      }).join('')}
     </article>
   `;
 }
@@ -5415,6 +5938,7 @@ function renderDashboard() {
   closeStudentFicha({ silent: true });
   closeTestModal({ silent: true });
   closeUnitAssignDialog();
+  closePayDialog();
   appRoot.innerHTML = dashboardMarkup(state.profile);
 
   appRoot.querySelector('#logout-btn').addEventListener('click', signOut);
@@ -5544,6 +6068,10 @@ function renderDashboard() {
 
   appRoot.querySelectorAll('[data-manage-assignment]').forEach((button) => {
     button.addEventListener('click', () => manageUnitAssignment(button));
+  });
+
+  appRoot.querySelectorAll('[data-open-pay-dialog]').forEach((button) => {
+    button.addEventListener('click', () => openPayDialog(button.dataset.openPayDialog, button.dataset.payMode || 'payment'));
   });
 
   const subjectsGroupSelect = appRoot.querySelector('[data-subjects-group]');

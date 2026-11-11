@@ -93,11 +93,18 @@ app/
       con la lista del grupo, botones Todos/Ninguno, fecha de cierre opcional;
       los excluidos quedan con `student_unit_overrides` cerradas.
 - [x] Tests del alumno (`0016`): apartado **Mi orientación** con test de
-      personalidad (15 preguntas, escala de 5 botones) y test de orientación
-      vocacional (pasos de intereses/aptitudes/ambiente/valores con botones
-      de selección múltiple — series recientes, clásicas, anime…— y elección
-      de carrera). Se guardan con `app_save_student_test` y el personal ve
-      los resultados (rasgos, carreras sugeridas, intereses) en la ficha.
+      personalidad (15 preguntas, escala de 5 botones, avance automático al
+      responder) y test de orientación vocacional de **8 pasos** (contenido
+      que ve —novelas, anime, deportes, videojuegos…—, materias favoritas,
+      actividades, aptitudes, día de trabajo ideal, ambiente, valores y
+      futuro) con botones de selección múltiple y elección final de carrera.
+      Se guardan con `app_save_student_test` y el personal ve los resultados
+      (rasgos, carreras sugeridas, intereses) en la ficha.
+- [x] Finanzas (`0020`–`0021`): pestaña **Pagos** para el personal con
+      resumen mensual, estado de cuentas por alumno (plan semanal, quincenal,
+      mensual, contado, beca u otro + cuota), registro de pagos (monto,
+      fecha, método y concepto) e historial. El **tutor ve su propio estado
+      de cuenta** (solo lectura); los alumnos **no** tienen acceso a pagos.
 - [x] Vinculación de cuentas existentes (`0017`–`0019`): en el alta hay una
       casilla "el alumno ya tiene cuenta"; con su correo se reutiliza su
       cuenta (sin duplicar acceso), se confirma su correo y se crea solo la
