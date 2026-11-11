@@ -2921,7 +2921,8 @@ body.ficha-open {
 .test-card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 12px 14px;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -2968,6 +2969,7 @@ body.ficha-open {
 
 .test-card .btn {
   flex: none;
+  width: auto;
   white-space: nowrap;
 }
 
@@ -3158,9 +3160,14 @@ body.unit-assign-open {
   background: var(--panel);
 }
 
-.test-footer .btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.test-footer .btn {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.test-footer .btn[data-pending] {
+  opacity: 0.55;
 }
 
 .test-error {
@@ -3303,6 +3310,10 @@ body.unit-assign-open {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.test-result-actions .btn {
+  width: auto;
 }
 
 .ficha-test-results {
@@ -3473,6 +3484,10 @@ body.unit-assign-open {
   background: var(--panel);
 }
 
+.unit-assign-foot .btn {
+  width: auto;
+}
+
 .unit-assign-foot .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -3482,6 +3497,10 @@ body.unit-assign-open {
   .test-grid,
   .ficha-test-results {
     grid-template-columns: 1fr;
+  }
+  .test-card .btn {
+    flex: 1 0 100%;
+    width: 100%;
   }
   .test-overlay,
   .unit-assign-overlay {

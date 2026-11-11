@@ -3004,6 +3004,19 @@ function testResultMarkup(active) {
   `;
 }
 
+function testModalCanContinue(active) {
+  const total = testModalStepCount(active);
+  const step = Math.min(active.step, total - 1);
+
+  if (active.kind === 'personality') {
+    const question = personalityQuestions[step];
+    return question ? active.answers[question.id] != null : false;
+  }
+
+  if (step >= vocationalSteps.length) return Boolean(active.answers.career_choice);
+  return (active.answers[vocationalSteps[step].id] || []).length > 0;
+}
+
 function testModalMarkup() {
   const active = state.activeTest;
   if (!active) return '';
@@ -3031,11 +3044,7 @@ function testModalMarkup() {
     ? 'Elige la opción que mejor te describa. No hay respuestas buenas o malas.'
     : (isCareerStep ? 'Puedes elegir una carrera o decir que aún no lo sabes.' : vocationalSteps[step].help);
 
-  const canContinue = active.kind === 'personality'
-    ? active.answers[question.id] != null
-    : isCareerStep
-      ? Boolean(active.answers.career_choice)
-      : (active.answers[vocationalSteps[step].id] || []).length > 0;
+  const canContinue = testModalCanContinue(active);
 
   return `
     <div class="test-overlay" data-test-overlay>
@@ -3063,7 +3072,7 @@ function testModalMarkup() {
 
         <footer class="test-footer">
           <button type="button" class="btn ghost" data-test-back ${step === 0 ? 'disabled' : ''}>← Atrás</button>
-          <button type="button" class="btn primary" data-test-next ${canContinue ? '' : 'disabled'}>
+          <button type="button" class="btn primary" data-test-next aria-disabled="${canContinue ? 'false' : 'true'}" ${canContinue ? '' : 'data-pending="1"'}>
             ${step === total - 1 ? 'Guardar resultados' : 'Siguiente →'}
           </button>
         </footer>
@@ -3148,6 +3157,17 @@ function bindTestModalEvents() {
   });
 
   overlay.querySelector('[data-test-next]')?.addEventListener('click', async (event) => {
+    if (!testModalCanContinue(active)) {
+      const errorBox = overlay.querySelector('[data-test-error]');
+      if (errorBox) {
+        errorBox.hidden = false;
+        errorBox.textContent = active.kind === 'personality'
+          ? 'Elige una opción antes de continuar.'
+          : 'Selecciona al menos una opción antes de continuar.';
+      }
+      return;
+    }
+
     const total = testModalStepCount(active);
     if (active.step < total - 1) {
       active.step += 1;
