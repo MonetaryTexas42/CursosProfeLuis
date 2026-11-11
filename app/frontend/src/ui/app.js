@@ -38,7 +38,7 @@ const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
 
 // Etiqueta de versión visible en la cabecera: sirve para confirmar que el
 // navegador cargó el build más reciente (no una versión en caché).
-const APP_BUILD = 'v4-tests';
+const APP_BUILD = 'v5-autopaso';
 
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
