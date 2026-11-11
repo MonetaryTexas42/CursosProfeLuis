@@ -2888,7 +2888,7 @@ function testModalOptionsMarkup(active) {
     </div>
     <div class="test-choice-foot">
       <span class="pill">${selected.length} seleccionados${max ? ` · máximo ${max}` : ''}</span>
-      ${selected.length ? '<button type="button" class="btn-mini" data-test-clear>Limpiar selección</button>' : ''}
+      <button type="button" class="btn-mini" data-test-clear ${selected.length ? '' : 'hidden'}>Limpiar selección</button>
     </div>
   `;
 }
@@ -3120,28 +3120,85 @@ function bindTestModalEvents() {
     return;
   }
 
+  const scrollDialogTop = () => {
+    const dialog = overlay.querySelector('.test-dialog');
+    if (dialog) dialog.scrollTop = 0;
+  };
+
+  const refreshFooterState = () => {
+    const next = overlay.querySelector('[data-test-next]');
+    if (!next) return;
+    const ok = testModalCanContinue(active);
+    next.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    if (ok) next.removeAttribute('data-pending');
+    else next.setAttribute('data-pending', '1');
+  };
+
+  const refreshChoiceFoot = () => {
+    const foot = overlay.querySelector('.test-choice-foot');
+    if (!foot) return;
+    const step = vocationalSteps[active.step];
+    if (!step) return;
+    const selected = Array.isArray(active.answers[step.id]) ? active.answers[step.id] : [];
+    const max = step.id === 'values' ? 3 : null;
+    const pill = foot.querySelector('.pill');
+    if (pill) pill.textContent = `${selected.length} seleccionados${max ? ` · máximo ${max}` : ''}`;
+    const clear = foot.querySelector('[data-test-clear]');
+    if (clear) clear.hidden = selected.length === 0;
+    refreshFooterState();
+  };
+
   overlay.querySelectorAll('[data-test-option]').forEach((button) => {
     button.addEventListener('click', () => {
       const value = button.dataset.testOption;
+      const total = testModalStepCount(active);
+
+      // Personalidad: una sola respuesta → avanza automáticamente.
       if (active.kind === 'personality') {
         const question = personalityQuestions[active.step];
         active.answers[question.id] = Number(value);
-      } else if (active.step >= vocationalSteps.length) {
-        active.answers.career_choice = value;
-      } else {
-        const step = vocationalSteps[active.step];
-        const current = Array.isArray(active.answers[step.id]) ? [...active.answers[step.id]] : [];
-        const index = current.indexOf(value);
-        const max = step.id === 'values' ? 3 : null;
 
-        if (index >= 0) {
-          current.splice(index, 1);
-        } else if (!max || current.length < max) {
-          current.push(value);
+        if (active.step < total - 1) {
+          active.step += 1;
+          renderTestModal();
+          scrollDialogTop();
+        } else {
+          saveStudentTest(null);
         }
-        active.answers[step.id] = current;
+        return;
       }
-      renderTestModal();
+
+      // Carrera (último paso del vocacional): una sola elección → guarda.
+      if (active.step >= vocationalSteps.length) {
+        active.answers.career_choice = value;
+        button.classList.add('selected');
+        const errorBox = overlay.querySelector('[data-test-error]');
+        if (errorBox) {
+          errorBox.hidden = false;
+          errorBox.textContent = 'Guardando tus resultados…';
+        }
+        saveStudentTest(null);
+        return;
+      }
+
+      // Pasos de selección múltiple: actualiza en el sitio, sin recargar.
+      const step = vocationalSteps[active.step];
+      const current = Array.isArray(active.answers[step.id]) ? [...active.answers[step.id]] : [];
+      const index = current.indexOf(value);
+      const max = step.id === 'values' ? 3 : null;
+
+      if (index >= 0) {
+        current.splice(index, 1);
+      } else if (!max || current.length < max) {
+        current.push(value);
+      }
+      active.answers[step.id] = current;
+
+      const nowSelected = current.includes(value);
+      button.classList.toggle('selected', nowSelected);
+      const check = button.querySelector('.test-check');
+      if (check) check.textContent = nowSelected ? '✓' : '+';
+      refreshChoiceFoot();
     });
   });
 
@@ -3149,8 +3206,14 @@ function bindTestModalEvents() {
   if (clearButton) {
     clearButton.addEventListener('click', () => {
       const step = vocationalSteps[active.step];
-      if (step) active.answers[step.id] = [];
-      renderTestModal();
+      if (!step) return;
+      active.answers[step.id] = [];
+      overlay.querySelectorAll('[data-test-option].selected').forEach((button) => {
+        button.classList.remove('selected');
+        const check = button.querySelector('.test-check');
+        if (check) check.textContent = '+';
+      });
+      refreshChoiceFoot();
     });
   }
 
@@ -3158,6 +3221,7 @@ function bindTestModalEvents() {
     if (active.step > 0) {
       active.step -= 1;
       renderTestModal();
+      scrollDialogTop();
     }
   });
 
@@ -3233,10 +3297,12 @@ function closeTestModal({ silent = false, refresh = false } = {}) {
 
 async function saveStudentTest(button) {
   const active = state.activeTest;
-  if (!active || button?.disabled) return;
+  if (!active || active.saving || button?.disabled) return;
+
+  active.saving = true;
 
   const errorBox = document.querySelector('[data-test-error]');
-  if (errorBox) {
+  if (errorBox && button) {
     errorBox.hidden = true;
     errorBox.textContent = '';
   }
@@ -3266,6 +3332,7 @@ async function saveStudentTest(button) {
   });
 
   if (error) {
+    active.saving = false;
     if (button) {
       button.disabled = false;
       button.textContent = 'Guardar resultados';

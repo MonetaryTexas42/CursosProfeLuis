@@ -600,13 +600,13 @@ async function runStudentFlow(pageEval, waitFor) {
     }
     console.log(`  ✓ escala de respuesta con botones (${scaleLabels})`);
     await pageEval(`document.querySelector('[data-test-option="1"]').click(); true`);
-    await pageEval(`document.querySelector('[data-test-next]').click(); true`);
-    await waitFor(`document.body.innerText.includes('2 / 15')`, "avance a la pregunta 2");
+    await waitFor(`document.body.innerText.includes('2 / 15')`, "avance automático a la pregunta 2");
+    console.log("  ✓ tocar una respuesta avanza solo a la siguiente pregunta");
     await pageEval(`document.querySelector('[data-test-back]').click(); true`);
     await waitFor(`document.body.innerText.includes('1 / 15')`, "regreso a la pregunta 1");
     await pageEval(`document.querySelector('[data-test-close]').click(); true`);
     await waitFor(`!document.querySelector('.test-dialog')`, "test cerrado");
-    console.log("  ✓ navegación entre preguntas, atrás y cierre");
+    console.log("  ✓ botón atrás y cierre");
 
     console.log("Test vocacional (recorrido)…");
     await pageEval(`document.querySelector('[data-start-test="vocational"]').click(); true`);
@@ -620,6 +620,16 @@ async function runStudentFlow(pageEval, waitFor) {
       throw new Error(`Pocas opciones de series: ${seriesOptions}`);
     }
     console.log(`  ✓ paso de series con ${seriesOptions} botones de selección múltiple`);
+    await pageEval(`document.querySelector('[data-test-option="Series recientes"]').click(); true`);
+    await waitFor(
+      `document.querySelector('[data-test-option="Series recientes"]').classList.contains('selected')`,
+      "opción marcada en el sitio",
+    );
+    await waitFor(
+      `document.querySelector('.test-choice-foot .pill').textContent.includes('1 seleccionados')`,
+      "contador actualizado sin recargar",
+    );
+    console.log("  ✓ marcar opciones actualiza la selección al instante (sin parpadeo)");
     await pageEval(`document.querySelector('[data-test-close]').click(); true`);
     await waitFor(`!document.querySelector('.test-dialog')`, "test vocacional cerrado");
 
@@ -632,8 +642,6 @@ async function runStudentFlow(pageEval, waitFor) {
         for (let i = 0; i < 80 && !document.querySelector('.test-result'); i += 1) {
           const option = document.querySelector('[data-test-option]');
           if (option) option.click();
-          const next = document.querySelector('[data-test-next]');
-          if (next && !next.disabled) next.click();
           await sleep(140);
         }
         return !!document.querySelector('.test-result');
