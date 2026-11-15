@@ -116,6 +116,13 @@ app/
       ⚠️ Recomendado: desactivar "Allow new users to sign up" en
       Supabase → Authentication → Providers → Email para cerrar el
       autorregistro por completo.
+- [x] Pulido de UX (`v8`): panel del alumno con héroe y tarjetas de unidades
+      por materia; sección de pagos con tablero de cuentas, selector de plan
+      y método por botones; ficha con campos derivados de los tests en solo
+      lectura; scores de carreras diferenciados (peso por especificidad, ya
+      no todo 100%); **reintento de preguntas del quiz** (contador de intento
+      real + botón "Reintentar", `0022`); el reproductor del curso ya no
+      muestra las secciones de gestión antiguas a los alumnos.
 - [x] Cerrar y reabrir unidades desde la tarjeta.
 - [x] Modo claro/oscuro con persistencia.
 - [x] Panel del staff de una sola página: barra lateral colapsable (se
