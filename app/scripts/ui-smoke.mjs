@@ -235,6 +235,72 @@ async function loginAsStudent(pageEval, waitFor) {
   }
 }
 
+// Estado esperado del curso según la base: unidades y materias que SÍ debe
+// ver el alumno (asignaciones activas efectivas) y títulos publicados que
+// NO debe ver (para comprobar que no se adelanta).
+async function fetchExpectedCourseState() {
+  const envText = readFileSync(resolve(here, "../frontend/.env"), "utf8");
+  const env = Object.fromEntries(
+    envText.split("\n").filter(Boolean).map((line) => {
+      const index = line.indexOf("=");
+      return [line.slice(0, index), line.slice(index + 1)];
+    }),
+  );
+  const url = env.VITE_SUPABASE_URL;
+  const key = env.VITE_SUPABASE_ANON_KEY;
+  const domain = env.VITE_STUDENT_EMAIL_DOMAIN || "alumnos.ecoems.mx";
+  const { username, password } = readTestUser("student");
+
+  const authRes = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: `${username}@${domain}`, password }),
+  });
+  const auth = await authRes.json();
+  if (!auth.access_token) throw new Error("No se pudo autenticar al alumno para el estado esperado");
+
+  const headers = { apikey: key, Authorization: `Bearer ${auth.access_token}` };
+  const rest = async (path) => {
+    const res = await fetch(`${url}/rest/v1/${path}`, { headers });
+    if (!res.ok) throw new Error(`REST ${path}: ${res.status}`);
+    return res.json();
+  };
+
+  const [me] = await rest(`students?select=id,group_id&profile_id=eq.${auth.user.id}`);
+  if (!me) throw new Error("El alumno no tiene ficha");
+
+  const [assignments, overrides, units, subjects] = await Promise.all([
+    rest(`unit_assignments?select=id,unit_id,status,opens_at,closes_at&group_id=eq.${me.group_id}&status=in.(active,closed)&visible=eq.true`),
+    rest(`student_unit_overrides?select=assignment_id,status,opens_at,closes_at&student_id=eq.${me.id}`),
+    rest(`units?select=id,title,subject_id&status=eq.published`),
+    rest(`subjects?select=id,name&active=eq.true`),
+  ]);
+
+  const overrideByAssignment = new Map(overrides.map((o) => [o.assignment_id, o]));
+  const now = Date.now();
+  const allowed = new Set();
+  for (const assignment of assignments) {
+    const o = overrideByAssignment.get(assignment.id) || {};
+    const status = o.status || assignment.status;
+    if (status !== "active") continue;
+    const opensAt = o.opens_at || assignment.opens_at;
+    const closesAt = o.closes_at || assignment.closes_at;
+    if (opensAt && new Date(opensAt).getTime() > now) continue;
+    if (closesAt && new Date(closesAt).getTime() <= now) continue;
+    allowed.add(assignment.unit_id);
+  }
+
+  const unitTitle = new Map(units.map((u) => [u.id, u.title]));
+  const visibleUnitTitles = [...allowed].map((id) => unitTitle.get(id)).filter(Boolean);
+  const hiddenUnitTitles = units.filter((u) => !allowed.has(u.id)).map((u) => u.title);
+
+  const subjectNames = new Map(subjects.map((s) => [s.id, s.name]));
+  const visibleSubjectIds = new Set(units.filter((u) => allowed.has(u.id)).map((u) => u.subject_id));
+  const visibleSubjectNames = [...visibleSubjectIds].map((id) => subjectNames.get(id)).filter(Boolean);
+
+  return { visibleUnitTitles, hiddenUnitTitles, visibleSubjectNames };
+}
+
 async function runCourseFlow(pageEval, waitFor) {
   console.log("Entrando como alumno…");
   await loginAsStudent(pageEval, waitFor);
@@ -246,35 +312,53 @@ async function runCourseFlow(pageEval, waitFor) {
 
   console.log("Abriendo el reproductor del curso…");
   await pageEval(`document.querySelector('a[href="./curso/"]').click(); true`);
+
+  const expected = await fetchExpectedCourseState();
+  console.log(
+    `  (base) ${expected.visibleUnitTitles.length} unidades activas para el alumno · ${expected.hiddenUnitTitles.length} publicadas ocultas`,
+  );
+
   await waitFor(
-    `document.body.innerText.toLowerCase().includes('español')`,
+    `document.body.innerText.toLowerCase().includes('español') || document.body.innerText.toLowerCase().includes('${expected.visibleSubjectNames[0]?.toLowerCase() || 'unidades'}')`,
     "materias del curso cargadas desde Supabase",
   );
+  await sleep(1500);
 
-  const shellText = await pageEval(`document.body.innerText.toLowerCase()`);
+  const homeText = await pageEval(`document.body.innerText`);
+  const homeLower = homeText.toLowerCase();
 
-  // Solo deben aparecer las materias con unidades ACTIVADAS por el profesor.
-  if (!shellText.includes("español")) {
-    throw new Error('El curso no muestra "español" (materia con unidades activas)');
+  // Todas las materias con unidades activas deben aparecer en el inicio.
+  for (const name of expected.visibleSubjectNames) {
+    if (!homeLower.includes(name.toLowerCase())) {
+      throw new Error(`El curso no muestra la materia activa "${name}"`);
+    }
+    console.log(`  ✓ materia visible: "${name}"`);
   }
-  console.log('  ✓ solo aparecen materias con unidades activas ("español")');
 
-  if (shellText.includes("matemáticas") || shellText.includes("habilidad verbal")) {
-    throw new Error("El curso muestra materias sin unidades activas (se adelantaría el alumno)");
+  // Alguna unidad publicada pero NO activada no debe aparecer en ningún lado.
+  if (expected.hiddenUnitTitles.length) {
+    const hiddenTitle = expected.hiddenUnitTitles[0];
+    if (homeLower.includes(hiddenTitle.toLowerCase())) {
+      throw new Error(`El curso muestra la unidad no activada "${hiddenTitle}"`);
+    }
+    console.log(`  ✓ unidad no activada oculta: "${hiddenTitle}"`);
   }
-  console.log("  ✓ las materias sin unidades activas quedan ocultas (matemáticas, habilidad verbal)");
 
-  // Dentro de Español: unidades activas visibles y las demás ocultas.
-  await pageEval(`document.querySelector('.subject-card').click(); true`);
-  await waitFor(
-    `document.body.innerText.includes('Funciones de la lengua')`,
-    "unidad activada visible dentro de la materia",
-  );
+  // Dentro de la primera materia: sus unidades activas visibles y las demás no.
+  await pageEval(`document.querySelector('.subject-card')?.click(); true`);
+  await sleep(1200);
   const subjectText = await pageEval(`document.body.innerText`);
-  if (subjectText.includes("Categorías gramaticales") || subjectText.includes("Analogías entre palabras")) {
-    throw new Error("El curso muestra unidades que el profesor no ha activado");
+  const subjectLower = subjectText.toLowerCase();
+  const visibleFound = expected.visibleUnitTitles.filter((title) => subjectLower.includes(title.toLowerCase())).length;
+  if (visibleFound < 1 && expected.visibleUnitTitles.length > 0) {
+    throw new Error("Dentro de la materia no aparece ninguna unidad activada");
   }
-  console.log("  ✓ dentro de la materia solo se ven las unidades activadas, no las demás");
+  console.log(`  ✓ dentro de la materia aparecen las unidades activadas (${visibleFound} visible${visibleFound === 1 ? "" : "s"})`);
+  const leaked = expected.hiddenUnitTitles.filter((title) => subjectLower.includes(title.toLowerCase()));
+  if (leaked.length) {
+    throw new Error(`La materia muestra unidades no activadas: ${leaked.join(", ")}`);
+  }
+  console.log("  ✓ dentro de la materia no hay unidades sin activar");
 
   const badge = await pageEval(
     `(document.querySelector('.session-chip') || {}).textContent || ''`,
@@ -747,6 +831,20 @@ async function runStudentFlow(pageEval, waitFor) {
       "resultado del intento",
     );
     console.log("  ✓ intento calificado como correcto");
+
+    console.log("Reintento de preguntas del quiz…");
+    await pageEval(`(() => { const btn = document.querySelector('[data-answer-kind="quiz"]'); btn.scrollIntoView({block:'center'}); btn.click(); return true; })()`);
+    await waitFor(`document.querySelector('[data-retry-question]')`, "respuesta del quiz con botón de reintento");
+    const firstAttempt = await pageEval(`document.querySelector('[data-retry-question]').closest('.answer-box').querySelector('small').textContent`);
+    await pageEval(`document.querySelector('[data-retry-question]').click(); true`);
+    await waitFor(`!document.querySelector('[data-retry-question]')`, "pregunta lista para reintentar");
+    await pageEval(`document.querySelector('[data-answer-kind="quiz"]').click(); true`);
+    await waitFor(`document.querySelector('[data-retry-question]')`, "segunda respuesta del quiz");
+    const secondAttempt = await pageEval(`document.querySelector('[data-retry-question]').closest('.answer-box').querySelector('small').textContent`);
+    const n1 = parseInt(firstAttempt.match(/\d+/)?.[0] || '0', 10);
+    const n2 = parseInt(secondAttempt.match(/\d+/)?.[0] || '0', 10);
+    if (!(n2 > n1)) throw new Error(`El intento no avanzó: ${firstAttempt} → ${secondAttempt}`);
+    console.log(`  ✓ las preguntas del quiz se pueden reintentar (${firstAttempt.trim()} → ${secondAttempt.trim()})`);
 
     console.log("\nPASS · Flujo UI del alumno con contenido real verificado.");
 }

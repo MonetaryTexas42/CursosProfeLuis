@@ -378,13 +378,10 @@ function route() {
   if (r.view === "404") { render404(); return; }
   if (r.view === "mate") { const mateSub = DATA.subjects.find(s=>s.id==='matematicas'); setAccent(mateSub ? mateSub.color : null); renderMate(); return; }
   if (r.view === "lectura") { setAccent(null); renderLectura(); return; }
-  if (r.view === "asistencia") { setAccent('#2563EB'); renderAsistencia(); return; }
-  if (r.view === "pagos") { setAccent('#059669'); renderPagos(); return; }
-  if (r.view === "planificacion") { setAccent('#4F46E5'); renderPlanificacion(); return; }
-  if (r.view === "taller") { setAccent('#0F766E'); renderTaller(); return; }
-  if (r.view === "perfil") { setAccent('#BE123C'); renderPerfil(); return; }
-  if (r.view === "concentrado") { setAccent('#B45309'); renderConcentrado(); return; }
-  if (r.view === "catalogo") { setAccent('#0891B2'); renderCatalogo(); return; }
+  // El antiguo "Sistema" (asistencia, pagos, taller, perfiles…) era gestión
+  // del profesor; los alumnos ya no acceden: cualquier ruta vieja va al inicio.
+  const legacyViews = ["asistencia", "pagos", "planificacion", "taller", "perfil", "concentrado", "catalogo"];
+  if (legacyViews.indexOf(r.view) >= 0) { setAccent(null); renderHome(); return; }
   if (r.view === "subject") { setAccent(r.sub.color); renderSubject(r.sub); if (isMathSubject(r.sub)) fmtMathInEl($("#view")); return; }
   if (r.view === "lesson") { if (!r.unit) { render404(); return; } setAccent(r.sub.color); renderLesson(r.sub, r.unit); if (isMathSubject(r.sub)) fmtMathInEl($("#view")); return; }
   setAccent(null);
@@ -443,23 +440,9 @@ function renderNav() {
       '<span class="nav-lesson-icon">\u25b8</span>' +
       '<span class="nav-lesson-name">' + label + "</span>" +
     "</a>";
-  const sistGroup =
-    '<div class="nav-group">' +
-      '<a class="nav-sub' + (sistViews.indexOf(r.view) >= 0 ? " active" : "") + '" href="#/sistema/asistencia" data-sub="sistema">' +
-        '<span class="nav-icon">\u{1F4CA}</span>' +
-        '<span class="nav-name">Sistema</span>' +
-        '<span class="nav-chevron' + (sistOpen ? " open" : "") + '">\u25b8</span>' +
-      "</a>" +
-      '<div class="nav-units' + (sistOpen ? " open" : "") + '">' +
-        sistLink("asistencia", "#/sistema/asistencia", "Asistencia") +
-        sistLink("pagos", "#/sistema/pagos", "Pagos") +
-        sistLink("planificacion", "#/sistema/planificacion", "Planificaci\u00f3n") +
-        sistLink("taller", "#/sistema/taller", "Taller vocacional") +
-        sistLink("catalogo", "#/sistema/catalogo", "Cat\u00e1logo de escuelas") +
-        sistLink("perfil", "#/sistema/perfil", "Perfil del alumno") +
-        sistLink("concentrado", "#/sistema/concentrado", "Concentrado de tareas") +
-      "</div>" +
-    "</div>";
+  // El antiguo "Sistema" (asistencia, pagos, perfiles…) era gestión del
+  // profesor en localStorage; ya no se muestra a los alumnos.
+  const sistGroup = "";
   $("#side-nav").innerHTML = lectGroup + DATA.subjects.map(s => {
     const hasUnits = s.ready && s.units && s.units.length;
     const activeSub = r.view !== "home" && r.sub && r.sub.id === s.id;

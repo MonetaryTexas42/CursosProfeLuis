@@ -38,7 +38,7 @@ const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
 
 // Etiqueta de versión visible en la cabecera: sirve para confirmar que el
 // navegador cargó el build más reciente (no una versión en caché).
-const APP_BUILD = 'v7-curso';
+const APP_BUILD = 'v8-pulido';
 
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
@@ -2600,6 +2600,7 @@ function staffPaymentsTabMarkup(data) {
   const monthPayments = payments.filter((payment) => String(payment.paid_at || '').slice(0, 7) === monthKey);
   const monthIncome = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const totalIncome = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const withPlan = students.filter((student) => billing.has(student.id)).length;
 
   return `
     <div class="section-title">
@@ -2611,20 +2612,29 @@ function staffPaymentsTabMarkup(data) {
     </div>
 
     <div class="pay-summary">
-      <article class="card pay-stat">
-        <span class="card-label">Pagos de este mes</span>
-        <h2>${money(monthIncome)}</h2>
-        <p class="muted">${monthPayments.length} ${monthPayments.length === 1 ? 'pago registrado' : 'pagos registrados'} en ${now.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</p>
+      <article class="card pay-stat pay-stat-violet">
+        <span class="pay-stat-icon" aria-hidden="true">📅</span>
+        <div>
+          <span class="card-label">Este mes (${now.toLocaleDateString('es-MX', { month: 'short' })})</span>
+          <h2>${money(monthIncome)}</h2>
+          <p class="muted">${monthPayments.length} ${monthPayments.length === 1 ? 'pago' : 'pagos'} registrados</p>
+        </div>
       </article>
-      <article class="card pay-stat">
-        <span class="card-label">Ingresos totales</span>
-        <h2>${money(totalIncome)}</h2>
-        <p class="muted">Todo lo registrado en la plataforma</p>
+      <article class="card pay-stat pay-stat-green">
+        <span class="pay-stat-icon" aria-hidden="true">💰</span>
+        <div>
+          <span class="card-label">Ingresos totales</span>
+          <h2>${money(totalIncome)}</h2>
+          <p class="muted">Todo lo registrado en la plataforma</p>
+        </div>
       </article>
-      <article class="card pay-stat">
-        <span class="card-label">Planes</span>
-        <h2>${[...new Set([...billing.values()].map((row) => row.plan))].length}</h2>
-        <p class="muted">Tipos de plan activos en el grupo</p>
+      <article class="card pay-stat pay-stat-blue">
+        <span class="pay-stat-icon" aria-hidden="true">🗂️</span>
+        <div>
+          <span class="card-label">Planes asignados</span>
+          <h2>${withPlan}/${students.length}</h2>
+          <p class="muted">${[...new Set([...billing.values()].map((row) => row.plan))].length} ${[...new Set([...billing.values()].map((row) => row.plan))].length === 1 ? 'tipo de plan' : 'tipos de plan'}</p>
+        </div>
       </article>
     </div>
 
@@ -2636,31 +2646,45 @@ function staffPaymentsTabMarkup(data) {
         </div>
       </div>
       ${students.length ? `
-        <ul class="data-list pay-list">
+        <div class="pay-board">
           ${students.map((student) => {
             const planRow = billing.get(student.id) || {};
             const plan = planRow.plan || 'mensual';
             const total = paymentsTotal(student.id, payments);
             const last = paymentsLast(student.id, payments);
+            const initial = (student.full_name || 'A').trim().slice(0, 1).toUpperCase();
             return `
-              <li>
-                <div>
-                  <strong>${escapeHtml(student.full_name)}</strong>
-                  <small>${escapeHtml(student.student_code)} · ${escapeHtml(student.group_name || '')}</small>
+              <article class="pay-card">
+                <div class="pay-card-head">
+                  <span class="pay-avatar" aria-hidden="true">${escapeHtml(initial)}</span>
+                  <div class="pay-who">
+                    <strong>${escapeHtml(student.full_name)}</strong>
+                    <small>${escapeHtml(student.student_code || '')}${student.group_name ? ` · ${escapeHtml(student.group_name)}` : ''}</small>
+                  </div>
+                  <span class="pill ${billing.has(student.id) ? '' : 'pill-amber'}">${billing.has(student.id) ? escapeHtml(paymentPlanLabels[plan] || plan) : 'Sin plan'}</span>
                 </div>
-                <div class="pay-cells">
-                  <span class="pill">${escapeHtml(paymentPlanLabels[plan] || plan)}${planRow.fee ? ` · ${money(planRow.fee)}` : ''}</span>
-                  <span class="pill ${total > 0 ? 'success' : ''}">Pagado: ${money(total)}</span>
-                  ${last ? `<span class="pill">Último: ${escapeHtml(formatDate(String(last.paid_at).slice(0, 10)))}</span>` : '<span class="pill">Sin pagos</span>'}
+                <div class="pay-card-body">
+                  <div class="pay-metric">
+                    <span class="card-label">Cuota</span>
+                    <strong>${planRow.fee ? money(planRow.fee) : '—'}</strong>
+                  </div>
+                  <div class="pay-metric">
+                    <span class="card-label">Pagado</span>
+                    <strong class="${total > 0 ? 'pay-good' : ''}">${money(total)}</strong>
+                  </div>
+                  <div class="pay-metric">
+                    <span class="card-label">Último pago</span>
+                    <strong class="pay-last">${last ? escapeHtml(formatDate(String(last.paid_at).slice(0, 10))) : '—'}</strong>
+                  </div>
                 </div>
-                <div class="row pay-actions">
-                  <button class="btn-mini primary" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="payment">Registrar pago</button>
-                  <button class="btn-mini" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="plan">Plan</button>
+                <div class="pay-card-actions">
+                  <button class="btn primary" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="payment">💵 Registrar pago</button>
+                  <button class="btn ghost" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="plan">⚙️ Plan</button>
                 </div>
-              </li>
+              </article>
             `;
           }).join('')}
-        </ul>
+        </div>
       ` : '<p class="empty-state">Todavía no hay alumnos en tus grupos.</p>'}
     </article>
 
@@ -2699,7 +2723,7 @@ function payDialogMarkup() {
   const student = (data?.students || []).find((item) => item.id === dialog.studentId);
   const planRow = (data?.billingByStudent || new Map()).get(dialog.studentId) || {};
   const today = new Date().toISOString().slice(0, 10);
-
+  const initial = (student?.full_name || 'A').trim().slice(0, 1).toUpperCase();
   const isPlan = dialog.mode === 'plan';
 
   return `
@@ -2707,22 +2731,25 @@ function payDialogMarkup() {
       <section class="unit-assign-dialog pay-dialog" role="dialog" aria-modal="true" aria-labelledby="pay-title">
         <button type="button" class="ficha-close" data-pay-close aria-label="Cerrar">✕</button>
 
-        <header class="unit-assign-head">
-          <span class="card-label">${isPlan ? 'Plan de pago' : 'Registrar pago'}</span>
-          <h2 id="pay-title">${escapeHtml(student?.full_name || 'Alumno')}</h2>
-          <p class="muted">${escapeHtml(student?.student_code || '')} · ${escapeHtml(student?.group_name || '')}</p>
+        <header class="pay-dialog-head">
+          <span class="pay-avatar pay-avatar-lg" aria-hidden="true">${escapeHtml(initial)}</span>
+          <div class="pay-who">
+            <span class="card-label">${isPlan ? 'Plan de pago' : 'Registrar pago'}</span>
+            <h2 id="pay-title">${escapeHtml(student?.full_name || 'Alumno')}</h2>
+            <p class="muted">${escapeHtml(student?.student_code || '')}${student?.group_name ? ` · ${escapeHtml(student.group_name)}` : ''}${!isPlan && planRow.plan ? ` · Plan ${escapeHtml(paymentPlanLabels[planRow.plan] || planRow.plan)}` : ''}</p>
+          </div>
         </header>
 
         <form class="form pay-form" data-pay-form>
           ${isPlan ? `
-            <label class="field">
-              <span>Plan</span>
-              <select name="plan">
-                ${Object.entries(paymentPlanLabels).map(([value, label]) => `
-                  <option value="${value}" ${(planRow.plan || 'mensual') === value ? 'selected' : ''}>${escapeHtml(label)}</option>
-                `).join('')}
-              </select>
-            </label>
+            <div class="pay-plan-grid">
+              ${Object.entries(paymentPlanLabels).map(([value, label]) => `
+                <button type="button" class="pay-plan-option ${(planRow.plan || 'mensual') === value ? 'selected' : ''}" data-pay-plan="${value}">
+                  ${escapeHtml(label)}
+                </button>
+              `).join('')}
+              <input type="hidden" name="plan" value="${escapeHtml(planRow.plan || 'mensual')}">
+            </div>
             <label class="field">
               <span>Cuota por periodo (pesos)</span>
               <input name="fee" type="number" min="0" step="0.01" value="${planRow.fee ?? ''}" placeholder="ej. 250">
@@ -2734,18 +2761,26 @@ function payDialogMarkup() {
           ` : `
             <label class="field">
               <span>Monto (pesos)</span>
-              <input name="amount" type="number" min="1" step="0.01" required placeholder="ej. 250">
+              <div class="pay-amount-wrap">
+                <span class="pay-currency">$</span>
+                <input name="amount" type="number" min="1" step="0.01" required placeholder="0.00">
+              </div>
             </label>
             <label class="field">
               <span>Fecha del pago</span>
               <input name="paid_at" type="date" required value="${today}">
             </label>
-            <label class="field">
+            <div class="field">
               <span>Método</span>
-              <select name="method">
-                ${Object.entries(paymentMethodLabels).map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join('')}
-              </select>
-            </label>
+              <div class="pay-method-grid">
+                ${Object.entries(paymentMethodLabels).map(([value, label], index) => `
+                  <button type="button" class="pay-method-option ${index === 0 ? 'selected' : ''}" data-pay-method="${value}">
+                    ${escapeHtml(label)}
+                  </button>
+                `).join('')}
+                <input type="hidden" name="method" value="efectivo">
+              </div>
+            </div>
             <label class="field">
               <span>Concepto (opcional)</span>
               <input name="period" placeholder="ej. semana del 2 nov, noviembre, inscripción">
@@ -2807,6 +2842,24 @@ function renderPayDialog() {
 
   const form = overlay.querySelector('[data-pay-form]');
   if (form) form.addEventListener('submit', (event) => savePayDialog(event, form));
+
+  overlay.querySelectorAll('[data-pay-method]').forEach((button) => {
+    button.addEventListener('click', () => {
+      overlay.querySelectorAll('[data-pay-method]').forEach((item) => item.classList.remove('selected'));
+      button.classList.add('selected');
+      const input = form?.querySelector('input[name="method"]');
+      if (input) input.value = button.dataset.payMethod;
+    });
+  });
+
+  overlay.querySelectorAll('[data-pay-plan]').forEach((button) => {
+    button.addEventListener('click', () => {
+      overlay.querySelectorAll('[data-pay-plan]').forEach((item) => item.classList.remove('selected'));
+      button.classList.add('selected');
+      const input = form?.querySelector('input[name="plan"]');
+      if (input) input.value = button.dataset.payPlan;
+    });
+  });
 
   requestAnimationFrame(() => {
     overlay.querySelector('[data-pay-close]')?.focus();
@@ -3069,6 +3122,16 @@ function staffTutoresTabMarkup(data) {
   `;
 }
 
+const subjectPalette = [
+  'var(--brand)', 'var(--brand-2)', '#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#14b8a6'
+];
+
+function subjectColor(name) {
+  let hash = 0;
+  for (const char of String(name || '')) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  return subjectPalette[Math.abs(hash) % subjectPalette.length];
+}
+
 function studentDashboardMarkup(data) {
   if (!data.student) {
     return `
@@ -3080,35 +3143,63 @@ function studentDashboardMarkup(data) {
     `;
   }
 
+  const fullName = state.profile?.full_name || 'Alumno';
+  const firstName = fullName.split(' ')[0];
+  const initial = fullName.trim().slice(0, 1).toUpperCase();
+  const profile = data.profile || {};
+  const testsDone = Number(Boolean(profile.personality?.completed_at)) + Number(Boolean(profile.aptitude?.completed_at));
+
   return `
-    <article class="card wide">
-      <div class="card-heading">
-        <div>
-          <span class="card-label">Mi espacio</span>
-          <h2>${escapeHtml(data.group?.name || 'Sin grupo')}</h2>
+    <section class="student-hero">
+      <div class="student-hero-copy">
+        <span class="kicker">Hola, ${escapeHtml(firstName)} 👋</span>
+        <h1>Tu camino al bachillerato</h1>
+        <p class="muted">${escapeHtml(data.group ? [data.group.level, data.group.schedule].filter(Boolean).join(' · ') || 'Grupo sin horario' : 'Tu grupo aún no está asignado.')}</p>
+        <div class="student-hero-chips">
+          <span class="hero-chip">📚 ${countLabel(data.activeAssignments, 'unidad activa', 'unidades activas')}</span>
+          <span class="hero-chip">🧭 ${testsDone} de 2 tests completados</span>
+          <span class="hero-chip">🎓 ${escapeHtml(data.student.student_code)}</span>
         </div>
-        <span class="pill success">${escapeHtml(data.student.student_code)}</span>
       </div>
-      <p>${escapeHtml(data.group ? [data.group.level, data.group.schedule].filter(Boolean).join(' · ') || 'Sin horario' : 'Tu grupo aún no está asignado.')}</p>
-      <div class="row">
+      <div class="student-hero-actions">
+        <span class="student-avatar" aria-hidden="true">${escapeHtml(initial)}</span>
         <a class="btn primary" href="./curso/">📚 Abrir curso completo</a>
-        <span class="pill">${countLabel(data.activeAssignments, 'unidad activa', 'unidades activas')}</span>
-        <span class="pill">${escapeHtml(data.student.status)}</span>
       </div>
-      ${data.units.length ? `
-        <ul class="data-list">
-          ${data.units.map((item) => `
-            <li>
-              <div>
-                <strong>${escapeHtml(item.unit?.title || 'Unidad')}</strong>
-                <small>${escapeHtml(item.unit?.subject_name || 'Materia')} · ${escapeHtml(progressLabels[item.progress?.status] || 'Sin empezar')}</small>
+    </section>
+
+    <div class="section-title">
+      <div>
+        <span class="card-label">Tus unidades</span>
+        <h2>${data.units.length ? 'Sigue tu ruta de estudio' : 'Aún no hay unidades'}</h2>
+      </div>
+      ${data.units.length ? `<span class="pill">${data.units.length}</span>` : ''}
+    </div>
+
+    ${data.units.length ? `
+      <div class="student-unit-grid">
+        ${data.units.map((item) => {
+          const status = item.progress?.status || 'not_started';
+          const statusLabel = progressLabels[status] || 'Sin empezar';
+          const accuracy = item.progress?.best_accuracy != null ? `${Math.round(item.progress.best_accuracy)}%` : null;
+          const attempts = item.progress?.attempts_count || 0;
+          const accent = subjectColor(item.unit?.subject_name);
+          return `
+            <article class="student-unit-card" style="--accent:${accent}">
+              <div class="student-unit-top">
+                <span class="student-unit-subject">${escapeHtml(item.unit?.subject_name || 'Materia')}</span>
+                <span class="pill ${status === 'completed' || status === 'mastered' ? 'success' : status === 'in_progress' ? 'pill-blue' : ''}">${escapeHtml(statusLabel)}</span>
               </div>
-              <button class="btn ghost" data-open-unit="${escapeHtml(item.id)}">Abrir</button>
-            </li>
-          `).join('')}
-        </ul>
-      ` : '<p class="empty-state">Tus unidades aparecerán aquí cuando el profesor las active.</p>'}
-    </article>
+              <h3>${escapeHtml(item.unit?.title || 'Unidad')}</h3>
+              <div class="student-unit-stats">
+                ${accuracy ? `<span class="hero-chip">🎯 ${escapeHtml(accuracy)}</span>` : ''}
+                ${attempts > 0 ? `<span class="hero-chip">🔄 ${attempts} ${attempts === 1 ? 'intento' : 'intentos'}</span>` : ''}
+              </div>
+              <button class="btn ghost" data-open-unit="${escapeHtml(item.id)}">${status === 'completed' || status === 'mastered' ? 'Repasar →' : 'Estudiar →'}</button>
+            </article>
+          `;
+        }).join('')}
+      </div>
+    ` : '<article class="card wide"><p class="empty-state">Tus unidades aparecerán aquí cuando el profesor las active. 🔒</p></article>'}
 
     ${studentTestsMarkup(data)}
   `;
@@ -3252,18 +3343,31 @@ function vocationalResult(answers) {
   const values = [...new Set(answers.values || [])];
   const future = [...new Set(answers.future || [])];
 
-  const careerSuggestions = careerCatalog
+  const tagFrequency = {};
+  for (const career of careerCatalog) {
+    for (const tag of career.tags) {
+      tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+    }
+  }
+
+  const scored = careerCatalog
     .map((career) => {
       const matches = career.tags.filter((tag) => tagSet.has(tag));
-      return {
-        name: career.name,
-        score: Math.min(100, Math.round((matches.length / career.tags.length) * 100)),
-        matches
-      };
+      // Peso por especificidad: un tag compartido por muchas carreras
+      // distingue menos que uno poco común. Así el score no se satura a 100%.
+      const weight = matches.reduce((sum, tag) => sum + 1 / tagFrequency[tag], 0);
+      return { name: career.name, matches, weight };
     })
-    .filter((career) => career.score > 0)
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
-    .slice(0, 6);
+    .filter((career) => career.matches.length > 0)
+    .sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name));
+
+  const top = scored.slice(0, 8);
+  const maxWeight = top[0]?.weight || 1;
+  const careerSuggestions = top.map((career) => ({
+    name: career.name,
+    score: Math.round((career.weight / maxWeight) * 100),
+    matches: career.matches
+  }));
 
   return {
     version: 1,
@@ -4027,6 +4131,9 @@ function questionMarkup(question, result, attributes) {
   const answerAttributes = attributes.exerciseKey
     ? `data-answer-kind="exercise" data-answer-key="${escapeHtml(attributes.exerciseKey)}"`
     : `data-answer-kind="quiz" data-answer-part="${escapeHtml(attributes.part)}" data-answer-key="${escapeHtml(attributes.questionKey)}"`;
+  const resultKey = attributes.exerciseKey
+    ? `exercise:${attributes.exerciseKey}`
+    : `quiz:${attributes.part}:${attributes.questionKey}`;
 
   return `
     <article class="card wide question-card">
@@ -4045,7 +4152,10 @@ function questionMarkup(question, result, attributes) {
         <div class="answer-box ${result.is_correct ? 'correct' : 'incorrect'}">
           <strong>${result.is_correct ? 'Correcto' : 'Todavía no'}</strong>
           ${result.explanation ? `<p>${escapeHtml(result.explanation)}</p>` : ''}
-          <small>Intento ${result.attempt_no || 1}</small>
+          <div class="answer-foot">
+            <small>Intento ${result.attempt_no || 1}</small>
+            <button class="btn-mini" data-retry-question="${escapeHtml(resultKey)}">↺ Reintentar</button>
+          </div>
         </div>
       ` : ''}
     </article>
@@ -4336,6 +4446,15 @@ function renderUnit() {
 
   appRoot.querySelectorAll('[data-answer-key]').forEach((button) => {
     button.addEventListener('click', answerQuestion);
+  });
+
+  appRoot.querySelectorAll('[data-retry-question]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const key = button.dataset.retryQuestion;
+      if (!key) return;
+      delete state.unitResults[key];
+      renderUnit();
+    });
   });
 
   appRoot.querySelectorAll('[data-reveal]').forEach((button) => {
@@ -4880,7 +4999,51 @@ async function setAssignmentStatus(button, status) {
 /* ---------------- Ficha completa del alumno (ventana emergente) ---------------- */
 
 function fichaCsv(value) {
-  return Array.isArray(value) ? value.filter(Boolean).join(', ') : '';
+  return Array.isArray(value) ? value.filter(Boolean).map(careerName).join(', ') : '';
+}
+
+function careerName(value) {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && value.name) return value.name;
+  return '';
+}
+
+function careerNames(value) {
+  return Array.isArray(value) ? value.map(careerName).filter(Boolean) : [];
+}
+
+// Recalcula el score de las carreras con la misma fórmula de especificidad
+// que usa el test, para mostrar porcentajes diferenciados incluso con
+// resultados guardados antes de la mejora.
+function careerDisplayScores(careers) {
+  const list = (Array.isArray(careers) ? careers : [])
+    .map((career) => ({
+      name: typeof career === 'string' ? career : career?.name,
+      matches: Array.isArray(career?.matches) ? career.matches.map(String) : []
+    }))
+    .filter((career) => Boolean(career.name));
+
+  const tagFrequency = {};
+  for (const career of careerCatalog) {
+    for (const tag of career.tags) {
+      tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+    }
+  }
+
+  const weighted = list
+    .map((career) => ({
+      ...career,
+      weight: career.matches.reduce((sum, tag) => sum + 1 / (tagFrequency[tag] || 1), 0)
+    }))
+    .sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name));
+
+  const maxWeight = weighted[0]?.weight || 1;
+
+  return weighted.map((career) => ({
+    name: career.name,
+    matches: career.matches,
+    score: Math.round((career.weight / maxWeight) * 100)
+  }));
 }
 
 function fichaJson(value) {
@@ -5043,7 +5206,7 @@ function fichaActivityMarkup(data, student, detail) {
 }
 
 function fichaTagGroupMarkup(label, values) {
-  const list = Array.isArray(values) ? values.filter(Boolean) : [];
+  const list = Array.isArray(values) ? values.map(careerName).filter(Boolean) : [];
   if (!list.length) return '';
 
   return `
@@ -5106,24 +5269,20 @@ function fichaTestResultsMarkup(profile) {
         ${vocationalDone ? `
           ${careers.length ? `
             <div class="test-career-results">
-              ${careers.slice(0, 6).map((career) => {
-                const name = typeof career === 'string' ? career : career?.name;
-                const score = typeof career === 'object' ? Number(career?.score ?? 0) : 0;
-                return `
+              ${careerDisplayScores(careers).slice(0, 6).map((career) => `
                   <div class="test-career-row">
                     <div>
-                      <strong>${escapeHtml(name || 'Carrera')}</strong>
-                      <small>${(career?.matches || []).map((tag) => escapeHtml(tag)).join(' · ') || 'Coincide con su perfil'}</small>
+                      <strong>${escapeHtml(career.name)}</strong>
+                      <small>${career.matches.map((tag) => escapeHtml(tag)).join(' · ') || 'Coincide con su perfil'}</small>
                     </div>
                     <div class="test-career-score">
                       <div class="ficha-bar" aria-hidden="true">
-                        <div class="ficha-bar-fill" style="--bar-color:var(--brand-2);--bar-scale:${(Math.max(0, Math.min(100, score)) / 100).toFixed(3)}"></div>
+                        <div class="ficha-bar-fill" style="--bar-color:var(--brand-2);--bar-scale:${(Math.max(0, Math.min(100, career.score)) / 100).toFixed(3)}"></div>
                       </div>
-                      <strong>${score}%</strong>
+                      <strong>${career.score}%</strong>
                     </div>
                   </div>
-                `;
-              }).join('')}
+                `).join('')}
             </div>
           ` : ''}
           ${interests.length ? `
@@ -5162,13 +5321,10 @@ function fichaProfilePanelMarkup(student, profile) {
     <form class="form ficha-profile-form" data-save-profile="${escapeHtml(student.id)}">
       <div class="ficha-form-grid">
         <label class="field"><span>Carrera que quiere</span><input name="career_choice" value="${escapeHtml(profile.career_choice || '')}" placeholder="ej. Medicina"></label>
-        <label class="field"><span>Carreras sugeridas (separadas por coma)</span><input name="career_suggestions" value="${escapeHtml(fichaCsv(profile.career_suggestions))}" placeholder="ej. Enfermería, Biología"></label>
-        <label class="field"><span>Intereses (separados por coma)</span><input name="interests" value="${escapeHtml(fichaCsv(profile.interests))}" placeholder="ciencia, música…"></label>
-        <label class="field"><span>Aptitudes (separadas por coma)</span><input name="aptitudes" value="${escapeHtml(fichaCsv(profile.aptitudes))}" placeholder="razonamiento, lectura…"></label>
-        <label class="field"><span>Fortalezas (separadas por coma)</span><input name="strengths" value="${escapeHtml(fichaCsv(profile.strengths))}" placeholder="disciplina, constancia…"></label>
         <label class="field"><span>Áreas a trabajar (separadas por coma)</span><input name="weaknesses" value="${escapeHtml(fichaCsv(profile.weaknesses))}" placeholder="organización, ansiedad…"></label>
         <label class="field wide"><span>Notas de orientación vocacional</span><textarea name="vocational_notes" placeholder="Acuerdos, seguimiento y observaciones de orientación…">${escapeHtml(profile.vocational_notes || '')}</textarea></label>
       </div>
+      <p class="hint">🔒 Carreras sugeridas, intereses, aptitudes y fortalezas salen de los tests del alumno; no se editan a mano.</p>
       <div class="ficha-form-actions">
         <button class="btn primary" type="submit">Guardar perfil profesional</button>
       </div>
@@ -5511,14 +5667,18 @@ async function saveStudentProfile(event, studentId) {
   const payload = {
     student_id: studentId,
     career_choice: String(data.get('career_choice') || '').trim() || null,
-    career_suggestions: split(data.get('career_suggestions')),
-    interests: split(data.get('interests')),
-    aptitudes: split(data.get('aptitudes')),
-    strengths: split(data.get('strengths')),
     weaknesses: split(data.get('weaknesses')),
     vocational_notes: String(data.get('vocational_notes') || '').trim() || null,
     updated_at: new Date().toISOString()
   };
+
+  // Los campos derivados de los tests (carreras sugeridas, intereses,
+  // aptitudes, fortalezas) solo se incluyen si el formulario los expone,
+  // para no borrar resultados guardados por los tests del alumno.
+  if (data.has('career_suggestions')) payload.career_suggestions = split(data.get('career_suggestions'));
+  if (data.has('interests')) payload.interests = split(data.get('interests'));
+  if (data.has('aptitudes')) payload.aptitudes = split(data.get('aptitudes'));
+  if (data.has('strengths')) payload.strengths = split(data.get('strengths'));
 
   // Los tests se guardan con app_save_student_test. Solo incluirlos si el
   // formulario los expone para no borrar resultados ya guardados.

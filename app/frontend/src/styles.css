@@ -3671,3 +3671,357 @@ body.unit-assign-open {
     max-height: none;
   }
 }
+
+/* ---------------- Héroe y unidades del alumno ---------------- */
+
+.student-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 8px 0 22px;
+  padding: 24px 26px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    radial-gradient(480px 200px at 90% -20%, var(--glow-1), transparent 60%),
+    linear-gradient(130deg, var(--ficha-hero-1), var(--ficha-hero-2));
+  box-shadow: var(--shadow-soft);
+}
+
+.student-hero-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.student-hero-copy h1 {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.03em;
+}
+
+.student-hero-copy p {
+  margin: 0;
+}
+
+.student-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.student-hero-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.student-avatar {
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  font-size: 26px;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(91, 140, 255, 0.3);
+}
+
+.student-unit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.student-unit-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent, var(--brand));
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.student-unit-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent, var(--brand));
+}
+
+.student-unit-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.student-unit-subject {
+  color: var(--accent, var(--brand));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-unit-card h3 {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.3;
+}
+
+.student-unit-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 8px;
+}
+
+.student-unit-card .btn {
+  width: auto;
+  justify-self: start;
+}
+
+/* ---------------- Finanzas mejoradas ---------------- */
+
+.pay-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pay-stat-icon {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--soft-row);
+  font-size: 21px;
+}
+
+.pay-stat-violet .pay-stat-icon { background: rgba(139, 92, 246, 0.16); }
+.pay-stat-green .pay-stat-icon { background: rgba(13, 159, 110, 0.16); }
+.pay-stat-blue .pay-stat-icon { background: rgba(47, 107, 255, 0.16); }
+
+.pay-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 14px;
+}
+
+.pay-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.pay-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+}
+
+.pay-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pay-avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.pay-avatar-lg {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 20px;
+}
+
+.pay-who {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pay-who strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-who small,
+.pay-who p {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin: 0;
+}
+
+.pay-card-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pay-metric {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  min-width: 0;
+}
+
+.pay-metric strong {
+  overflow: hidden;
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-metric .pay-good { color: var(--good); }
+.pay-metric .pay-last { font-size: 12px; font-weight: 700; color: var(--text); }
+
+.pay-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pay-card-actions .btn {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+.pay-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pay-dialog-head h2 {
+  margin: 2px 0 2px;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.pay-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pay-plan-option,
+.pay-method-option {
+  padding: 10px 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pay-plan-option:hover,
+.pay-method-option:hover {
+  border-color: var(--brand);
+}
+
+.pay-plan-option.selected,
+.pay-method-option.selected {
+  border-color: var(--brand);
+  background: var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.pay-method-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pay-amount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--input-bg);
+}
+
+.pay-currency {
+  color: var(--good);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.pay-amount-wrap input {
+  height: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.answer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 720px) {
+  .pay-card-body { grid-template-columns: 1fr; }
+  .pay-method-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .student-hero { padding: 20px 18px; }
+}
