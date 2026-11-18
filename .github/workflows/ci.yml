@@ -1,0 +1,123 @@
+name: CI y despliegue
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build y pruebas
+    runs-on: ubuntu-latest
+    env:
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/frontend/package-lock.json
+            app/scripts/package-lock.json
+
+      - name: Dependencias del frontend
+        working-directory: app/frontend
+        run: npm ci
+
+      - name: Dependencias de scripts
+        working-directory: app/scripts
+        run: npm ci
+
+      - name: Verificar configuración de producción
+        if: github.ref == 'refs/heads/main'
+        working-directory: app/frontend
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$VITE_SUPABASE_URL" || { echo "Falta el secreto VITE_SUPABASE_URL"; exit 1; }
+          test -n "$VITE_SUPABASE_ANON_KEY" || { echo "Falta el secreto VITE_SUPABASE_ANON_KEY"; exit 1; }
+          case "$VITE_SUPABASE_URL" in
+            *ioikcrdxneuydylyhvwi*) echo "La URL de producción es la esperada para este despliegue." ;;
+          esac
+
+      - name: Huella del aviso de privacidad
+        working-directory: app
+        run: node scripts/privacy-doc.mjs --check
+
+      - name: Build de producción
+        working-directory: app/frontend
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_STUDENT_EMAIL_DOMAIN: alumnos.ecoems.mx
+          VITE_APP_ENV: production
+        run: npm run build -- --base=/CursosProfeLuis/
+
+      - name: Pruebas de RLS contra staging
+        if: env.STAGING_DATABASE_URL != ''
+        working-directory: app
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: node scripts/run-rls-tests.mjs
+
+      - name: Aviso si no hay staging
+        if: env.STAGING_DATABASE_URL == ''
+        run: echo "::warning::No hay STAGING_DATABASE_URL; la suite de RLS no se ejecutó."
+
+      - name: Publicar artefacto del build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ github.sha }}
+          path: app/frontend/dist
+          retention-days: 14
+
+      - name: Desplegar en gh-pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./app/frontend/dist
+          publish_branch: gh-pages
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+          commit_message: "Despliegue ${{ github.sha }}"
+
+      - name: Etiquetar la versión desplegada
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          TAG="deploy-${GITHUB_SHA::7}"
+          git tag -f "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG" || echo "::warning::No se pudo publicar la etiqueta $TAG"
+
+      - name: Health check posterior al despliegue
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          set -e
+          for i in $(seq 1 12); do
+            if curl -fsS -o /dev/null "https://monetarytexas42.github.io/CursosProfeLuis/"; then
+              echo "Portal: OK"
+              break
+            fi
+            echo "Esperando a que Pages publique… ($i/12)"
+            sleep 10
+          done
+          curl -fsS "https://monetarytexas42.github.io/CursosProfeLuis/" > /dev/null
+          curl -fsS "https://monetarytexas42.github.io/CursosProfeLuis/privacidad.html" | grep -q "v3-2026"
+          echo "Aviso de privacidad v3-2026: OK"

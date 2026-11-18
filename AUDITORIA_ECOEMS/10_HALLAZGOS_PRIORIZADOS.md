@@ -262,12 +262,19 @@ Para evitar confusiones en la revisión:
 
 ## 8. Criterio de salida del piloto
 
-> **Estado a 17 nov 2026:** la Fase 0 (`OPS-05`, `COD-07`) y la Fase 1
-> (`SEC-01`, `SEC-02`, `SEC-03`, `PRIV-01`, `PRIV-02`/`DB-08`, `OPS-03`) están
-> **implementadas en código y versionadas, pero no aplicadas ni verificadas en
-> staging**. Por eso las casillas siguen abiertas: la corrección no se declara
-> terminada hasta ejecutar las migraciones y la suite en un entorno aislado.
-> `OPS-09` (staging real) continúa bloqueado por falta de credenciales.
+> **Estado a 17 nov 2026:** la Fase 0 (`OPS-05`, `COD-07`), la Fase 1
+> (`SEC-01`, `SEC-02`, `SEC-03`, `PRIV-01`, `PRIV-02`/`DB-08`, `OPS-03`) y la
+> Fase 2 (`SEC-04`, `FUN-01`, `FUN-02`, `PRIV-03`, `PRIV-05`/`OPS-01`,
+> `OPS-02`, `OPS-04`, `DB-07`) están **implementadas en código y versionadas,
+> pero no aplicadas ni verificadas en staging**. Por eso las casillas siguen
+> abiertas: la corrección no se declara terminada hasta ejecutar las
+> migraciones (`0028`–`0031`), desplegar `deactivate-user` y correr la suite de
+> **113 checks** en un entorno aislado. `OPS-09` (staging real) continúa
+> bloqueado por falta de credenciales.
+>
+> Queda un pendiente funcional dentro de `FUN-02`: el recibo descargable en
+> PDF. El folio, el periodo, el saldo, la detección de duplicados y la
+> anulación auditada ya están implementados.
 
 Para declarar que la plataforma puede operar con datos reales de menores, deben cumplirse **todos** estos:
 
@@ -275,10 +282,15 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [ ] `SEC-02`, `SEC-03` y `SEC-04` corregidos y probados con cuentas reales en staging.
 - [ ] `PRIV-01` implementado en código: aviso publicado, enlace, hash y bloqueo (falta verificación en staging).
 - [ ] `PRIV-02` y `DB-08` resueltos: notas internas fuera del alcance de la familia.
-- [ ] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura.
+- [ ] `FUN-01` verificado en staging: el tutor ve avance, calificaciones, asistencia, tareas y observaciones `family` de sus hijos, sin poder editar.
+- [ ] `FUN-02` verificado en staging: periodo, saldo, duplicado y anulación auditada; recibo descargable implementado.
+- [ ] `PRIV-03` verificado en staging: el tutor no lee `student_profiles` crudo ni notas internas; solo `student_guidance`.
+- [ ] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura, con una restauración de prueba exitosa.
 - [ ] `OPS-03` y `OPS-09` resueltos: staging real y pruebas bloqueadas en producción.
+- [ ] `OPS-04` verificado: CI publica sin `push -f`, etiqueta el commit y el rollback tarda menos de 15 minutos.
 - [ ] `COD-07` implementado: suite de RLS negativa en CI.
-- [ ] Aviso de privacidad validado por abogado.
+- [ ] `DB-07` cerrado: `verify-migrations.mjs` confirma qué migraciones están aplicadas en staging y producción (solo lectura).
+- [ ] Aviso de privacidad `v3-2026` validado por abogado y sin placeholders.
 - [ ] Respaldos automáticos de Supabase verificados y restauración probada.
 - [ ] Runbook de incidentes documentado.
 

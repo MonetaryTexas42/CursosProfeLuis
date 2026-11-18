@@ -171,8 +171,8 @@ export const checks = [
   zero(
     "RLS-19",
     "student1",
-    "El alumno solo ve su perfil psicopedagógico (PRIV-03)",
-    "select count(*)::int as n from public.student_profiles sp where sp.student_id <> public.app_student_id()",
+    "El alumno no lee la tabla cruda del perfil vocacional; usa student_guidance (PRIV-03)",
+    "select count(*)::int as n from public.student_profiles",
     { requires: ["student1"] },
   ),
   zero(
@@ -308,8 +308,8 @@ export const checks = [
   zero(
     "RLS-47",
     "guardian1",
-    "El tutor solo ve el perfil psicopedagógico de sus hijos",
-    "select count(*)::int as n from public.student_profiles sp where not public.app_is_guardian_of(sp.student_id)",
+    "El tutor no lee la tabla cruda del perfil vocacional; usa student_guidance (PRIV-03)",
+    "select count(*)::int as n from public.student_profiles",
     { requires: ["guardian1"] },
   ),
   zero(
@@ -601,6 +601,224 @@ export const checks = [
     "El tutor no puede fabricar un consentimiento por PostgREST",
     "select count(*)::int as n from pg_policies where schemaname = 'public' and tablename = 'privacy_consents' and policyname = 'privacy_consents_guardian_insert'",
     { requires: ["guardian1"] },
+  ),
+
+  // ------------------------------------------ offboarding real (SEC-04)
+  yes(
+    "RLS-108",
+    "admin",
+    "profiles registra fecha, actor y motivo de la desactivación (SEC-04)",
+    `select (count(*) = 3) as ok
+       from information_schema.columns
+      where table_schema = 'public' and table_name = 'profiles'
+        and column_name in ('deactivated_at', 'deactivated_by', 'deactivation_reason')`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-109",
+    "admin",
+    "El motivo de desactivación tiene límite de longitud (SEC-04)",
+    `select (count(*) = 1) as ok
+       from pg_constraint
+      where conrelid = 'public.profiles'::regclass
+        and conname = 'profiles_deactivation_reason_len'`,
+    { requires: ["admin"] },
+  ),
+
+  // ------------------------------- perfil vocacional curado (PRIV-03)
+  yes(
+    "RLS-110",
+    "admin",
+    "student_guidance existe y no expone notas internas ni áreas a trabajar",
+    `select (
+       (select count(*) from information_schema.columns
+         where table_schema = 'public' and table_name = 'student_guidance') > 0
+       and (select count(*) from information_schema.columns
+             where table_schema = 'public' and table_name = 'student_guidance'
+               and column_name in ('weaknesses', 'vocational_notes', 'extras')) = 0
+     ) as ok`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-111",
+    "admin",
+    "student_profiles_select ya no usa app_can_access_student (PRIV-03)",
+    `select (count(*) = 0) as ok
+       from pg_policies
+      where schemaname = 'public' and tablename = 'student_profiles'
+        and policyname = 'student_profiles_select'
+        and coalesce(qual, '') like '%app_can_access_student%'`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-112",
+    "admin",
+    "student_profiles_select deja la tabla cruda al personal docente (PRIV-03)",
+    `select (count(*) = 1) as ok
+       from pg_policies
+      where schemaname = 'public' and tablename = 'student_profiles'
+        and policyname = 'student_profiles_select'
+        and coalesce(qual, '') like '%app_is_teacher_of_student%'`,
+    { requires: ["admin"] },
+  ),
+  zero(
+    "RLS-113",
+    "student1",
+    "El alumno no ve el resumen vocacional de otros alumnos (PRIV-03)",
+    "select count(*)::int as n from public.student_guidance g where g.student_id <> public.app_student_id()",
+    { requires: ["student1"] },
+  ),
+  zero(
+    "RLS-114",
+    "guardian1",
+    "El tutor sin consentimiento no ve el resumen vocacional (PRIV-03)",
+    "select count(*)::int as n from public.student_guidance",
+    { requires: ["guardian1"] },
+  ),
+  zero(
+    "RLS-115",
+    "guardian3",
+    "El tutor con consentimiento no ve el resumen de un alumno no consentido (PRIV-03)",
+    "select count(*)::int as n from public.student_guidance g where g.student_id <> $1::uuid",
+    { requires: ["guardian3", "student2_id"], params: (f) => [f.student2_id] },
+  ),
+  zero(
+    "RLS-116",
+    "teacher",
+    "El profesor solo ve el resumen vocacional de sus alumnos (PRIV-03)",
+    "select count(*)::int as n from public.student_guidance g where not public.app_is_teacher_of_student(g.student_id)",
+    { requires: ["teacher"] },
+  ),
+  zero(
+    "RLS-117",
+    "teacher_other",
+    "Otro profesor no ve el resumen vocacional del alumno ajeno (PRIV-03)",
+    "select count(*)::int as n from public.student_guidance g where g.student_id = $1::uuid",
+    { requires: ["teacher_other", "student1_id"], params: (f) => [f.student1_id] },
+  ),
+
+  // ------------------------------ pagos con trazabilidad (FUN-02)
+  yes(
+    "RLS-118",
+    "admin",
+    "payments guarda periodo, estado, folio, idempotencia y anulación (FUN-02)",
+    `select (count(*) = 8) as ok
+       from information_schema.columns
+      where table_schema = 'public' and table_name = 'payments'
+        and column_name in (
+          'period_start', 'period_end', 'status', 'receipt_no',
+          'idempotency_key', 'voided_at', 'voided_by', 'void_reason'
+        )`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-119",
+    "admin",
+    "payments no tiene política de DELETE: el historial no se borra (FUN-02)",
+    `select (count(*) = 0) as ok
+       from pg_policies
+      where schemaname = 'public' and tablename = 'payments' and cmd = 'DELETE'`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-120",
+    "admin",
+    "app_void_payment es SECURITY DEFINER con search_path fijo (FUN-02)",
+    `select (count(*) = 1) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_void_payment'
+        and p.prosecdef
+        and exists (
+          select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) as c
+           where c like 'search_path=%'
+        )`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-121",
+    "admin",
+    "student_billing_status respeta la RLS del invocador (FUN-02)",
+    `select (
+       (select count(*) from pg_views
+         where schemaname = 'public' and viewname = 'student_billing_status') = 1
+       and (select coalesce(array_to_string(c.reloptions, ','), '') like '%security_invoker=true%'
+              from pg_class c
+              join pg_namespace n on n.oid = c.relnamespace
+             where n.nspname = 'public' and c.relname = 'student_billing_status')
+     ) as ok`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-122",
+    "admin",
+    "payment_duplicates respeta la RLS del invocador (FUN-02)",
+    `select (
+       (select count(*) from pg_views
+         where schemaname = 'public' and viewname = 'payment_duplicates') = 1
+       and (select coalesce(array_to_string(c.reloptions, ','), '') like '%security_invoker=true%'
+              from pg_class c
+              join pg_namespace n on n.oid = c.relnamespace
+             where n.nspname = 'public' and c.relname = 'payment_duplicates')
+     ) as ok`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-123",
+    "admin",
+    "El trigger de folio, duplicados y auditoría está activo (FUN-02)",
+    `select (count(*) = 1) as ok
+       from pg_trigger t
+       join pg_class c on c.oid = t.tgrelid
+       join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'payments'
+        and t.tgname = 'payments_before_write' and not t.tgisinternal`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-124",
+    "admin",
+    "Folio e idempotencia son únicos (FUN-02)",
+    `select (count(*) = 2) as ok
+       from pg_indexes
+      where schemaname = 'public' and tablename = 'payments'
+        and indexname in ('payments_idempotency_key_idx', 'payments_receipt_no_idx')`,
+    { requires: ["admin"] },
+  ),
+  zero(
+    "RLS-125",
+    "student1",
+    "El alumno no ve su estado de cuenta (FUN-02)",
+    "select count(*)::int as n from public.student_billing_status",
+    { requires: ["student1"] },
+  ),
+  zero(
+    "RLS-126",
+    "guardian1",
+    "El tutor sin consentimiento no ve el estado de cuenta (FUN-02)",
+    "select count(*)::int as n from public.student_billing_status",
+    { requires: ["guardian1"] },
+  ),
+  zero(
+    "RLS-127",
+    "guardian3",
+    "El tutor con consentimiento no ve el estado de cuenta de un alumno no consentido (FUN-02)",
+    "select count(*)::int as n from public.student_billing_status b where b.student_id <> $1::uuid",
+    { requires: ["guardian3", "student2_id"], params: (f) => [f.student2_id] },
+  ),
+  zero(
+    "RLS-128",
+    "teacher",
+    "El profesor solo ve el estado de cuenta de sus alumnos (FUN-02)",
+    "select count(*)::int as n from public.student_billing_status b where not public.app_is_teacher_of_student(b.student_id)",
+    { requires: ["teacher"] },
+  ),
+  zero(
+    "RLS-129",
+    "teacher_other",
+    "Otro profesor no ve el estado de cuenta del alumno ajeno (FUN-02)",
+    "select count(*)::int as n from public.student_billing_status b where b.student_id = $1::uuid",
+    { requires: ["teacher_other", "student1_id"], params: (f) => [f.student1_id] },
   ),
 
   // ----------------------------------------------------------- administrador

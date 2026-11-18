@@ -31,17 +31,22 @@ migrations/
   0025_password_change_server.sql cambio de contraseña verificado (SEC-03)
   0026_student_link_tokens.sql invitaciones de alumno con token (SEC-02)
   0027_privacy_notice.sql      aviso, evidencia y bloqueo del tutor (PRIV-01)
+  0028_offboarding.sql         desactivación con ban en Auth y rastro (SEC-04)
+  0029_payments_traceability.sql periodo, saldo, folio, duplicados y anulación (FUN-02)
+  0030_vocational_visibility.sql perfil vocacional curado para la familia (PRIV-03)
+  0031_privacy_notice_v3.sql    aviso v3-2026 con finalidad educativa (PRIV-03)
 tests/
   0004_progress_rpcs.sql       prueba SQL transaccional de las RPC de progreso
   0006_game_reading_rpcs.sql   prueba SQL transaccional de juegos y lectura
   0007_content_smoke.sql       flujo completo con contenido real (asignación → completar)
-  rls/rls-negative.mjs         suite de RLS negativa (91 checks, ver COD-07)
+  rls/rls-negative.mjs         suite de RLS negativa (113 checks, ver COD-07)
 ```
 
-El repositorio contiene **27 migraciones**. Un entorno creado desde cero
-(staging) tiene 40 tablas, RLS en todas y 88 políticas. El estado real de
-producción **no está verificado** (`DB-07`): no se debe asumir que las 27
+El repositorio contiene **31 migraciones**. Un entorno creado desde cero
+(staging) tiene 40 tablas, RLS en todas y 90 políticas. El estado real de
+producción **no está verificado** (`DB-07`): no se debe asumir que las 31
 migraciones estén aplicadas ni que producción coincida con el repositorio.
+`scripts/verify-migrations.mjs` compara lo aplicado con los archivos locales.
 
 ## Configuración versionada
 
@@ -70,7 +75,7 @@ cambia el comportamiento de Auth para todos los usuarios del proyecto.
 
 ## Suite de RLS negativa (COD-07)
 
-`tests/rls/rls-negative.mjs` contiene 91 verificaciones que expresan el
+`tests/rls/rls-negative.mjs` contiene 113 verificaciones que expresan el
 comportamiento **seguro esperado** para `anon`, alumno con y sin asignación,
 tutor con y sin vínculos, tutor con consentimiento vigente, profesor, otro
 profesor y admin. Se ejecuta con un runner que descubre identidades reales,
@@ -88,9 +93,10 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 - `2`: error de configuración o conexión.
 
 Los roles sin identidad se marcan **SKIP**, nunca PASS. Antes de la Fase 1 la
-línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0027` aplicadas y
+línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0031` aplicadas y
 los fixtures de consentimiento, la expectativa es **0 FAIL**; cualquier FAIL
-nuevo es una regresión.
+nuevo es una regresión. La Fase 2 añade RLS-108–129 (offboarding, perfil
+vocacional curado y pagos con trazabilidad).
 
 ## Verificación de staging (OPS-09)
 
@@ -133,8 +139,9 @@ está en [`../docs/staging.md`](../docs/staging.md).
 
 ## Pruebas ejecutadas
 
-- **91 verificaciones de RLS** en `tests/rls/rls-negative.mjs`, ejecutadas con
-  identidades ficticias y `rollback` (ver COD-07 más arriba).
+- **113 verificaciones de RLS** en `tests/rls/rls-negative.mjs` (ver COD-07 más
+  arriba). La suite está validada con `node --check`; **aún no se ha ejecutado
+  contra una base** porque staging sigue bloqueado.
 - `tests/0004_progress_rpcs.sql`: inicio, intentos, quiz/reto, precisión, completado,
   tutor bloqueado y asignación cerrada bloqueada (8 verificaciones).
 - `tests/0006_game_reading_rpcs.sql`: sesiones de juego, lecturas, estadísticas y
@@ -150,6 +157,8 @@ está en [`../docs/staging.md`](../docs/staging.md).
 functions/
   admin-create-student/        alta de alumno (admin o profesor del grupo)   [listo]
   admin-reset-student-password/ contraseña temporal con auditoría            [listo]
+  admin-create-teacher/        alta de profesor                              [listo]
+  deactivate-user/             desactivación con ban en Auth (SEC-04)        [nuevo, por desplegar]
   invite-guardian/             invitación de tutor con enlace mágico         [nuevo, por desplegar]
   guardian-consent/            aceptación/revocación del aviso de privacidad [nuevo, por desplegar]
   complete-password-change/    cambio de contraseña verificado (SEC-03)      [nuevo, por desplegar]
@@ -194,15 +203,35 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 El runner exige `TEST_STUDENT_CODE` (fixture ficticio) y se niega a ejecutar
 contra producción salvo `ALLOW_PRODUCTION_SQL_TEST=1`.
 
-## Respaldo
+## Respaldo y restauración
 
 ```bash
 cd app
+# Respaldo cifrado (AES-256-GCM). Excluye todo auth.* por defecto.
 DATABASE_URL="$(cat .secrets/database-url)" node scripts/backup-db.mjs
+
+# Restauración: exige confirmación explícita y respalda antes de escribir.
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/restore-db.mjs .backups/<archivo>.enc --confirm=restore
 ```
 
-Escribe en `.backups/` (ignorado por git) un JSON con todas las tablas de
-`auth` y `public`. El esquema se reproduce con las migraciones.
+Los respaldos viven en `.backups/` (ignorado por git) con permisos `600`; la
+llave en `.secrets/backup.key` (o `BACKUP_KEY`). Se conservan 30 días y cada
+archivo deja `.sha256` y una línea en `backup.log`. Restaurar contra producción
+exige además `--i-know` y deja rastro en `restore.log`. Incluir `auth.*` en un
+respaldo requiere `--include-auth` y `ALLOW_AUTH_BACKUP=1`.
+
+## Verificación de migraciones (DB-07)
+
+```bash
+cd app
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/verify-migrations.mjs --out=.backups/migrations-staging.json
+```
+
+Es de solo lectura: compara `supabase_migrations.schema_migrations` con los
+archivos locales, lista políticas y funciones, y detecta `SECURITY DEFINER`
+sin `search_path` fijo. Avisa si el destino es producción.
 
 ## Despliegue de Edge Functions
 

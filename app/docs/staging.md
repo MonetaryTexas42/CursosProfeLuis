@@ -25,7 +25,7 @@ Reglas no negociables:
 | Pieza | Estado |
 |---|---|
 | `supabase/config.toml` versionado | Listo |
-| Suite RLS negativa (`68` checks) | Lista, pendiente de ejecutar |
+| Suite RLS negativa (`113` checks) | Lista, pendiente de ejecutar |
 | Runner `scripts/run-rls-tests.mjs` | Listo |
 | Verificador `scripts/staging-check.mjs` | Listo |
 | Seed `scripts/seed-staging-users.mjs` | Listo |
@@ -191,8 +191,9 @@ VITE_SUPABASE_URL="https://<REF_STAGING>.supabase.co" \
   node scripts/staging-check.mjs
 ```
 
-Debe reportar el ref de staging, 40 tablas, 88 políticas y perfiles de los
-cuatro roles. Si aparece una advertencia, corrígela antes de probar RLS.
+Debe reportar el ref de staging, 40 tablas, 90 políticas, 31 migraciones y
+perfiles de los cuatro roles. Si aparece una advertencia, corrígela antes de
+probar RLS.
 
 ### 3.8. Ejecutar la suite de RLS negativa
 
@@ -204,8 +205,9 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 ```
 
 La suite expresa el comportamiento **seguro esperado**. Antes de la Fase 1 la
-línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0027` aplicadas y
-los fixtures de consentimiento, la expectativa es **0 FAIL**. Códigos de salida:
+línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0031` aplicadas y
+los fixtures de consentimiento, la expectativa es **0 FAIL** (113 checks;
+RLS-108–129 cubren la Fase 2). Códigos de salida:
 
 - `0`: todo PASS o SKIP justificado.
 - `1`: hay FAIL (comportamiento inseguro).
@@ -346,14 +348,18 @@ Si falta una identidad, los checks dependientes se marcan **SKIP**, nunca PASS.
 
 - [ ] El proyecto de staging tiene un ref distinto de producción.
 - [ ] `staging-check.mjs` no aborta y no muestra advertencias.
-- [ ] Las 27 migraciones están aplicadas.
+- [ ] Las 31 migraciones están aplicadas.
 - [ ] `config.toml` está aplicado en staging (`config diff` sin cambios).
 - [ ] El seed de usuarios corre dos veces sin errores (idempotente).
 - [ ] La suite RLS no produce PASS falsos: los roles sin identidad salen SKIP.
-- [ ] La suite RLS termina con **0 FAIL** tras `0023`–`0027` (la línea base previa era 6: `SEC-01` y `PRIV-02`).
-- [ ] `guardian-consent` está desplegada y la vista `privacy_document` devuelve la versión y el hash del aviso.
+- [ ] La suite RLS termina con **0 FAIL** tras `0023`–`0031` (la línea base previa era 6: `SEC-01` y `PRIV-02`).
+- [ ] `guardian-consent` está desplegada y la vista `privacy_document` devuelve `v3-2026` y su hash.
 - [ ] Un tutor sin consentimiento no ve datos del alumno y puede aceptar desde el panel.
 - [ ] `complete-password-change` está desplegada y `app_complete_password_change` ya no existe.
+- [ ] `deactivate-user` banea en Auth, registra actor/motivo y compensa si falla el update (`SEC-04`).
+- [ ] `student_guidance` no expone `weaknesses`, `vocational_notes` ni `extras` (`PRIV-03`).
+- [ ] `student_billing_status`, `payment_duplicates` y `app_void_payment` responden con los fixtures (`FUN-02`).
+- [ ] `verify-migrations.mjs` confirma 31 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
 - [ ] El frontend compila en modo `staging` y no contiene secretos.
 - [ ] No hay datos reales ni PII en staging.
 

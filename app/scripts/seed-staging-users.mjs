@@ -264,7 +264,7 @@ async function main() {
 
     const privacyRes = await client.query(
       `select
-         coalesce((select value #>> '{}' from public.settings where key = 'privacy_document_version'), 'v2-2026') as version,
+         coalesce((select value #>> '{}' from public.settings where key = 'privacy_document_version'), 'v3-2026') as version,
          coalesce((select value #>> '{}' from public.settings where key = 'privacy_document_url'), '/privacidad.html') as url,
          coalesce((select value #>> '{}' from public.settings where key = 'privacy_document_sha256'), '') as sha256`,
     );

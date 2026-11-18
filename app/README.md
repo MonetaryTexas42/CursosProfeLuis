@@ -23,16 +23,28 @@ Base local de Fase 1. Proyecto Supabase: `ioikcrdxneuydylyhvwi` (staging por cre
 - Los intentos y el progreso por unidad siguen regidos por asignaciones activas.
 - El progreso local (localStorage) del reproductor se conserva como respaldo temporal, pendiente de sincronizar con Supabase (Fase 2).
 
-### Republicar el frontend
+### Publicar el frontend
+
+El despliegue ya **no** se hace con `git push -f`. El workflow
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) construye el
+frontend, valida el aviso de privacidad, corre la suite RLS contra staging
+(cuando `STAGING_DATABASE_URL` está configurada) y publica en `gh-pages`. Cada
+publicación deja la etiqueta `deploy-<sha>` y pasa un health check.
+
+```bash
+# Publicación normal: commit en main
+git push origin main
+
+# Rollback: volver a publicar una etiqueta anterior
+git checkout deploy-<sha>
+```
+
+El runbook completo —secretos, rollback y verificación— está en
+[`docs/despliegue.md`](docs/despliegue.md). Para probar el build en local:
 
 ```bash
 cd app/frontend
 npm run build -- --base=/CursosProfeLuis/
-cd dist
-git init -b gh-pages
-git add -A
-git commit -m "Build de la plataforma"
-git push -f https://github.com/MonetaryTexas42/CursosProfeLuis.git gh-pages
 ```
 
 ## Estructura
@@ -105,6 +117,22 @@ app/
       mensual, contado, beca u otro + cuota), registro de pagos (monto,
       fecha, método y concepto) e historial. El **tutor ve su propio estado
       de cuenta** (solo lectura); los alumnos **no** tienen acceso a pagos.
+- [x] Pagos con trazabilidad (`0029`, FUN-02): periodo cubierto, folio
+      `REC-<año>-<n>`, estado (`paid`/`partial`/`voided`), clave de
+      idempotencia, detección de duplicados, estado de cuenta por alumno
+      (`al corriente`/`parcial`/`pendiente`/`vencido`/`beca`) y anulación con
+      motivo y auditoría. El historial no se borra: se anula.
+- [x] Panel del tutor (`FUN-01`): avance, calificaciones, asistencia, tareas,
+      observaciones `family` y estado de cuenta de sus hijos, todo en solo
+      lectura y con estados vacíos.
+- [x] Perfil vocacional curado (`0030`, PRIV-03): la familia usa
+      `student_guidance` (intereses, aptitudes, fortalezas, carrera de
+      interés); no lee `student_profiles` crudo ni las notas internas.
+- [x] Desactivación real (`0028`, SEC-04): `deactivate-user` banea la cuenta
+      en Auth, guarda fecha, actor y motivo, y audita la reactivación.
+- [x] Aviso de privacidad `v3-2026` (`0031`): finalidad educativa del perfil
+      vocacional, resumen curado para el tutor y notas internas reservadas al
+      personal.
 - [x] Vinculación de cuentas existentes (`0017`–`0019`): en el alta hay una
       casilla "el alumno ya tiene cuenta"; con su correo se reutiliza su
       cuenta (sin duplicar acceso), se confirma su correo y se crea solo la
@@ -163,8 +191,15 @@ DATABASE_URL="$(cat .secrets/database-url)" node scripts/seed-content.mjs
 # Correr una prueba SQL transaccional
 DATABASE_URL="$(cat .secrets/database-url)" node scripts/run-sql-test.mjs supabase/tests/0004_progress_rpcs.sql
 
-# Respaldo de la base en JSON (.backups/, ignorado por git)
+# Respaldo cifrado de la base (AES-256-GCM, excluye auth.*, .backups/, ignorado por git)
 DATABASE_URL="$(cat .secrets/database-url)" node scripts/backup-db.mjs
+
+# Restauración con confirmación explícita y respaldo previo automático
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/restore-db.mjs .backups/<archivo>.enc --confirm=restore
+
+# Comparar migraciones aplicadas con los archivos locales (solo lectura)
+DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/verify-migrations.mjs
 
 # Prueba UI con Chrome headless (requiere la app servida en :5173)
 node scripts/ui-smoke.mjs               # flujo del alumno

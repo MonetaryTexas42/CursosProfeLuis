@@ -35,7 +35,7 @@ const assignmentStatusLabels = {
 
 // Debe coincidir con settings.privacy_document_version de la base.
 // La versión vigente también se lee de la vista pública `privacy_document`.
-const PRIVACY_DOCUMENT_VERSION = 'v2-2026';
+const PRIVACY_DOCUMENT_VERSION = 'v3-2026';
 
 // Etiqueta de versión visible en la cabecera: sirve para confirmar que el
 // navegador cargó el build más reciente (no una versión en caché).
@@ -962,7 +962,7 @@ async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
-    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes
+    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes, billingStatusRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -999,9 +999,10 @@ async function fetchAdminDashboard() {
     supabase.from('student_billing').select('*'),
     supabase
       .from('payments')
-      .select('id,student_id,amount,paid_at,method,period,notes')
+      .select('id,student_id,amount,paid_at,method,period,notes,period_start,period_end,status,receipt_no,voided_at,void_reason')
       .order('paid_at', { ascending: false })
-      .limit(600)
+      .limit(600),
+    supabase.from('student_billing_status').select('*')
   ]);
 
   assertNoError(yearRes.error);
@@ -1025,6 +1026,7 @@ async function fetchAdminDashboard() {
   assertNoError(externalAccountsRes.error);
   assertNoError(billingRes.error);
   assertNoError(paymentsRes.error);
+  assertNoError(billingStatusRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -1108,6 +1110,9 @@ async function fetchAdminDashboard() {
       (billingRes.data || []).map((row) => [row.student_id, row])
     ),
     payments: paymentsRes.data || [],
+    billingStatusByStudent: new Map(
+      (billingStatusRes.data || []).map((row) => [row.student_id, row])
+    ),
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1162,7 +1167,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes, billingStatusRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -1210,10 +1215,16 @@ async function fetchTeacherDashboard(teacherId) {
     studentIds.length
       ? supabase
           .from('payments')
-          .select('id,student_id,amount,paid_at,method,period,notes')
+          .select('id,student_id,amount,paid_at,method,period,notes,period_start,period_end,status,receipt_no,voided_at,void_reason')
           .in('student_id', studentIds)
           .order('paid_at', { ascending: false })
           .limit(400)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('student_billing_status')
+          .select('*')
+          .in('student_id', studentIds)
       : Promise.resolve({ data: [], error: null })
   ]);
 
@@ -1233,6 +1244,7 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(activityRes.error);
   assertNoError(billingRes.error);
   assertNoError(paymentsRes.error);
+  assertNoError(billingStatusRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const subjectMap = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
@@ -1287,6 +1299,9 @@ async function fetchTeacherDashboard(teacherId) {
       (billingRes.data || []).map((row) => [row.student_id, row])
     ),
     payments: paymentsRes.data || [],
+    billingStatusByStudent: new Map(
+      (billingStatusRes.data || []).map((row) => [row.student_id, row])
+    ),
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1348,7 +1363,7 @@ async function fetchStudentDashboard(studentId) {
       .eq('visible', true)
       .order('created_at'),
     supabase
-      .from('student_profiles')
+      .from('student_guidance')
       .select('*')
       .eq('student_id', studentRes.data.id)
       .maybeSingle()
@@ -1533,7 +1548,11 @@ async function fetchGuardianDashboard(profile) {
   const groupIds = [...new Set(students.map((student) => student.group_id))];
   const studentIds = students.map((student) => student.id);
 
-  const [profilesRes, groupsRes, billingRes, paymentsRes] = await Promise.all([
+  const [
+    profilesRes, groupsRes, billingRes, paymentsRes, billingStatusRes,
+    guidanceRes, progressRes, assignmentsRes, gradesRes, assessmentsRes,
+    attendanceRes, sessionsRes, observationsRes, tasksRes, submissionsRes, statsRes, subjectsRes
+  ] = await Promise.all([
     profileIds.length
       ? supabase.from('profiles').select('id,full_name').in('id', profileIds)
       : Promise.resolve({ data: [], error: null }),
@@ -1546,20 +1565,191 @@ async function fetchGuardianDashboard(profile) {
     studentIds.length
       ? supabase
           .from('payments')
-          .select('id,student_id,amount,paid_at,method,period')
+          .select('id,student_id,amount,paid_at,method,period,period_start,period_end,status,receipt_no,voided_at,void_reason')
           .in('student_id', studentIds)
           .order('paid_at', { ascending: false })
           .limit(120)
-      : Promise.resolve({ data: [], error: null })
+      : Promise.resolve({ data: [], error: null }),
+    // FUN-01 · lectura de solo lectura para el tutor (RLS existente).
+    studentIds.length
+      ? supabase.from('student_billing_status').select('*').in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase.from('student_guidance').select('*').in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('unit_progress')
+          .select('student_id,assignment_id,status,best_accuracy,completed_at,attempts_count')
+          .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase
+          .from('unit_assignments')
+          .select('id,group_id,unit_id,status,visible,opens_at,closes_at')
+          .in('group_id', groupIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('grades')
+          .select('student_id,assessment_id,score,status,notes,recorded_at')
+          .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase
+          .from('assessments')
+          .select('id,group_id,subject_id,name,type,max_score,assessment_date')
+          .in('group_id', groupIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('attendance')
+          .select('student_id,session_id,status,minutes_late')
+          .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase
+          .from('attendance_sessions')
+          .select('id,group_id,session_date,topic')
+          .in('group_id', groupIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('observations')
+          .select('student_id,category,body,created_at')
+          .in('student_id', studentIds)
+          .eq('visibility', 'family')
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase
+          .from('tasks')
+          .select('id,group_id,subject_id,title,due_at,max_score,task_type')
+          .in('group_id', groupIds)
+          .is('archived_at', null)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('task_submissions')
+          .select('task_id,student_id,status,score,feedback,submitted_at')
+          .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('student_stats')
+          .select('student_id,xp_total,units_completed,units_mastered,accuracy,reading_wpm,reading_comprehension')
+          .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('subjects').select('id,name').order('name')
   ]);
 
   assertNoError(profilesRes.error);
   assertNoError(groupsRes.error);
   assertNoError(billingRes.error);
   assertNoError(paymentsRes.error);
+  assertNoError(billingStatusRes.error);
+  assertNoError(guidanceRes.error);
+  assertNoError(progressRes.error);
+  assertNoError(assignmentsRes.error);
+  assertNoError(gradesRes.error);
+  assertNoError(assessmentsRes.error);
+  assertNoError(attendanceRes.error);
+  assertNoError(sessionsRes.error);
+  assertNoError(observationsRes.error);
+  assertNoError(tasksRes.error);
+  assertNoError(submissionsRes.error);
+  assertNoError(statsRes.error);
+  assertNoError(subjectsRes.error);
+
+  const unitIds = [...new Set((assignmentsRes.data || []).map((row) => row.unit_id).filter(Boolean))];
+  const unitsRes = unitIds.length
+    ? await supabase.from('units').select('id,title,subject_id').in('id', unitIds)
+    : { data: [], error: null };
+  assertNoError(unitsRes.error);
 
   const names = new Map((profilesRes.data || []).map((item) => [item.id, item.full_name]));
   const groupNames = new Map((groupsRes.data || []).map((group) => [group.id, group.name]));
+  const subjectNames = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
+  const unitsById = new Map((unitsRes.data || []).map((unit) => [unit.id, unit]));
+  const assignmentsById = new Map((assignmentsRes.data || []).map((row) => [row.id, row]));
+  const assessmentsById = new Map((assessmentsRes.data || []).map((row) => [row.id, row]));
+  const sessionsById = new Map((sessionsRes.data || []).map((row) => [row.id, row]));
+  const tasksById = new Map((tasksRes.data || []).map((row) => [row.id, row]));
+  const guidanceByStudent = new Map((guidanceRes.data || []).map((row) => [row.student_id, row]));
+  const statsByStudent = new Map((statsRes.data || []).map((row) => [row.student_id, row]));
+
+  const group = (rows, key) => {
+    const map = new Map();
+    for (const row of rows || []) {
+      const value = row[key];
+      if (!map.has(value)) map.set(value, []);
+      map.get(value).push(row);
+    }
+    return map;
+  };
+
+  const progressByStudent = group(progressRes.data, 'student_id');
+  const gradesByStudent = group(gradesRes.data, 'student_id');
+  const attendanceByStudent = group(attendanceRes.data, 'student_id');
+  const observationsByStudent = group(observationsRes.data, 'student_id');
+  const submissionsByStudent = group(submissionsRes.data, 'student_id');
+
+  const academics = new Map(students.map((student) => {
+    const progress = (progressByStudent.get(student.id) || []).map((row) => {
+      const assignment = assignmentsById.get(row.assignment_id);
+      const unit = assignment ? unitsById.get(assignment.unit_id) : null;
+      return {
+        ...row,
+        unit_title: unit?.title || 'Unidad',
+        subject_name: unit ? (subjectNames.get(unit.subject_id) || unit.subject_id) : '',
+        opens_at: assignment?.opens_at || null,
+        closes_at: assignment?.closes_at || null
+      };
+    });
+
+    const grades = (gradesByStudent.get(student.id) || []).map((row) => {
+      const assessment = assessmentsById.get(row.assessment_id);
+      return {
+        ...row,
+        assessment_name: assessment?.name || 'Evaluación',
+        subject_name: assessment ? (subjectNames.get(assessment.subject_id) || assessment.subject_id) : '',
+        max_score: assessment?.max_score ?? null,
+        assessment_date: assessment?.assessment_date || null
+      };
+    }).sort((a, b) => String(b.assessment_date || '').localeCompare(String(a.assessment_date || '')));
+
+    const attendance = (attendanceByStudent.get(student.id) || []).map((row) => {
+      const session = sessionsById.get(row.session_id);
+      return {
+        ...row,
+        session_date: session?.session_date || null,
+        topic: session?.topic || ''
+      };
+    }).sort((a, b) => String(b.session_date || '').localeCompare(String(a.session_date || '')));
+
+    const observations = (observationsByStudent.get(student.id) || [])
+      .slice()
+      .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+
+    const submissions = submissionsByStudent.get(student.id) || [];
+    const tasks = (tasksRes.data || [])
+      .filter((task) => task.group_id === student.group_id)
+      .map((task) => ({
+        ...task,
+        subject_name: subjectNames.get(task.subject_id) || task.subject_id,
+        submission: submissions.find((row) => row.task_id === task.id) || null
+      }))
+      .sort((a, b) => String(a.due_at || '').localeCompare(String(b.due_at || '')));
+
+    return [student.id, {
+      guidance: guidanceByStudent.get(student.id) || {},
+      stats: statsByStudent.get(student.id) || {},
+      progress,
+      grades,
+      attendance,
+      observations,
+      tasks
+    }];
+  }));
 
   return {
     kind: 'guardian',
@@ -1568,6 +1758,10 @@ async function fetchGuardianDashboard(profile) {
       (billingRes.data || []).map((row) => [row.student_id, row])
     ),
     payments: paymentsRes.data || [],
+    billingStatusByStudent: new Map(
+      (billingStatusRes.data || []).map((row) => [row.student_id, row])
+    ),
+    academics,
     children: students.map((student) => ({
       ...student,
       full_name: names.get(student.profile_id) || 'Alumno sin nombre',
@@ -2862,9 +3056,68 @@ function money(value) {
   return number.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 }
 
+function isoDate(value) {
+  return value.toISOString().slice(0, 10);
+}
+
+// Espejo de `app_billing_period` (0029): periodo natural del plan.
+function billingPeriod(plan, value) {
+  if (!['semanal', 'quincenal', 'mensual'].includes(plan)) return null;
+  const date = new Date(`${value || isoDate(new Date())}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+
+  if (plan === 'mensual') {
+    return {
+      start: isoDate(new Date(Date.UTC(year, month, 1))),
+      end: isoDate(new Date(Date.UTC(year, month + 1, 0)))
+    };
+  }
+
+  if (plan === 'quincenal') {
+    if (date.getUTCDate() <= 15) {
+      return {
+        start: isoDate(new Date(Date.UTC(year, month, 1))),
+        end: isoDate(new Date(Date.UTC(year, month, 15)))
+      };
+    }
+    return {
+      start: isoDate(new Date(Date.UTC(year, month, 16))),
+      end: isoDate(new Date(Date.UTC(year, month + 1, 0)))
+    };
+  }
+
+  // semanal: lunes a domingo (date_trunc('week') usa lunes).
+  const diffToMonday = (date.getUTCDay() + 6) % 7;
+  const start = new Date(Date.UTC(year, month, date.getUTCDate() - diffToMonday));
+  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 6));
+  return { start: isoDate(start), end: isoDate(end) };
+}
+
+function paymentStatusLabel(status) {
+  if (status === 'voided') return 'Anulado';
+  if (status === 'partial') return 'Parcial';
+  return 'Pagado';
+}
+
+function billingStatusLabel(status) {
+  return {
+    'al corriente': 'Al corriente',
+    parcial: 'Pago parcial',
+    pendiente: 'Pendiente',
+    vencido: 'Vencido',
+    beca: 'Beca',
+    manual: 'Plan manual',
+    'sin cuota': 'Sin cuota'
+  }[status] || 'Pendiente';
+}
+
 function staffPaymentsTabMarkup(data) {
   const students = data.students || [];
   const billing = data.billingByStudent || new Map();
+  const billingStatus = data.billingStatusByStudent || new Map();
   const payments = data.payments || [];
 
   const now = new Date();
@@ -2921,6 +3174,7 @@ function staffPaymentsTabMarkup(data) {
         <div class="pay-board">
           ${students.map((student) => {
             const planRow = billing.get(student.id) || {};
+            const statusRow = billingStatus.get(student.id) || {};
             const plan = planRow.plan || 'mensual';
             const total = paymentsTotal(student.id, payments);
             const last = paymentsLast(student.id, payments);
@@ -2943,6 +3197,14 @@ function staffPaymentsTabMarkup(data) {
                   <div class="pay-metric">
                     <span class="card-label">Pagado</span>
                     <strong class="${total > 0 ? 'pay-good' : ''}">${money(total)}</strong>
+                  </div>
+                  <div class="pay-metric">
+                    <span class="card-label">Estado</span>
+                    <strong class="${statusRow.status === 'al corriente' || statusRow.status === 'beca' ? 'pay-good' : 'pay-last'}">${escapeHtml(billingStatusLabel(statusRow.status))}</strong>
+                  </div>
+                  <div class="pay-metric">
+                    <span class="card-label">Saldo</span>
+                    <strong class="${Number(statusRow.balance || 0) > 0 ? 'pay-last' : ''}">${statusRow.balance != null ? money(statusRow.balance) : '—'}</strong>
                   </div>
                   <div class="pay-metric">
                     <span class="card-label">Último pago</span>
@@ -2974,10 +3236,13 @@ function staffPaymentsTabMarkup(data) {
             return `
               <li>
                 <div>
-                  <strong>${escapeHtml(student?.full_name || 'Alumno')}</strong>
-                  <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period ? ` · ${escapeHtml(payment.period)}` : ''}</small>
+                  <strong>${escapeHtml(student?.full_name || 'Alumno')}${payment.receipt_no ? ` · ${escapeHtml(payment.receipt_no)}` : ''}</strong>
+                  <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period_start ? ` · ${escapeHtml(formatDate(payment.period_start))}–${escapeHtml(formatDate(payment.period_end))}` : payment.period ? ` · ${escapeHtml(payment.period)}` : ''}${payment.status === 'voided' && payment.void_reason ? ` · Motivo: ${escapeHtml(payment.void_reason)}` : ''}</small>
                 </div>
-                <span class="pill success">${money(payment.amount)}</span>
+                <div class="pay-history-actions">
+                  <span class="pill ${payment.status === 'voided' ? 'pill-amber' : 'success'}">${money(payment.amount)} · ${escapeHtml(paymentStatusLabel(payment.status))}</span>
+                  ${payment.status !== 'voided' ? `<button class="btn ghost" data-void-payment="${escapeHtml(payment.id)}">Anular</button>` : ''}
+                </div>
               </li>
             `;
           }).join('')}
@@ -3147,8 +3412,39 @@ function closePayDialog() {
   document.body.classList.remove('unit-assign-open');
 }
 
-async function savePayDialog(event, form) {
-  event.preventDefault();
+async function voidPayment(button) {
+  const paymentId = button.dataset.voidPayment;
+  if (!paymentId || button.disabled) return;
+
+  const reason = window.prompt('Motivo de la anulación (mínimo 3 caracteres):', '');
+  if (reason === null) return;
+
+  const trimmed = reason.trim();
+  if (trimmed.length < 3) {
+    setError('Escribe un motivo de al menos 3 caracteres para anular el pago.');
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Anulando…';
+
+  const { error } = await supabase.rpc('app_void_payment', {
+    p_payment_id: paymentId,
+    p_reason: trimmed
+  });
+
+  if (error) {
+    setError(error.message || 'No se pudo anular el pago.');
+    button.disabled = false;
+    button.textContent = 'Anular';
+    return;
+  }
+
+  setNotice('Pago anulado. El historial conserva el registro y el motivo.');
+  await loadDashboard(state.profile);
+}
+
+async function savePayDialog(event, form) {  event.preventDefault();
   const dialog = state.payDialog;
   if (!dialog) return;
 
@@ -3176,19 +3472,31 @@ async function savePayDialog(event, form) {
       const amount = Number(data.get('amount'));
       if (!amount || amount <= 0) throw new Error('Escribe un monto válido.');
 
+      const paidAt = String(data.get('paid_at') || isoDate(new Date()));
+      const planRow = (state.dashboard?.billingByStudent || new Map()).get(dialog.studentId) || {};
+      const period = billingPeriod(planRow.plan || 'mensual', paidAt);
+
       const { error } = await supabase.from('payments').insert({
         student_id: dialog.studentId,
         amount,
-        paid_at: String(data.get('paid_at') || new Date().toISOString().slice(0, 10)),
+        paid_at: paidAt,
         method: String(data.get('method') || 'efectivo'),
         period: String(data.get('period') || '').trim() || null,
         notes: String(data.get('notes') || '').trim() || null,
+        period_start: period?.start || null,
+        period_end: period?.end || null,
+        idempotency_key: crypto.randomUUID(),
         recorded_by: state.profile?.id ?? null
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505' || /duplicad|idéntico/i.test(error.message || '')) {
+          throw new Error('Ya existe un pago idéntico para ese periodo. Revisa el historial antes de registrarlo otra vez.');
+        }
+        throw error;
+      }
       closePayDialog();
-      setNotice('Pago registrado.');
+      setNotice('Pago registrado con folio.');
     }
 
     await loadDashboard(state.profile);
@@ -4287,12 +4595,198 @@ function guardianDashboardMarkup(data) {
       </article>
     ` : ''}
 
+    ${hasConsent ? guardianAcademicsMarkup(data) : ''}
+
     ${hasConsent ? guardianPaymentsMarkup(data) : ''}
+  `;
+}
+
+function guardianAcademicsMarkup(data) {
+  const children = data.children || [];
+  const academics = data.academics || new Map();
+
+  return `
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Seguimiento</span>
+          <h2>Avance, calificaciones y tareas</h2>
+        </div>
+        <span class="pill">Solo lectura</span>
+      </div>
+      <p class="muted"><small>Ves lo que el personal registra para tus hijos. No puedes editar nada desde aquí.</small></p>
+      ${children.map((child) => guardianChildAcademicsMarkup(child, academics.get(child.id) || {})).join('')}
+    </article>
+  `;
+}
+
+function guardianChildAcademicsMarkup(child, academics) {
+  const stats = academics.stats || {};
+  const progress = academics.progress || [];
+  const grades = academics.grades || [];
+  const attendance = academics.attendance || [];
+  const observations = academics.observations || [];
+  const tasks = academics.tasks || [];
+  const guidance = academics.guidance || {};
+
+  const attendanceCounts = attendance.reduce((counts, row) => {
+    counts[row.status] = (counts[row.status] || 0) + 1;
+    return counts;
+  }, {});
+  const attendanceTotal = attendance.length;
+  const attendanceRate = attendanceTotal
+    ? Math.round((((attendanceCounts.present || 0) + (attendanceCounts.late || 0)) * 100) / attendanceTotal)
+    : null;
+  const completed = progress.filter((row) => row.status === 'completed' || row.status === 'mastered').length;
+  const inProgress = progress.filter((row) => row.status === 'in_progress').length;
+  const pendingTasks = tasks.filter((task) => !task.submission || task.submission.status === 'pending');
+
+  const interests = Array.isArray(guidance.interests) ? guidance.interests : [];
+  const aptitudes = Array.isArray(guidance.aptitudes) ? guidance.aptitudes : [];
+  const strengths = Array.isArray(guidance.strengths) ? guidance.strengths : [];
+  const careers = Array.isArray(guidance.career_suggestions)
+    ? guidance.career_suggestions.map((career) => (typeof career === 'string' ? career : career?.name)).filter(Boolean)
+    : [];
+  const hasGuidance = interests.length || aptitudes.length || strengths.length || careers.length || guidance.career_choice;
+
+  const taskStatusLabel = (task) => {
+    if (!task.submission) return 'Sin registrar';
+    return { pending: 'Pendiente', submitted: 'Entregada', late: 'Entregada tarde' }[task.submission.status] || 'Pendiente';
+  };
+
+  const attendanceLabel = (status) => ({
+    present: 'Asistencia',
+    late: 'Retardo',
+    excused: 'Justificado',
+    absent: 'Falta'
+  }[status] || status);
+
+  return `
+    <section class="guardian-child">
+      <div class="guardian-child-head">
+        <div>
+          <h3>${escapeHtml(child.full_name)}</h3>
+          <small>${escapeHtml(child.student_code)} · ${escapeHtml(child.group_name)}</small>
+        </div>
+        <span class="pill">Solo lectura</span>
+      </div>
+
+      <div class="guardian-grid">
+        <div class="guardian-block">
+          <h4>Avance <span class="guardian-ro">Solo lectura</span></h4>
+          <div class="guardian-chips">
+            <span class="hero-chip">🎯 ${completed} ${completed === 1 ? 'unidad completada' : 'unidades completadas'}</span>
+            <span class="hero-chip">📚 ${inProgress} en curso</span>
+            <span class="hero-chip">⚡ ${Number(stats.xp_total || 0)} XP</span>
+          </div>
+          ${progress.length ? `
+            <ul class="data-list compact">
+              ${progress.slice(0, 6).map((row) => `
+                <li>
+                  <div>
+                    <strong>${escapeHtml(row.unit_title)}</strong>
+                    <small>${escapeHtml(row.subject_name || 'Materia')} · ${escapeHtml(progressLabels[row.status] || row.status)}${row.best_accuracy != null ? ` · ${Math.round(row.best_accuracy)}%` : ''}</small>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="empty-state">Todavía no hay avance registrado.</p>'}
+        </div>
+
+        <div class="guardian-block">
+          <h4>Calificaciones visibles <span class="guardian-ro">Solo lectura</span></h4>
+          ${grades.length ? `
+            <ul class="data-list compact">
+              ${grades.slice(0, 8).map((row) => `
+                <li>
+                  <div>
+                    <strong>${escapeHtml(row.assessment_name)}</strong>
+                    <small>${escapeHtml(row.subject_name || 'Materia')}${row.assessment_date ? ` · ${escapeHtml(formatDate(row.assessment_date))}` : ''}</small>
+                  </div>
+                  <span class="pill ${row.score != null ? 'success' : ''}">${row.score != null ? `${row.score}/${row.max_score ?? '—'}` : 'Pendiente'}</span>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="empty-state">Aún no hay calificaciones marcadas como visibles para la familia.</p>'}
+        </div>
+
+        <div class="guardian-block">
+          <h4>Asistencia <span class="guardian-ro">Solo lectura</span></h4>
+          ${attendanceTotal ? `
+            <div class="guardian-chips">
+              <span class="hero-chip">✅ ${attendanceRate}% de asistencia</span>
+              ${Object.entries(attendanceCounts).map(([status, count]) => `<span class="hero-chip">${escapeHtml(attendanceLabel(status))}: ${count}</span>`).join('')}
+            </div>
+            <ul class="data-list compact">
+              ${attendance.slice(0, 6).map((row) => `
+                <li>
+                  <div>
+                    <strong>${row.session_date ? escapeHtml(formatDate(row.session_date)) : 'Sesión'}</strong>
+                    <small>${escapeHtml(row.topic || 'Sin tema registrado')}${row.minutes_late ? ` · ${row.minutes_late} min tarde` : ''}</small>
+                  </div>
+                  <span class="pill ${row.status === 'absent' ? 'pill-amber' : ''}">${escapeHtml(attendanceLabel(row.status))}</span>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="empty-state">Aún no hay registros de asistencia.</p>'}
+        </div>
+
+        <div class="guardian-block">
+          <h4>Tareas <span class="guardian-ro">Solo lectura</span></h4>
+          ${tasks.length ? `
+            <div class="guardian-chips">
+              <span class="hero-chip">📝 ${pendingTasks.length} pendientes</span>
+            </div>
+            <ul class="data-list compact">
+              ${tasks.slice(0, 6).map((task) => `
+                <li>
+                  <div>
+                    <strong>${escapeHtml(task.title)}</strong>
+                    <small>${escapeHtml(task.subject_name || 'Materia')}${task.due_at ? ` · entrega ${escapeHtml(formatDate(String(task.due_at).slice(0, 10)))}` : ''}</small>
+                  </div>
+                  <span class="pill ${task.submission?.status === 'submitted' ? 'success' : task.submission?.status === 'late' ? 'pill-amber' : ''}">${escapeHtml(taskStatusLabel(task))}${task.submission?.score != null ? ` · ${task.submission.score}/${task.max_score ?? '—'}` : ''}</span>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="empty-state">Aún no hay tareas asignadas.</p>'}
+        </div>
+
+        <div class="guardian-block wide">
+          <h4>Observaciones para la familia <span class="guardian-ro">Solo lectura</span></h4>
+          ${observations.length ? `
+            <ul class="data-list compact">
+              ${observations.slice(0, 6).map((row) => `
+                <li>
+                  <div>
+                    <strong>${escapeHtml(row.category || 'Observación')}</strong>
+                    <small>${escapeHtml(formatDate(String(row.created_at).slice(0, 10)))}</small>
+                    <p>${escapeHtml(row.body)}</p>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="empty-state">No hay observaciones visibles para la familia.</p>'}
+        </div>
+
+        <div class="guardian-block wide">
+          <h4>Orientación vocacional <span class="guardian-ro">Solo lectura</span></h4>
+          <p class="hint">Resumen orientativo, no diagnóstico. Las notas internas de orientación quedan reservadas al personal docente.</p>
+          ${hasGuidance ? `
+            ${guidance.career_choice ? `<p><strong>Carrera de interés:</strong> ${escapeHtml(guidance.career_choice)}</p>` : ''}
+            ${interests.length ? `<p><strong>Intereses:</strong> ${interests.map((item) => escapeHtml(item)).join(' · ')}</p>` : ''}
+            ${aptitudes.length ? `<p><strong>Aptitudes:</strong> ${aptitudes.map((item) => escapeHtml(item)).join(' · ')}</p>` : ''}
+            ${strengths.length ? `<p><strong>Fortalezas:</strong> ${strengths.map((item) => escapeHtml(item)).join(' · ')}</p>` : ''}
+            ${careers.length ? `<p><strong>Carreras sugeridas:</strong> ${careers.slice(0, 6).map((item) => escapeHtml(item)).join(' · ')}</p>` : ''}
+          ` : '<p class="empty-state">El alumno todavía no ha completado los test de orientación.</p>'}
+        </div>
+      </div>
+    </section>
   `;
 }
 
 function guardianPaymentsMarkup(data) {
   const billing = data.billingByStudent || new Map();
+  const billingStatus = data.billingStatusByStudent || new Map();
 
   return `
     <article class="card wide">
@@ -4305,6 +4799,7 @@ function guardianPaymentsMarkup(data) {
       </div>
       ${data.children.map((child) => {
         const planRow = billing.get(child.id) || {};
+        const statusRow = billingStatus.get(child.id) || {};
         const plan = planRow.plan || 'mensual';
         const total = paymentsTotal(child.id, data.payments);
         const last = paymentsLast(child.id, data.payments);
@@ -4322,18 +4817,23 @@ function guardianPaymentsMarkup(data) {
               </div>
               <div class="pay-cells">
                 <span class="pill">${escapeHtml(paymentPlanLabels[plan] || plan)}${planRow.fee ? ` · ${money(planRow.fee)}` : ''}</span>
+                ${statusRow.status ? `<span class="pill ${statusRow.status === 'al corriente' || statusRow.status === 'beca' ? 'success' : 'pill-amber'}">${escapeHtml(billingStatusLabel(statusRow.status))}</span>` : ''}
                 <span class="pill ${total > 0 ? 'success' : ''}">Pagado: ${money(total)}</span>
                 ${last ? `<span class="pill">Último pago: ${escapeHtml(formatDate(String(last.paid_at).slice(0, 10)))}</span>` : '<span class="pill">Sin pagos registrados</span>'}
               </div>
             </div>
+            ${statusRow.period_start ? `
+              <p class="muted"><small>Periodo actual: ${escapeHtml(formatDate(statusRow.period_start))} – ${escapeHtml(formatDate(statusRow.period_end))}${statusRow.balance != null && Number(statusRow.balance) > 0 ? ` · Saldo: ${money(statusRow.balance)}` : ''}</small></p>
+            ` : ''}
             ${recent.length ? `
               <ul class="data-list">
                 ${recent.map((payment) => `
                   <li>
                     <div>
-                      <strong>${money(payment.amount)}</strong>
-                      <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period ? ` · ${escapeHtml(payment.period)}` : ''}</small>
+                      <strong>${money(payment.amount)}${payment.receipt_no ? ` · ${escapeHtml(payment.receipt_no)}` : ''}</strong>
+                      <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period_start ? ` · ${escapeHtml(formatDate(payment.period_start))}–${escapeHtml(formatDate(payment.period_end))}` : ''}${payment.status === 'voided' ? ' · Anulado' : ''}</small>
                     </div>
+                    <span class="pill ${payment.status === 'voided' ? 'pill-amber' : 'success'}">${escapeHtml(paymentStatusLabel(payment.status))}</span>
                   </li>
                 `).join('')}
               </ul>
@@ -6603,6 +7103,10 @@ function renderDashboard() {
 
   appRoot.querySelectorAll('[data-open-pay-dialog]').forEach((button) => {
     button.addEventListener('click', () => openPayDialog(button.dataset.openPayDialog, button.dataset.payMode || 'payment'));
+  });
+
+  appRoot.querySelectorAll('[data-void-payment]').forEach((button) => {
+    button.addEventListener('click', () => voidPayment(button));
   });
 
   const subjectsGroupSelect = appRoot.querySelector('[data-subjects-group]');

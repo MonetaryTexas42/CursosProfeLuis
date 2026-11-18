@@ -117,6 +117,70 @@ async function main() {
          and policyname = 'privacy_consents_guardian_insert'`),
   );
 
+  // Fase 2 · FUN-02, PRIV-03 y SEC-04.
+  const billingPeriodFn = Number(
+    await scalar(`
+      select count(*)
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'app_billing_period'`),
+  );
+
+  const voidPaymentFn = Number(
+    await scalar(`
+      select count(*)
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = 'app_void_payment'`),
+  );
+
+  const billingStatusView = Number(
+    await scalar(`
+      select count(*) from pg_views
+       where schemaname = 'public' and viewname = 'student_billing_status'`),
+  );
+
+  const paymentDuplicatesView = Number(
+    await scalar(`
+      select count(*) from pg_views
+       where schemaname = 'public' and viewname = 'payment_duplicates'`),
+  );
+
+  const guidanceView = Number(
+    await scalar(`
+      select count(*) from pg_views
+       where schemaname = 'public' and viewname = 'student_guidance'`),
+  );
+
+  const paymentsColumns = Number(
+    await scalar(`
+      select count(*)
+        from information_schema.columns
+       where table_schema = 'public' and table_name = 'payments'
+         and column_name in (
+           'period_start', 'period_end', 'status', 'receipt_no',
+           'idempotency_key', 'voided_at', 'voided_by', 'void_reason'
+         )`),
+  );
+
+  const offboardingColumns = Number(
+    await scalar(`
+      select count(*)
+        from information_schema.columns
+       where table_schema = 'public' and table_name = 'profiles'
+         and column_name in ('deactivated_at', 'deactivated_by', 'deactivation_reason')`),
+  );
+
+  const rawProfilePolicyLeak = Number(
+    await scalar(`
+      select count(*)
+        from pg_policies
+       where schemaname = 'public'
+         and tablename = 'student_profiles'
+         and policyname = 'student_profiles_select'
+         and coalesce(qual, '') like '%app_can_access_student%'`),
+  );
+
   let privacyRow = null;
   try {
     const res = await client.query("select version, url, sha256 from public.privacy_document");
@@ -158,6 +222,12 @@ async function main() {
   console.log("  billing guard: " + (billingGuard ? "sí (0021)" : "NO"));
   console.log("  consent guard: " + (consentGuard ? "sí (0027)" : "NO"));
   console.log("  aviso público: " + (privacyView ? "sí (0027)" : "NO"));
+  console.log("  periodo plan:  " + (billingPeriodFn ? "sí (0029)" : "NO"));
+  console.log("  anulación:     " + (voidPaymentFn ? "sí (0029)" : "NO"));
+  console.log("  estado cuenta: " + (billingStatusView ? "sí (0029)" : "NO"));
+  console.log("  duplicados:    " + (paymentDuplicatesView ? "sí (0029)" : "NO"));
+  console.log("  guía curada:   " + (guidanceView ? "sí (0030)" : "NO"));
+  console.log("  offboarding:   " + (offboardingColumns === 3 ? "sí (0028)" : "NO"));
   if (privacyRow) {
     console.log(
       "  aviso vigente: " +
@@ -179,15 +249,25 @@ async function main() {
   console.log("  perfiles:      " + (roles.map((r) => `${r.role}=${r.n}`).join(", ") || "ninguno"));
 
   const warnings = [];
-  if (migrations !== null && migrations < 27) warnings.push(`faltan migraciones (${migrations} < 27)`);
+  if (migrations !== null && migrations < 31) warnings.push(`faltan migraciones (${migrations} < 31)`);
   if (tables < 40) warnings.push(`faltan tablas (${tables} < 40)`);
-  if (policies < 88) warnings.push(`faltan políticas (${policies} < 88)`);
-  if (definer < 46) warnings.push(`faltan funciones SECURITY DEFINER (${definer} < 46)`);
+  if (policies < 90) warnings.push(`faltan políticas (${policies} < 90)`);
+  if (definer < 48) warnings.push(`faltan funciones SECURITY DEFINER (${definer} < 48)`);
   if (billingGuard === 0) warnings.push("falta app_can_view_billing (0021 no aplicada)");
   if (consentGuard === 0) warnings.push("falta app_guardian_has_consent (0027 no aplicada)");
   if (privacyView === 0) warnings.push("falta la vista privacy_document (0027 no aplicada)");
   if (guardianConsentInsertPolicy > 0) {
     warnings.push("sigue la política privacy_consents_guardian_insert: el tutor podría fabricar consentimientos");
+  }
+  if (billingPeriodFn === 0) warnings.push("falta app_billing_period (0029 no aplicada)");
+  if (voidPaymentFn === 0) warnings.push("falta app_void_payment (0029 no aplicada)");
+  if (billingStatusView === 0) warnings.push("falta la vista student_billing_status (0029 no aplicada)");
+  if (paymentDuplicatesView === 0) warnings.push("falta la vista payment_duplicates (0029 no aplicada)");
+  if (guidanceView === 0) warnings.push("falta la vista student_guidance (0030 no aplicada)");
+  if (paymentsColumns < 8) warnings.push(`faltan columnas de trazabilidad en payments (${paymentsColumns}/8)`);
+  if (offboardingColumns < 3) warnings.push(`faltan columnas de offboarding en profiles (${offboardingColumns}/3)`);
+  if (rawProfilePolicyLeak > 0) {
+    warnings.push("student_profiles_select sigue exponiendo la tabla cruda al tutor (PRIV-03)");
   }
   if (!privacyRow) {
     warnings.push("no se pudo leer la vista privacy_document");

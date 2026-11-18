@@ -4056,3 +4056,100 @@ body.unit-assign-open {
   .pay-method-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .student-hero { padding: 20px 18px; }
 }
+
+/* ---------------- Panel de seguimiento del tutor (FUN-01) ---------------- */
+
+.guardian-child {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-2);
+}
+
+.guardian-child + .guardian-child {
+  margin-top: 14px;
+}
+
+.guardian-child-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.guardian-child-head h3 {
+  margin: 0;
+}
+
+.guardian-child-head small {
+  color: var(--muted);
+}
+
+.guardian-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.guardian-block {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.guardian-block.wide {
+  grid-column: 1 / -1;
+}
+
+.guardian-block h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.guardian-ro {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.guardian-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.data-list.compact li {
+  padding: 8px 0;
+}
+
+.data-list.compact p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.pay-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .guardian-grid {
+    grid-template-columns: 1fr;
+  }
+}

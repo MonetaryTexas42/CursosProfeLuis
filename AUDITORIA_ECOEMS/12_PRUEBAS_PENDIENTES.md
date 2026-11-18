@@ -14,7 +14,7 @@ Este documento define las pruebas que faltan, cómo ejecutarlas en un entorno ai
 
 | Requisito | Detalle |
 |---|---|
-| Proyecto staging | `ecoems-staging`, con las 27 migraciones y el seed |
+| Proyecto staging | `ecoems-staging`, con las 31 migraciones y el seed |
 | Usuarios ficticios | Un admin, un profesor con grupo, dos alumnos (uno con asignación, uno sin), un tutor vinculado sin consentimiento, un tutor no vinculado y un tutor con consentimiento vigente y revocado |
 | Contenido | Al menos una unidad publicada con `correctIndex`, una en borrador |
 | `psql` | Para pruebas SQL directas |
@@ -42,7 +42,7 @@ Todas las contraseñas son ficticias y viven solo en staging. El seed
 
 ### 2.2. Suite automatizada de RLS (COD-07)
 
-La suite `app/supabase/tests/rls/rls-negative.mjs` (91 checks) y su runner
+La suite `app/supabase/tests/rls/rls-negative.mjs` (113 checks) y su runner
 `app/scripts/run-rls-tests.mjs` codifican el comportamiento **seguro esperado**.
 Descubren las identidades por rol, validan que el JWT simulado resuelva al rol
 correcto y hacen `rollback` en cada prueba.
@@ -61,9 +61,10 @@ Los roles sin identidad se marcan **SKIP**, nunca PASS. Antes de la Fase 1 la
 línea base era de 6 FAIL (`SEC-01`: RLS-01, 02, 10, 11; `PRIV-02`: RLS-16, 50).
 Con las migraciones 0023–0027 y las Edge Functions de contraseña, invitación y
 consentimiento, la expectativa es **0 FAIL**; cualquier FAIL nuevo es una
-regresión. La suite añade RLS-89–91 (`SEC-03`), RLS-92–97 (`SEC-02`) y
-RLS-98–107 (`PRIV-01`). El runbook completo está en
-[`app/docs/staging.md`](../app/docs/staging.md).
+regresión. La suite añade RLS-89–91 (`SEC-03`), RLS-92–97 (`SEC-02`),
+RLS-98–107 (`PRIV-01`) y RLS-108–129 para la Fase 2: offboarding (`SEC-04`),
+perfil vocacional curado (`PRIV-03`) y pagos con trazabilidad (`FUN-02`). El
+runbook completo está en [`app/docs/staging.md`](../app/docs/staging.md).
 
 ---
 
@@ -140,7 +141,7 @@ Cada prueba indica: **rol**, **consulta**, **esperado hoy**, **esperado después
 
 > Los IDs de esta sección son **conceptuales**, para planear la verificación. La
 > numeración ejecutable y autoritativa está en
-> `app/supabase/tests/rls/rls-negative.mjs` (RLS-01…91); cuando difieran, manda
+> `app/supabase/tests/rls/rls-negative.mjs` (RLS-01…129); cuando difieran, manda
 > la suite.
 
 ### 4.1. Contenido (SEC-01)
@@ -177,14 +178,22 @@ curl -s "$SB_URL/rest/v1/unit_versions?select=unit_id,version,content&published_
 | RLS-14 | profesor | `select count(*) from students` | solo su grupo | solo su grupo | — |
 | RLS-15 | alumno1 | `select * from student_staff_notes` | error/0 | error/0 | PRIV-02 |
 
-### 4.3. Perfil psicopedagógico (PRIV-03)
+### 4.3. Perfil vocacional (PRIV-03)
 
-| # | Rol | Consulta | Esperado | Hallazgo |
-|---|---|---|---|---|
-| RLS-20 | tutor1 | `select * from student_profiles` | solo su hijo; revisar si incluye `vocational_notes` | PRIV-03 |
-| RLS-21 | alumno1 | `select * from student_profiles` | solo su fila | PRIV-03 |
-| RLS-22 | alumno2 | `select count(*) from student_profiles` | 1 (solo él) | — |
-| RLS-23 | profesor de otro grupo | `select count(*) from student_profiles` | 0 | — |
+La familia ya **no** lee la tabla cruda `student_profiles`. Usa la vista curada
+`student_guidance`, que no expone `weaknesses`, `vocational_notes` ni `extras`.
+
+| # | Rol | Consulta | Esperado hoy | Esperado corregido | Hallazgo |
+|---|---|---|---|---|---|
+| RLS-20 | tutor1 | `select * from student_profiles` | solo su hijo, con `vocational_notes` | **0 filas** (RLS-47) | PRIV-03 |
+| RLS-21 | alumno1 | `select * from student_profiles` | solo su fila | **0 filas** (RLS-19) | PRIV-03 |
+| RLS-22 | alumno2 | `select count(*) from student_profiles` | 1 (solo él) | **0** | PRIV-03 |
+| RLS-23 | profesor de otro grupo | `select count(*) from student_profiles` | 0 | 0 | — |
+| RLS-24 | tutor1 (con consentimiento) | `select * from student_guidance` | no existía | solo su hijo, **sin** `weaknesses`/`vocational_notes`/`extras` (RLS-110) | PRIV-03 |
+| RLS-25 | tutor3 | `select count(*) from student_guidance` | no existía | 0 si el alumno no está consentido (RLS-114/115) | PRIV-03 |
+| RLS-26 | alumno1 | `select * from student_guidance` | no existía | solo su fila (RLS-113) | PRIV-03 |
+| RLS-27 | profesor | `select * from student_guidance` | no existía | solo sus alumnos (RLS-116/117) | PRIV-03 |
+| RLS-28 | admin | política `student_profiles_select` | usaba `app_can_access_student` | solo `app_is_admin`/`app_is_teacher_of_student` (RLS-111/112) | PRIV-03 |
 
 ### 4.4. Observaciones (familia vs. interno)
 
@@ -197,13 +206,19 @@ curl -s "$SB_URL/rest/v1/unit_versions?select=unit_id,version,content&published_
 
 ### 4.5. Finanzas (FUN-02, SEC-01)
 
-| # | Rol | Consulta | Esperado | Hallazgo |
-|---|---|---|---|---|
-| RLS-40 | alumno1 | `select count(*) from payments` | **0** (0021) | — |
-| RLS-41 | alumno1 | `select count(*) from student_billing` | **0** (0021) | — |
-| RLS-42 | tutor1 | `select count(*) from payments` | solo de su hijo | — |
-| RLS-43 | tutor1 | `insert into payments ...` | **falla** (solo lectura) | — |
-| RLS-44 | profesor | `select count(*) from payments` | solo de sus alumnos | — |
+| # | Rol | Consulta | Esperado hoy | Esperado corregido | Hallazgo |
+|---|---|---|---|---|---|
+| RLS-40 | alumno1 | `select count(*) from payments` | **0** (0021) | 0 | — |
+| RLS-41 | alumno1 | `select count(*) from student_billing` | **0** (0021) | 0 | — |
+| RLS-42 | tutor1 | `select count(*) from payments` | solo de su hijo | solo de su hijo | — |
+| RLS-43 | tutor1 | `insert into payments ...` | **falla** (solo lectura) | falla | — |
+| RLS-44 | profesor | `select count(*) from payments` | solo de sus alumnos | solo de sus alumnos | — |
+| RLS-45 | alumno1 | `select count(*) from student_billing_status` | no existía | **0** (RLS-125) | FUN-02 |
+| RLS-46 | tutor1 (sin consentimiento) | `select count(*) from student_billing_status` | no existía | **0** (RLS-126) | FUN-02 |
+| RLS-47 | tutor3 | `select count(*) from student_billing_status where student_id <> alumno2` | no existía | **0** (RLS-127) | FUN-02 |
+| RLS-48 | profesor | `select * from student_billing_status` | no existía | solo sus alumnos (RLS-128/129) | FUN-02 |
+| RLS-49 | admin | `pg_policies` de `payments` | había `DELETE` | **sin** política `DELETE` (RLS-119) | FUN-02 |
+| RLS-50 | admin | `pg_proc` de `app_void_payment` | no existía | `SECURITY DEFINER` con `search_path` fijo (RLS-120) | FUN-02 |
 
 ### 4.6. Consentimientos (PRIV-01)
 
@@ -262,14 +277,20 @@ curl -s -X POST "$SB_URL/rest/v1/rpc/app_complete_password_change" \
 
 ### 5.2. SEC-04 · Desactivación
 
+**Precondición:** `0028_offboarding.sql` aplicada y `deactivate-user` desplegada
+con la versión que banea en Auth.
+
 | # | Paso | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| AUTH-10 | Admin desactiva a alumno2 | `profiles.active=false` | además `banned_until` |
-| AUTH-11 | Alumno2 intenta login | **éxito** (falla en app) | **falla en Auth** |
-| AUTH-12 | Alumno2 usa su JWT anterior | RPC que solo valida `auth.uid()` funciona | debe fallar o el token debe estar revocado |
-| AUTH-13 | Admin reactiva | login funciona | login funciona |
+| AUTH-10 | Admin desactiva a alumno2 con motivo | `profiles.active=false` | además `banned_until`, `deactivated_at`, `deactivated_by` y `deactivation_reason` (RLS-108/109) |
+| AUTH-11 | Alumno2 intenta login | **éxito** (falla en app) | **falla en Auth** (`400`/`403`) |
+| AUTH-12 | Alumno2 usa su JWT anterior | RPC que solo valida `auth.uid()` funciona | falla al refrescar; el `access_token` caduca y no se renueva |
+| AUTH-13 | Admin reactiva | login funciona | login funciona, `banned_until = none`, rastro en `audit_log` |
+| AUTH-14 | Revisar `audit_log` | solo `profiles.active` | `user.deactivated`/`user.reactivated` con actor, motivo y antes/después |
+| AUTH-15 | Simular fallo del update de `profiles` | queda baneado sin registro | la función compensa el ban y devuelve error |
 
-**Evidencia:** código HTTP del login tras desactivar (`400`/`403` esperado en corregido).
+**Evidencia:** código HTTP del login tras desactivar, fila de `profiles` y
+entradas de `audit_log` (sin tokens).
 
 ### 5.3. SEC-02 · Invitación y canje de token
 
@@ -374,22 +395,40 @@ curl -s -X POST "$SB_URL/rest/v1/rpc/app_sync_player_state" \
 
 ### 6.3. Pagos (FUN-02)
 
+**Precondición:** `0029_payments_traceability.sql` aplicada y el panel nuevo
+desplegado.
+
 | # | Paso | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| FUN-30 | Registrar pago mensual | se guarda | se guarda con periodo |
-| FUN-31 | Registrar el mismo pago dos veces | **se duplica** | detecta duplicado |
-| FUN-32 | Consultar saldo del alumno | **no existe** | devuelve saldo |
-| FUN-33 | Anular un pago | **no existe** | anula con motivo y auditoría |
-| FUN-34 | Tutor consulta pagos | solo lectura | solo lectura |
-| FUN-35 | Alumno consulta pagos | 0 filas | 0 filas |
+| FUN-30 | Registrar pago mensual | se guarda | se guarda con `period_start`/`period_end`, `status='paid'` y folio `REC-<año>-<n>` |
+| FUN-31 | Registrar el mismo pago dos veces | **se duplica** | rechaza por `idempotency_key`/duplicado activo; los heredados aparecen en `payment_duplicates` (RLS-122/124) |
+| FUN-32 | Consultar saldo del alumno | **no existe** | `student_billing_status` devuelve periodo, esperado, pagado, saldo y estado (RLS-121) |
+| FUN-33 | Anular un pago | **no existe** | `app_void_payment` exige motivo, marca `voided`, conserva la fila y audita (RLS-120) |
+| FUN-34 | Tutor consulta pagos | solo lectura | solo lectura + estado de cuenta y recibos |
+| FUN-35 | Alumno consulta pagos | 0 filas | 0 filas (RLS-125) |
+| FUN-36 | Borrar un pago por PostgREST | **lo borra** | **falla**: no hay política `DELETE` (RLS-119) |
+| FUN-37 | Reactivar un pago anulado por REST | no aplicaba | **falla**; hay que registrar uno nuevo |
+| FUN-38 | Anular por PostgREST (no por RPC) | no dejaba rastro | el trigger `app_payments_before_write` registra `payment.voided` en `audit_log` (RLS-123) |
+| FUN-39 | Descargar recibo | **no existe** | **pendiente**: el folio y el periodo ya están; falta el PDF |
+
+```sql
+-- FUN-32: estado de cuenta por alumno y periodo
+select student_id, period_start, period_end, expected_amount, paid_amount, balance, status
+from public.student_billing_status
+where student_id = '<uuid-alumno1>'
+order by period_start desc;
+```
 
 ### 6.4. Panel del tutor (FUN-01)
 
 | # | Paso | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| FUN-40 | Tutor entra | ve hijos, consentimiento, pagos | además avance, calificaciones, asistencia, observaciones |
-| FUN-41 | Tutor intenta editar | sin controles | sin controles |
+| FUN-40 | Tutor entra | ve hijos, consentimiento, pagos | además avance, calificaciones, asistencia, observaciones `family` y tareas |
+| FUN-41 | Tutor intenta editar | sin controles | sin controles y con etiqueta “Solo lectura” |
 | FUN-42 | Tutor ve calificación no visible | 0 | 0 |
+| FUN-43 | Tutor con consentimiento revocado | — | panel bloqueado, sin datos académicos |
+| FUN-44 | Alumno sin actividad | panel vacío sin errores | estados vacíos explícitos |
+| FUN-45 | Tutor abre el perfil vocacional | veía `vocational_notes` | solo `student_guidance` (intereses, aptitudes, fortalezas, carrera de interés) |
 
 ---
 
@@ -406,11 +445,16 @@ curl -s -X POST "$SB_URL/rest/v1/rpc/app_sync_player_state" \
 | PRIV-16 | Revisar respaldo en disco | JSON legible con PII | cifrado y sin `auth.users` | PRIV-05 / OPS-01 |
 | PRIV-17 | Comparar el hash de `privacidad.html` con `settings` y `privacy_document` | no existía | coinciden (`node scripts/privacy-doc.mjs --check`) | PRIV-01 |
 | PRIV-18 | Insertar un consentimiento por PostgREST como tutor | no había política | **falla**; solo lo registra `guardian-consent` (RLS-107) | PRIV-01 |
+| PRIV-19 | Tutor con consentimiento lee el perfil vocacional | veía la fila cruda | solo `student_guidance`; no ve `weaknesses`, `vocational_notes` ni `extras` (RLS-110) | PRIV-03 |
+| PRIV-20 | Comparar el aviso vigente con `settings` | `v2-2026` | `v3-2026` con hash `85d13859…f740b`; el manifiesto coincide | PRIV-03 |
 
-**Estado de PRIV-10…13 y PRIV-17/18:** implementado en `0027_privacy_notice.sql`,
+**Estado de PRIV-10…13, PRIV-17/18 y PRIV-19/20:** implementado en
+`0027_privacy_notice.sql`, `0030_vocational_visibility.sql`, `0031_privacy_notice_v3.sql`,
 `guardian-consent` y el panel del tutor; falta la verificación E2E en staging.
-El aviso se publica como `v2-2026` con banner de revisión legal; la validación
-por abogado sigue pendiente.
+El aviso se publica como `v3-2026` con la finalidad educativa del perfil
+vocacional y banner de revisión legal; la validación por abogado sigue
+pendiente. Los consentimientos `v2-2026` dejan de ser vigentes al aplicar
+`0031`.
 
 **Comprobación de `localStorage`:**
 
@@ -429,28 +473,31 @@ Object.keys(localStorage).filter(k => k.startsWith('ecoems_'));
 **Solo en staging.** Ejecutar el ciclo completo:
 
 ```bash
-# 1. Respaldo
-DATABASE_URL="$(cat .secrets/staging-db-url)" node scripts/backup-db.mjs
+# 1. Respaldo cifrado (excluye auth.*, permisos 600, retención 30 días)
+DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/backup-db.mjs
 
-# 2. Verificar el archivo
+# 2. Verificar el archivo y su checksum
 ls -la .backups/
-# Esperado corregido: permisos 600, cifrado, sin auth.users
+shasum -a 256 -c .backups/<archivo>.sha256
 
 # 3. Modificar un dato de prueba (W)
-# 4. Restaurar
-DATABASE_URL="$(cat .secrets/staging-db-url)" node scripts/restore-db.mjs .backups/<archivo>
+# 4. Restaurar (exige confirmación explícita)
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/restore-db.mjs .backups/<archivo>.enc --confirm=restore
 
-# 5. Verificar que el dato volvió
+# 5. Verificar que el dato volvió y revisar restore.log
 ```
 
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| OPS-10 | Respaldo sin cifrar | archivo legible | cifrado |
-| OPS-11 | Respaldo incluye `auth.users` | sí | no |
-| OPS-12 | Restore sin confirmación | ejecuta | **aborta** |
-| OPS-13 | Restore con URL de producción | **ejecuta** | **aborta** |
-| OPS-14 | Restore con JSON corrupto | falla a mitad | valida antes |
-| OPS-15 | Restore deja log | no | sí |
+| OPS-10 | Respaldo sin cifrar | archivo legible | AES-256-GCM; sin llave no se lee |
+| OPS-11 | Respaldo incluye `auth.users` | sí | no; `--include-auth` exige `ALLOW_AUTH_BACKUP=1` |
+| OPS-12 | Restore sin confirmación | ejecuta | **aborta** sin `--confirm=restore` |
+| OPS-13 | Restore con URL de producción | **ejecuta** | **aborta** salvo `--i-know` |
+| OPS-14 | Restore con archivo corrupto | falla a mitad | valida checksum, conteos y tablas antes de escribir |
+| OPS-15 | Restore deja log | no | `restore.log` con fecha, archivo, checksum y resultado |
+| OPS-16 | Respaldo previo automático | no | el restore genera un respaldo antes de truncar |
+| OPS-17 | Retención | manual | borra respaldos de más de 30 días y lo registra en `backup.log` |
 
 ### 8.2. Smoke E2E (OPS-03)
 
@@ -482,6 +529,25 @@ node scripts/test-functions.mjs
 | OPS-34 | `guardian-consent` con alumno | 403 |
 | OPS-35 | `guardian-consent` con versión incorrecta | 409 |
 | OPS-36 | CORS con origen no permitido | rechazo (corregido) |
+| OPS-37 | `deactivate-user` con admin y motivo | 200 + ban en Auth + `audit_log` (SEC-04) |
+| OPS-38 | `deactivate-user` reactivando | 200 + `banned_until=none` |
+
+### 8.4. Migraciones, CI y despliegue (DB-07, OPS-04)
+
+```bash
+# Solo lectura: compara migraciones aplicadas con los archivos locales
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/verify-migrations.mjs --out=.backups/migrations-staging.json
+```
+
+| # | Prueba | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 31 migraciones aplicadas, sin faltantes ni sobrantes |
+| OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada |
+| OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` |
+| OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica |
+| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check |
+| OPS-45 | Rollback | manual y lento | volver a una etiqueta anterior en menos de 15 minutos |
 
 ---
 
@@ -514,10 +580,10 @@ npx lighthouse https://<staging>/ --only-categories=accessibility --output=json
 | SEC-02 | AUTH-20…28 + RLS-92…97 | E2E / SQL |
 | SEC-03 | AUTH-01…06 + RLS-89…91 | E2E / SQL |
 | PRIV-01 | PRIV-10…13, PRIV-17/18 + RLS-98…107 | E2E / SQL |
-| SEC-04 | AUTH-10…13 | E2E |
+| SEC-04 | AUTH-10…15 + OPS-37/38 + RLS-108/109 | E2E / SQL |
 | SEC-05 | OPS-36 | HTTP |
 | SEC-06 | AUTH-30…33 | E2E |
-| SEC-07 | AUTH-10…13 + auditoría | SQL |
+| SEC-07 | AUTH-10…15 + auditoría | SQL |
 | SEC-08 | Inspección de bundle | Estática |
 | SEC-09 | Carga controlada | Manual |
 | DB-01 | FUN-12 | SQL |
@@ -526,10 +592,10 @@ npx lighthouse https://<staging>/ --only-categories=accessibility --output=json
 | DB-04 | FUN-21 | HTTP |
 | DB-05 | Rebuild desde cero | SQL |
 | DB-06 | Inspección de retención | SQL |
-| DB-07 | Consulta de migraciones | SQL |
+| DB-07 | OPS-40/41 (`verify-migrations.mjs`) | SQL (solo lectura) |
 | DB-08 | RLS-16, RLS-50, RLS-85…88 | SQL |
-| FUN-01 | FUN-40…42 | E2E |
-| FUN-02 | FUN-30…35 | E2E |
+| FUN-01 | FUN-40…45 | E2E |
+| FUN-02 | FUN-30…39 + RLS-118…129 | E2E / SQL |
 | FUN-03 | FUN-10…13 | E2E |
 | FUN-04 | FUN-23 | E2E |
 | FUN-05 | FUN-21 | E2E |
@@ -551,16 +617,16 @@ npx lighthouse https://<staging>/ --only-categories=accessibility --output=json
 | UX-01…08 | UX-10…17 | Manual / axe |
 | PRIV-01 | PRIV-10…13 | E2E |
 | PRIV-02 | RLS-16, RLS-50, RLS-85…88 | SQL |
-| PRIV-03 | RLS-20…23 | SQL |
+| PRIV-03 | RLS-19/47, RLS-110…117, PRIV-19/20 | SQL / E2E |
 | PRIV-04 | PRIV-14 | Manual |
-| PRIV-05 | PRIV-16 / OPS-10 | Manual |
+| PRIV-05 | PRIV-16 / OPS-10, OPS-11, OPS-17 | Manual |
 | PRIV-06 | PRIV-15 | E2E |
 | PRIV-07 | Consulta de retención | SQL |
 | PRIV-08 | AUTH-33 | Manual |
-| OPS-01 | OPS-10, OPS-11 | Manual |
-| OPS-02 | OPS-12…15 | Manual (W) |
+| OPS-01 | OPS-10, OPS-11, OPS-17 | Manual |
+| OPS-02 | OPS-12…16 | Manual (W) |
 | OPS-03 | OPS-20…23 | Script |
-| OPS-04 | Simulación de despliegue | CI |
+| OPS-04 | OPS-42…45 | CI |
 | OPS-05 | Revisión de `config.toml` | Estática |
 | OPS-06 | Revisión de permisos | Manual |
 | OPS-07 | Simulación de fallo | Manual |
@@ -601,21 +667,26 @@ Cada prueba ejecutada debe dejar un registro como este:
 ## 12. Orden recomendado de ejecución
 
 1. **Preparar staging** y usuarios ficticios.
-2. **RLS-01…08** (contenido): confirma `SEC-01` y sirve de línea base.
-3. **RLS-16/50 y RLS-85…88** (notas internas).
-4. **RLS-30…33** (observaciones).
-5. **RLS-40…44** (finanzas).
-6. **AUTH-01…06 + RLS-89…91** (contraseña).
-7. **AUTH-20…28 + RLS-92…97** (invitaciones con token).
-8. **RLS-98…107 + PRIV-10…13, PRIV-17/18** (aviso y consentimiento).
-9. **AUTH-10…13** (desactivación).
-10. **FUN-20…26** (estudio y evaluación).
-11. **FUN-10…13** (activación).
-12. **PRIV-14…16** (datos y respaldos).
-13. **OPS-10…15** (respaldo/restore) — al final, porque modifica staging.
-14. **OPS-20…23** (smoke).
-15. **UX-10…17** (accesibilidad).
-16. **Repetir la suite** después de cada corrección de Fase 1.
+2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 31 migraciones aplicadas.
+3. **RLS-01…08** (contenido): confirma `SEC-01` y sirve de línea base.
+4. **RLS-16/50 y RLS-85…88** (notas internas).
+5. **RLS-30…33** (observaciones).
+6. **RLS-40…50** (finanzas y estado de cuenta).
+7. **AUTH-01…06 + RLS-89…91** (contraseña).
+8. **AUTH-20…28 + RLS-92…97** (invitaciones con token).
+9. **RLS-98…107 + PRIV-10…13, PRIV-17/18, PRIV-20** (aviso y consentimiento).
+10. **AUTH-10…15 + OPS-37/38 + RLS-108/109** (desactivación con ban).
+11. **RLS-19/47, RLS-110…117 + PRIV-19** (perfil vocacional curado).
+12. **FUN-30…39 + RLS-118…129** (pagos, saldo, duplicados y anulación).
+13. **FUN-40…45** (panel del tutor).
+14. **FUN-20…26** (estudio y evaluación).
+15. **FUN-10…13** (activación).
+16. **PRIV-14…16** (datos y respaldos).
+17. **OPS-10…17** (respaldo/restore) — al final, porque modifica staging.
+18. **OPS-20…23** (smoke).
+19. **OPS-42…45** (CI y despliegue).
+20. **UX-10…17** (accesibilidad).
+21. **Repetir la suite de 113 checks** después de cada corrección de Fase 2.
 
 ---
 
@@ -643,12 +714,16 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [ ] Las pruebas RLS-16/50 y RLS-85…88 demuestran que `notes_internal` ya no existe y que `student_staff_notes` no es accesible a la familia.
 - [ ] AUTH-01…06 y RLS-89…91 demuestran que la contraseña temporal deja de funcionar y que nadie puede limpiar la bandera sin cambiar la contraseña.
 - [ ] AUTH-20…28 y RLS-92…97 demuestran que la vinculación exige token, que el token no se lee por REST y que no se puede reutilizar.
-- [ ] RLS-98…107 y PRIV-10…13, PRIV-17/18 demuestran el bloqueo, la evidencia, la revocación y la ausencia de inserción directa de consentimientos.
-- [ ] AUTH-10…13 demuestran que el usuario desactivado no puede autenticarse.
+- [ ] RLS-98…107 y PRIV-10…13, PRIV-17/18, PRIV-20 demuestran el bloqueo, la evidencia, la revocación, la ausencia de inserción directa de consentimientos y el aviso `v3-2026`.
+- [ ] AUTH-10…15, OPS-37/38 y RLS-108/109 demuestran que el usuario desactivado no puede autenticarse y que queda rastro del actor y del motivo.
+- [ ] RLS-19/47, RLS-110…117 y PRIV-19 demuestran que la familia no lee `student_profiles` crudo ni las notas internas.
+- [ ] FUN-30…39 y RLS-118…129 demuestran periodo, saldo, duplicados, anulación auditada y ausencia de `DELETE`; el recibo PDF queda implementado.
+- [ ] FUN-40…45 demuestran el panel del tutor de solo lectura con avance, calificaciones, asistencia, tareas y observaciones `family`.
 - [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
-- [ ] PRIV-10…13 demuestran el bloqueo, la evidencia y la revocación.
-- [ ] OPS-12/13 demuestran que el restore no se ejecuta por accidente.
+- [ ] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log.
+- [ ] OPS-40/41 demuestran qué migraciones están aplicadas y que no hay `SECURITY DEFINER` sin `search_path`.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
+- [ ] OPS-42…45 demuestran que el despliegue es reproducible, etiquetado y reversible sin `push -f`.
 - [ ] La suite corre en CI y bloquea el despliegue si falla.
 - [ ] Cada prueba tiene evidencia registrada sin PII.
 

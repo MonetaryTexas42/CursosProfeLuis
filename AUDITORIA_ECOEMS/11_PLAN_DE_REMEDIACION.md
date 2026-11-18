@@ -69,7 +69,7 @@ Fase 4 (P3 · 90 días)
 | Paso | Acción |
 |---|---|
 | 1 | Crear un proyecto Supabase nuevo (`ecoems-staging`) |
-| 2 | Aplicar las 27 migraciones desde cero |
+| 2 | Aplicar las 31 migraciones desde cero |
 | 3 | Cargar `seed/content-v1.json` |
 | 4 | Crear usuarios ficticios por rol (admin, profesor, alumno, tutor) |
 | 5 | Crear `.env.staging` con la URL y anon key de staging |
@@ -333,8 +333,8 @@ Sin políticas para `authenticated`/`anon`: RLS devuelve 0 filas y solo el `serv
 
 **Implementado (sin aplicar):**
 
-- `frontend/public/privacidad.html` publica el aviso `v2-2026` con banner de revisión legal y placeholders institucionales. `scripts/privacy-doc.mjs` calcula su SHA-256 y genera `supabase/seed/privacy-document.json`.
-- `0027_privacy_notice.sql` publica `privacy_document_version`, `privacy_document_url` y `privacy_document_sha256`; crea la vista pública `privacy_document` y `app_guardian_has_consent`.
+- `frontend/public/privacidad.html` publica el aviso `v3-2026` (la `0027` publicó `v2-2026`; la `0031` añade la finalidad educativa del perfil vocacional) con banner de revisión legal y placeholders institucionales. `scripts/privacy-doc.mjs` calcula su SHA-256 y genera `supabase/seed/privacy-document.json`.
+- `0027_privacy_notice.sql` publica `privacy_document_version`, `privacy_document_url` y `privacy_document_sha256`; crea la vista pública `privacy_document` y `app_guardian_has_consent`. `0031_privacy_notice_v3.sql` sube la versión vigente a `v3-2026` y su hash.
 - Las políticas del tutor (`students`, `profiles`, `groups`, finanzas, mensajes) exigen consentimiento vigente. `student_guardians` y `privacy_consents` siguen visibles para poder aceptar o revocar.
 - Se elimina `privacy_consents_guardian_insert`: el tutor no puede fabricar un consentimiento por PostgREST.
 - `guardian-consent` valida versión, URL y hash contra `settings`, exige `acknowledged` y `confirm`, revoca todas las versiones activas y audita aceptación y revocación.
@@ -480,6 +480,14 @@ declarar la operación terminada.
 - Mostrar al tutor “al corriente / pendiente / vencido”.
 - Añadir recibo descargable.
 
+**Implementado en `0029`:** columnas y folio (`REC-<año>-<secuencia>`),
+`app_billing_period`, trigger `app_payments_before_write` (folio, validación,
+duplicados y auditoría de la anulación), vistas `student_billing_status` y
+`payment_duplicates`, RPC `app_void_payment`, políticas sin `DELETE` y panel
+del tutor/staff con periodo, estado, saldo, folio y botón “Anular”. El trigger
+registra en `audit_log` incluso si la anulación se hace por PostgREST. **Pendiente
+para cerrar el hallazgo:** recibo descargable (PDF) y verificación en staging.
+
 **Aceptación:** se puede responder “¿cuánto debe y de qué periodo?” para cualquier alumno; un pago duplicado se detecta; una anulación deja rastro.
 
 **Esfuerzo:** 3–5 días.
@@ -503,6 +511,12 @@ declarar la operación terminada.
 - Retención de 30 días con borrado automático.
 - Checksum y log de generación.
 - Verificar los respaldos automáticos de Supabase.
+
+**Implementado en `scripts/backup-db.mjs`:** cifrado AES-256-GCM en origen con
+llave en `.secrets/backup.key` (o `BACKUP_KEY`), exclusión de **todo** `auth.*`
+salvo `--include-auth` con `ALLOW_AUTH_BACKUP=1`, permisos 600/700, retención de
+30 días, checksum lateral `.sha256` y `backup.log`. El volcado sin cifrar exige
+`ALLOW_PLAINTEXT_BACKUP=1` y es solo para diagnóstico local.
 
 **Aceptación:** el respaldo en disco está cifrado; no contiene `auth.users`; se borra a los 30 días; existe evidencia de una restauración exitosa.
 
@@ -541,12 +555,74 @@ from supabase_migrations.schema_migrations
 order by version;
 ```
 
-- Comparar con los 22 archivos.
+- Comparar con los 31 archivos.
 - Revisar `pg_policies` y `pg_proc` para detectar objetos no versionados.
+
+**Implementado:** `scripts/verify-migrations.mjs` compara
+`supabase_migrations.schema_migrations` con los archivos locales, lista
+políticas/funciones, detecta `SECURITY DEFINER` sin `search_path` y puede
+escribir una instantánea JSON con `--out=`. Es de solo lectura y avisa si el
+destino es producción. **Pendiente:** ejecutarlo contra staging y contra una
+réplica/diagnóstico de producción para cerrar `DB-07`.
 
 **Aceptación:** existe un documento que confirma qué migraciones están aplicadas y si hay diferencias.
 
 **Esfuerzo:** 2 h.
+
+### 5.9. Estado de implementación de Fase 2 (17 nov 2026)
+
+| ID | Estado en código | Migración / archivo | Verificación pendiente |
+|---|---|---|---|
+| SEC-04 | Implementado | `0028_offboarding.sql`; `functions/deactivate-user/index.ts` | Desactivar → login/refresh falla en Auth (staging) |
+| FUN-01 | Implementado | `frontend/src/ui/app.js`; `styles.css` | Panel del tutor con datos ficticios |
+| FUN-02 | Implementado salvo recibo PDF | `0029_payments_traceability.sql`; `app.js` | Periodo/saldo/duplicado/anulación en staging |
+| PRIV-03 | Implementado | `0030_vocational_visibility.sql`; `privacidad.html` | Tutor no ve tabla cruda ni notas internas |
+| PRIV-05 / OPS-01 | Implementado | `scripts/backup-db.mjs` | Respaldo cifrado y restauración de prueba |
+| OPS-02 | Implementado | `scripts/restore-db.mjs` | Sin `--confirm` no escribe; producción exige `--i-know` |
+| OPS-04 | Implementado | `.github/workflows/ci.yml`; `docs/despliegue.md` | Primer push a `main` con secretos configurados |
+| DB-07 | Implementado el verificador | `scripts/verify-migrations.mjs` | Ejecutarlo contra staging y producción (solo lectura) |
+
+La suite de RLS creció de **91 a 113 checks** (RLS-108…129) para cubrir
+offboarding, pagos, estado de cuenta y perfil vocacional curado. Nada de esto
+está aplicado ni verificado en un entorno real todavía.
+
+### 5.10. Rollback de Fase 2 (0028–0031)
+
+Solo para emergencia. Antes de empezar, generar un respaldo cifrado con
+`scripts/backup-db.mjs` y confirmar que se puede descifrar. El orden es
+frontend → Edge Functions → migraciones en orden inverso (`0031` → `0028`).
+
+1. **Frontend:** volver al commit anterior de `app.js`, `styles.css` y
+   `privacidad.html`; reconstruir y publicar. El panel anterior no consulta
+   `student_guidance`, `student_billing_status` ni `app_void_payment`.
+2. **0031 (aviso v3):** restaurar en `settings` la versión `v2-2026`, la URL
+   `/privacidad.html` y el hash
+   `2862320c61c93a3553a7328625836bf9792783cc170051de76c655559ddeedfc`.
+   No borrar los consentimientos `v3-2026`: son evidencia; si se reaplica la
+   migración, vuelven a contar.
+3. **0030 (PRIV-03):** `drop view public.student_guidance`; recrear
+   `student_profiles_select` con `app_can_access_student(student_id)` desde
+   `0003_rls.sql`. No se recomienda: el tutor vuelve a ver `weaknesses` y
+   `vocational_notes`.
+4. **0029 (FUN-02):** `drop function public.app_void_payment(uuid, text)`;
+   `drop view public.payment_duplicates`; `drop view public.student_billing_status`;
+   `drop function public.app_payments_before_write()`; `drop function
+   public.app_billing_period(text, date)`; `drop sequence
+   public.payment_receipt_seq`; quitar las columnas nuevas de `payments` y
+   recrear las políticas `payments_write_staff` y `student_billing_write_staff`
+   desde `0020_payments.sql` / `0021_billing_guard.sql`. **No borrar** los pagos:
+   las columnas de anulación contienen evidencia; exportarlas antes de eliminar
+   las columnas.
+5. **0028 (SEC-04):** quitar `deactivation_reason`, `deactivated_by` y
+   `deactivated_at` de `profiles`; redesplegar la versión anterior de
+   `deactivate-user` (solo `profiles.active = false`). No se recomienda: el
+   usuario desactivado vuelve a poder autenticarse.
+
+**Verificación posterior:** `node scripts/staging-check.mjs` debe volver a los
+umbrales de Fase 1 (27 migraciones, 88 políticas, 46 funciones `SECURITY
+DEFINER`) y la suite RLS debe quedar sin los checks 108–129. Si se revirtió
+todo, la línea base no debe superar los 6 FAIL históricos de `SEC-01` y
+`PRIV-02`; cualquier FAIL adicional indica un rollback incompleto.
 
 ---
 
