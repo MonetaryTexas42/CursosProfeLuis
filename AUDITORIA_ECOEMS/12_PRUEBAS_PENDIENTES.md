@@ -1,0 +1,661 @@
+# 12 · Pruebas pendientes
+
+## 1. Propósito
+
+Esta auditoría fue **estática**: no se ejecutó la aplicación, no se abrió conexión a la base y no se llamó a producción. Por eso, buena parte de los hallazgos tiene evidencia de código pero **no verificación en ejecución**.
+
+Este documento define las pruebas que faltan, cómo ejecutarlas en un entorno aislado y qué evidencia debe quedar. No se ejecutó ninguna.
+
+> **Regla de oro:** ninguna prueba de este documento se corre contra producción. Todas requieren staging (`OPS-09`) o una réplica local. Las que escriben datos llevan la marca **W**.
+
+---
+
+## 2. Requisitos previos
+
+| Requisito | Detalle |
+|---|---|
+| Proyecto staging | `ecoems-staging`, con las 27 migraciones y el seed |
+| Usuarios ficticios | Un admin, un profesor con grupo, dos alumnos (uno con asignación, uno sin), un tutor vinculado sin consentimiento, un tutor no vinculado y un tutor con consentimiento vigente y revocado |
+| Contenido | Al menos una unidad publicada con `correctIndex`, una en borrador |
+| `psql` | Para pruebas SQL directas |
+| `curl` o `httpie` | Para PostgREST |
+| Node 20+ | Para scripts |
+| Chrome | Para E2E con DevTools Protocol |
+| JWT por rol | Ver §3 |
+
+### 2.1. Datos ficticios mínimos
+
+```
+admin@staging.ecoems.local          → rol admin
+profesor1@staging.ecoems.local      → rol teacher, grupos A y B
+profesor2@staging.ecoems.local      → rol teacher, sin grupos (otro profesor)
+alumno1@alumnos.staging.ecoems.mx   → rol student, grupo A, con asignación activa
+alumno2@alumnos.staging.ecoems.mx   → rol student, grupo B, sin asignación
+tutor1@staging.ecoems.local         → rol guardian, vinculado a alumno1, sin consentimiento
+tutor2@staging.ecoems.local         → rol guardian, sin vínculos
+tutor3@staging.ecoems.local         → rol guardian, consentimiento vigente de alumno2
+                                      y consentimiento revocado de alumno1
+```
+
+Todas las contraseñas son ficticias y viven solo en staging. El seed
+`app/scripts/seed-staging-users.mjs` crea exactamente estos usuarios.
+
+### 2.2. Suite automatizada de RLS (COD-07)
+
+La suite `app/supabase/tests/rls/rls-negative.mjs` (91 checks) y su runner
+`app/scripts/run-rls-tests.mjs` codifican el comportamiento **seguro esperado**.
+Descubren las identidades por rol, validan que el JWT simulado resuelva al rol
+correcto y hacen `rollback` en cada prueba.
+
+```bash
+cd app
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/run-rls-tests.mjs
+```
+
+- `0`: todo PASS o SKIP justificado.
+- `1`: hay FAIL (comportamiento inseguro).
+- `2`: error de configuración o conexión.
+
+Los roles sin identidad se marcan **SKIP**, nunca PASS. Antes de la Fase 1 la
+línea base era de 6 FAIL (`SEC-01`: RLS-01, 02, 10, 11; `PRIV-02`: RLS-16, 50).
+Con las migraciones 0023–0027 y las Edge Functions de contraseña, invitación y
+consentimiento, la expectativa es **0 FAIL**; cualquier FAIL nuevo es una
+regresión. La suite añade RLS-89–91 (`SEC-03`), RLS-92–97 (`SEC-02`) y
+RLS-98–107 (`PRIV-01`). El runbook completo está en
+[`app/docs/staging.md`](../app/docs/staging.md).
+
+---
+
+## 3. Cómo obtener un JWT por rol
+
+### 3.1. Login por contraseña
+
+```bash
+export SB_URL="https://<ref-staging>.supabase.co"
+export SB_ANON="<anon-key-staging>"
+
+login() {
+  local email="$1" pass="$2"
+  curl -s "$SB_URL/auth/v1/token?grant_type=password" \
+    -H "apikey: $SB_ANON" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}" \
+  | jq -r '.access_token'
+}
+
+export JWT_ADMIN=$(login "admin@staging.local" "$ADMIN_PASS")
+export JWT_TEACHER=$(login "profesor@staging.local" "$TEACHER_PASS")
+export JWT_STUDENT1=$(login "alumno1@alumnos.staging.mx" "$STUDENT1_PASS")
+export JWT_STUDENT2=$(login "alumno2@alumnos.staging.mx" "$STUDENT2_PASS")
+export JWT_GUARDIAN=$(login "tutor1@staging.local" "$GUARDIAN_PASS")
+```
+
+**Evidencia esperada:** cada llamada devuelve `access_token` y `user.id`. Guardar el `user.id` de cada rol para las pruebas SQL.
+
+### 3.2. Pruebas SQL con claims simulados
+
+Para probar RLS directamente en PostgreSQL sin pasar por PostgREST:
+
+```sql
+-- Reemplazar <uuid> por el id real del usuario en staging
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"<uuid-alumno1>","role":"authenticated"}';
+  select count(*) from public.unit_versions;
+rollback;
+```
+
+**Ventaja:** permite aislar la política de la API. **Cuidado:** `set local` debe ir dentro de una transacción; el `rollback` evita dejar el rol cambiado.
+
+**Helper recomendado:**
+
+```sql
+create or replace function public.test_as(p_user uuid)
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', p_user, 'role', 'authenticated')::text, true);
+end;
+$$;
+```
+
+Uso:
+
+```sql
+begin;
+select public.test_as('<uuid-alumno1>');
+select count(*) from public.unit_versions;
+rollback;
+```
+
+---
+
+## 4. Pruebas de RLS
+
+Cada prueba indica: **rol**, **consulta**, **esperado hoy**, **esperado después de la corrección** y **hallazgo** asociado.
+
+> Los IDs de esta sección son **conceptuales**, para planear la verificación. La
+> numeración ejecutable y autoritativa está en
+> `app/supabase/tests/rls/rls-negative.mjs` (RLS-01…91); cuando difieran, manda
+> la suite.
+
+### 4.1. Contenido (SEC-01)
+
+| # | Rol | Consulta | Esperado hoy | Esperado corregido | Hallazgo |
+|---|---|---|---|---|---|
+| RLS-01 | alumno sin asignación | `select count(*) from units` | > 0 | **0** | SEC-01 |
+| RLS-02 | alumno sin asignación | `select count(*) from unit_versions` | > 0 | **0** | SEC-01 |
+| RLS-03 | alumno con asignación A | `select unit_id from unit_versions` | todas | **solo A** | SEC-01 |
+| RLS-04 | alumno con asignación cerrada | `select count(*) from unit_versions` | > 0 | **0** | SEC-01 |
+| RLS-05 | alumno con asignación fuera de ventana | `select count(*) from unit_versions` | > 0 | **0** | SEC-01 |
+| RLS-06 | alumno | `select content from unit_versions` | incluye `correctIndex` | **solo de su unidad** | SEC-01 |
+| RLS-07 | profesor | `select count(*) from units` | todas (staff) | todas | — |
+| RLS-08 | tutor | `select count(*) from unit_versions` | > 0 | **0** (no cursa) | SEC-01 |
+
+**Consulta de verificación del contenido expuesto (solo lectura):**
+
+```bash
+curl -s "$SB_URL/rest/v1/unit_versions?select=unit_id,version,content&published_at=not.is.null" \
+  -H "apikey: $SB_ANON" \
+  -H "Authorization: Bearer $JWT_STUDENT2" | jq 'length'
+```
+
+**Evidencia:** número de filas y, si es > 0, confirmar que `content` incluye `correctIndex` (sin transcribir el contenido completo).
+
+### 4.2. Datos de alumnos (PRIV-02)
+
+| # | Rol | Consulta | Esperado hoy | Esperado corregido | Hallazgo |
+|---|---|---|---|---|---|
+| RLS-10 | alumno1 | `select * from students` | 1 fila con `notes_internal` | 1 fila **sin** `notes_internal` | PRIV-02 |
+| RLS-11 | tutor1 | `select * from students` | 1 fila con `notes_internal` | 1 fila **sin** `notes_internal` | PRIV-02 |
+| RLS-12 | alumno1 | `select count(*) from students` | 1 | 1 | — |
+| RLS-13 | alumno2 | `select count(*) from students` | 1 (solo él) | 1 | — |
+| RLS-14 | profesor | `select count(*) from students` | solo su grupo | solo su grupo | — |
+| RLS-15 | alumno1 | `select * from student_staff_notes` | error/0 | error/0 | PRIV-02 |
+
+### 4.3. Perfil psicopedagógico (PRIV-03)
+
+| # | Rol | Consulta | Esperado | Hallazgo |
+|---|---|---|---|---|
+| RLS-20 | tutor1 | `select * from student_profiles` | solo su hijo; revisar si incluye `vocational_notes` | PRIV-03 |
+| RLS-21 | alumno1 | `select * from student_profiles` | solo su fila | PRIV-03 |
+| RLS-22 | alumno2 | `select count(*) from student_profiles` | 1 (solo él) | — |
+| RLS-23 | profesor de otro grupo | `select count(*) from student_profiles` | 0 | — |
+
+### 4.4. Observaciones (familia vs. interno)
+
+| # | Rol | Consulta | Esperado | Hallazgo |
+|---|---|---|---|---|
+| RLS-30 | tutor1 | `select visibility, body from observations` | solo `family` de su hijo | — |
+| RLS-31 | alumno1 | `select visibility, body from observations` | solo `family` propios | — |
+| RLS-32 | profesor | `select count(*) from observations` | solo de sus alumnos | — |
+| RLS-33 | tutor2 (sin vínculo) | `select count(*) from observations` | 0 | — |
+
+### 4.5. Finanzas (FUN-02, SEC-01)
+
+| # | Rol | Consulta | Esperado | Hallazgo |
+|---|---|---|---|---|
+| RLS-40 | alumno1 | `select count(*) from payments` | **0** (0021) | — |
+| RLS-41 | alumno1 | `select count(*) from student_billing` | **0** (0021) | — |
+| RLS-42 | tutor1 | `select count(*) from payments` | solo de su hijo | — |
+| RLS-43 | tutor1 | `insert into payments ...` | **falla** (solo lectura) | — |
+| RLS-44 | profesor | `select count(*) from payments` | solo de sus alumnos | — |
+
+### 4.6. Consentimientos (PRIV-01)
+
+| # | Rol | Consulta | Esperado | Hallazgo |
+|---|---|---|---|---|
+| RLS-50 | tutor1 | `select * from privacy_consents` | solo de su hijo | — |
+| RLS-51 | alumno1 | `select * from privacy_consents` | solo los propios | PRIV-01 |
+| RLS-52 | tutor2 | `select count(*) from privacy_consents` | 0 | — |
+| RLS-98 | tutor1 (sin consentimiento) | `select count(*) from students` | **0** | PRIV-01 |
+| RLS-99 | tutor1 (sin consentimiento) | `select count(*) from profiles where id = alumno1` | **0** | PRIV-01 |
+| RLS-100 | tutor1 (sin consentimiento) | `select count(*) from groups where id = grupo1` | **0** | PRIV-01 |
+| RLS-101 | tutor1 (sin consentimiento) | `select count(*) from student_guardians` | **1** (su vínculo, para aceptar) | PRIV-01 |
+| RLS-102 | tutor1 (sin consentimiento) | `select count(*) from student_billing` + `payments` | **0** | PRIV-01 |
+| RLS-103 | tutor3 (con consentimiento) | `select count(*) from students` | **1** (solo el consentido) | PRIV-01 |
+| RLS-104 | tutor3 | perfil de alumno1 (consentimiento revocado) | **0** | PRIV-01 |
+| RLS-105 | tutor3 | `app_guardian_has_consent(alumno2)` y `(alumno1)` | **true** y **false** | PRIV-01 |
+| RLS-106 | anon | `select * from privacy_document` | 1 fila con versión, URL y hash | PRIV-01 |
+| RLS-107 | tutor1 | política `privacy_consents_guardian_insert` | **no existe** | PRIV-01 |
+
+### 4.7. Grupos y perfiles
+
+| # | Rol | Consulta | Esperado | Hallazgo |
+|---|---|---|---|---|
+| RLS-60 | profesor A | `select * from groups` | solo grupo A | — |
+| RLS-61 | profesor A | `select * from profiles` | solo su grupo + él | — |
+| RLS-62 | alumno1 | `select count(*) from profiles` | 1 (él) | — |
+| RLS-63 | tutor1 | `select count(*) from profiles` | él + su hijo | — |
+
+---
+
+## 5. Pruebas de autenticación e identidad
+
+### 5.1. SEC-03 · Cambio obligatorio de contraseña
+
+**Precondición:** alumno con `must_change_password = true` y contraseña temporal conocida.
+
+| # | Paso | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| AUTH-01 | Login con temporal | éxito | éxito |
+| AUTH-02 | `rpc('app_complete_password_change')` sin cambiar contraseña | limpia la bandera | **la función ya no existe (RLS-89)** |
+| AUTH-02b | `update profiles set must_change_password=false` por REST | — | **0 filas (RLS-91)** |
+| AUTH-03 | Cerrar sesión, entrar con la temporal | éxito | **falla** |
+| AUTH-04 | Cambiar contraseña por el flujo normal (Edge Function) | éxito | éxito y `password_changed_at` (RLS-90) |
+| AUTH-05 | Entrar con la temporal tras el cambio | falla | falla |
+| AUTH-06 | Entrar con la nueva | éxito | éxito |
+
+```bash
+# AUTH-02 (con JWT del alumno): debe responder 404 (función eliminada)
+curl -s -X POST "$SB_URL/rest/v1/rpc/app_complete_password_change" \
+  -H "apikey: $SB_ANON" \
+  -H "Authorization: Bearer $JWT_STUDENT1" \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+**Evidencia:** respuesta de la RPC y valor de `profiles.must_change_password` antes y después.
+
+### 5.2. SEC-04 · Desactivación
+
+| # | Paso | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| AUTH-10 | Admin desactiva a alumno2 | `profiles.active=false` | además `banned_until` |
+| AUTH-11 | Alumno2 intenta login | **éxito** (falla en app) | **falla en Auth** |
+| AUTH-12 | Alumno2 usa su JWT anterior | RPC que solo valida `auth.uid()` funciona | debe fallar o el token debe estar revocado |
+| AUTH-13 | Admin reactiva | login funciona | login funciona |
+
+**Evidencia:** código HTTP del login tras desactivar (`400`/`403` esperado en corregido).
+
+### 5.3. SEC-02 · Invitación y canje de token
+
+**Precondición:** profesor con un grupo; alumno ficticio sin cuenta previa.
+
+| # | Paso | Esperado corregido |
+|---|---|---|
+| AUTH-20 | Intentar `rpc('app_link_student_account')` | **404: la función ya no existe (RLS-95)** |
+| AUTH-21 | El staff genera una invitación | cuenta creada, token de 72 h, `must_change_password=true`, auditado |
+| AUTH-22 | El alumno abre el enlace y define su contraseña | éxito, `password_changed_at`, `must_change_password=false`, auditado |
+| AUTH-23 | Reusar el mismo token | **falla** con `400` y mensaje genérico |
+| AUTH-24 | Usar un token expirado o revocado | **falla** |
+| AUTH-25 | Canjear con contraseña débil | **falla**; el token sigue disponible para reintentar |
+| AUTH-26 | Un profesor de otro grupo intenta emitir | **403** |
+| AUTH-27 | Alumno, profesor o admin leen `student_link_tokens` por REST | **0 filas (RLS-92…94)** |
+| AUTH-28 | Revisar `audit_log` | `student.link_token_issued` y `student.link_token_redeemed`, sin token en claro |
+
+```bash
+# AUTH-20 (con JWT de profesor): debe responder 404 (función eliminada)
+curl -s -X POST "$SB_URL/rest/v1/rpc/app_link_student_account" \
+  -H "apikey: $SB_ANON" \
+  -H "Authorization: Bearer $JWT_TEACHER" \
+  -H "Content-Type: application/json" \
+  -d '{"p_email":"alumno@ejemplo.mx","p_full_name":"Alumno Prueba","p_group_id":"'"$GROUP_ID"'"}'
+
+# AUTH-21: la Edge Function devuelve el token una sola vez.
+# No se debe registrar en logs ni en el repositorio.
+curl -s -X POST "$SB_URL/functions/v1/issue-student-link-token" \
+  -H "apikey: $SB_ANON" \
+  -H "Authorization: Bearer $JWT_TEACHER" \
+  -H "Content-Type: application/json" \
+  -d '{"full_name":"Alumno Prueba","group_id":"'"$GROUP_ID"'"}'
+
+# AUTH-22: el canje es público; el token es la prueba de titularidad.
+curl -s -X POST "$SB_URL/functions/v1/redeem-student-link-token" \
+  -H "apikey: $SB_ANON" \
+  -H "Content-Type: application/json" \
+  -d '{"token":"'"$LINK_TOKEN"'","new_password":"NuevaClave2026"}'
+```
+
+**Evidencia:** respuestas HTTP, filas de `audit_log`, `profiles.password_changed_at` y ausencia del token en claro en la base y en los logs.
+
+### 5.4. SEC-06 / PRIV-08 · Magic link
+
+| # | Paso | Esperado |
+|---|---|---|
+| AUTH-30 | Invitar tutor | se genera enlace con expiración corta |
+| AUTH-31 | Abrir el enlace en otro navegador | funciona una vez |
+| AUTH-32 | Reabrir el enlace | falla |
+| AUTH-33 | Inspeccionar el mensaje de WhatsApp | no incluye nombre del alumno (corregido) |
+
+---
+
+## 6. Pruebas funcionales
+
+### 6.1. Activación de unidades (FUN-03, DB-01)
+
+| # | Paso | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| FUN-10 | Activar unidad para 2 de 5 alumnos | asignación de grupo + 3 overrides `closed` | audiencia explícita |
+| FUN-11 | Agregar un alumno nuevo al grupo | **ve la unidad** | **no la ve** |
+| FUN-12 | Activar la misma unidad dos veces | **crea otra asignación** | reutiliza o bloquea |
+| FUN-13 | Cerrar y reabrir | progreso se conserva | progreso se conserva |
+
+**Consulta de duplicados:**
+
+```sql
+select group_id, unit_id, count(*)
+from public.unit_assignments
+group by 1,2 having count(*) > 1;
+```
+
+### 6.2. Estudio y evaluación (DB-03, DB-04, FUN-04, FUN-05)
+
+| # | Paso | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| FUN-20 | Abrir unidad sin responder nada | funciona | funciona |
+| FUN-21 | `rpc('app_complete_unit')` sin actividades | **completed** | **falla** |
+| FUN-22 | `rpc('app_sync_player_state', {xp: 999999})` | **acepta** | **rechaza o calcula** |
+| FUN-23 | Quiz: fallar y reintentar 10 veces | **permite** | límite según política |
+| FUN-24 | Ejercicio con respuesta correcta | `is_correct=true` en servidor | igual |
+| FUN-25 | Ejercicio con respuesta incorrecta | `is_correct=false` | igual |
+| FUN-26 | Manipular el payload de respuesta | no altera `is_correct` | igual |
+
+```bash
+# FUN-21
+curl -s -X POST "$SB_URL/rest/v1/rpc/app_complete_unit" \
+  -H "apikey: $SB_ANON" -H "Authorization: Bearer $JWT_STUDENT1" \
+  -H "Content-Type: application/json" \
+  -d '{"p_assignment_id":"<uuid>"}'
+```
+
+```bash
+# FUN-22
+curl -s -X POST "$SB_URL/rest/v1/rpc/app_sync_player_state" \
+  -H "apikey: $SB_ANON" -H "Authorization: Bearer $JWT_STUDENT1" \
+  -H "Content-Type: application/json" \
+  -d '{"p_payload":{"xp":999999,"racha":999,"best":999,"done":[]}}'
+```
+
+**Evidencia:** respuesta JSON y valor de `student_stats.xp_total` antes y después.
+
+### 6.3. Pagos (FUN-02)
+
+| # | Paso | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| FUN-30 | Registrar pago mensual | se guarda | se guarda con periodo |
+| FUN-31 | Registrar el mismo pago dos veces | **se duplica** | detecta duplicado |
+| FUN-32 | Consultar saldo del alumno | **no existe** | devuelve saldo |
+| FUN-33 | Anular un pago | **no existe** | anula con motivo y auditoría |
+| FUN-34 | Tutor consulta pagos | solo lectura | solo lectura |
+| FUN-35 | Alumno consulta pagos | 0 filas | 0 filas |
+
+### 6.4. Panel del tutor (FUN-01)
+
+| # | Paso | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| FUN-40 | Tutor entra | ve hijos, consentimiento, pagos | además avance, calificaciones, asistencia, observaciones |
+| FUN-41 | Tutor intenta editar | sin controles | sin controles |
+| FUN-42 | Tutor ve calificación no visible | 0 | 0 |
+
+---
+
+## 7. Pruebas de privacidad
+
+| # | Paso | Esperado hoy | Esperado corregido | Hallazgo |
+|---|---|---|---|---|
+| PRIV-10 | Tutor nuevo entra | ve datos antes de aceptar | **bloqueado hasta aceptar** | PRIV-01 |
+| PRIV-11 | Botón de consentimiento | no abre texto | abre el aviso | PRIV-01 |
+| PRIV-12 | Aceptar | guarda versión, IP, UA | además hash y URL | PRIV-01 |
+| PRIV-13 | Revocar | **no hay botón** | revoca y bloquea | PRIV-01 |
+| PRIV-14 | Revisar `localStorage` tras cerrar sesión | quedan claves `ecoems_*` | se limpian | PRIV-04 |
+| PRIV-15 | Solicitar eliminación de datos | **no hay canal** | solicitud registrada | PRIV-06 |
+| PRIV-16 | Revisar respaldo en disco | JSON legible con PII | cifrado y sin `auth.users` | PRIV-05 / OPS-01 |
+| PRIV-17 | Comparar el hash de `privacidad.html` con `settings` y `privacy_document` | no existía | coinciden (`node scripts/privacy-doc.mjs --check`) | PRIV-01 |
+| PRIV-18 | Insertar un consentimiento por PostgREST como tutor | no había política | **falla**; solo lo registra `guardian-consent` (RLS-107) | PRIV-01 |
+
+**Estado de PRIV-10…13 y PRIV-17/18:** implementado en `0027_privacy_notice.sql`,
+`guardian-consent` y el panel del tutor; falta la verificación E2E en staging.
+El aviso se publica como `v2-2026` con banner de revisión legal; la validación
+por abogado sigue pendiente.
+
+**Comprobación de `localStorage`:**
+
+```js
+// En la consola del navegador, tras cerrar sesión
+Object.keys(localStorage).filter(k => k.startsWith('ecoems_'));
+// Esperado corregido: solo preferencias no sensibles (tema, sidebar)
+```
+
+---
+
+## 8. Pruebas de operación
+
+### 8.1. Respaldo y restauración (OPS-01, OPS-02)
+
+**Solo en staging.** Ejecutar el ciclo completo:
+
+```bash
+# 1. Respaldo
+DATABASE_URL="$(cat .secrets/staging-db-url)" node scripts/backup-db.mjs
+
+# 2. Verificar el archivo
+ls -la .backups/
+# Esperado corregido: permisos 600, cifrado, sin auth.users
+
+# 3. Modificar un dato de prueba (W)
+# 4. Restaurar
+DATABASE_URL="$(cat .secrets/staging-db-url)" node scripts/restore-db.mjs .backups/<archivo>
+
+# 5. Verificar que el dato volvió
+```
+
+| # | Prueba | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| OPS-10 | Respaldo sin cifrar | archivo legible | cifrado |
+| OPS-11 | Respaldo incluye `auth.users` | sí | no |
+| OPS-12 | Restore sin confirmación | ejecuta | **aborta** |
+| OPS-13 | Restore con URL de producción | **ejecuta** | **aborta** |
+| OPS-14 | Restore con JSON corrupto | falla a mitad | valida antes |
+| OPS-15 | Restore deja log | no | sí |
+
+### 8.2. Smoke E2E (OPS-03)
+
+```bash
+cd app
+APP_ENV=staging TEST_WRITE=1 node scripts/ui-smoke.mjs
+```
+
+| # | Prueba | Esperado hoy | Esperado corregido |
+|---|---|---|---|
+| OPS-20 | `TEST_WRITE=1` con URL de producción | escribe | **aborta** |
+| OPS-21 | `TEST_WRITE=1` con staging | escribe | escribe y limpia |
+| OPS-22 | Smoke sin `TEST_WRITE` | solo lectura | solo lectura |
+| OPS-23 | Scripts contienen PII | sí (`test-functions.mjs:105`) | no |
+
+### 8.3. Edge Functions
+
+```bash
+cd app
+node scripts/test-functions.mjs
+```
+
+| # | Prueba | Esperado |
+|---|---|---|
+| OPS-30 | `deactivate-user` sin token | 401 |
+| OPS-31 | `deactivate-user` con token de alumno | 403 |
+| OPS-32 | `deactivate-user` con admin | 200 |
+| OPS-33 | `admin-create-student` con profesor de otro grupo | 403 |
+| OPS-34 | `guardian-consent` con alumno | 403 |
+| OPS-35 | `guardian-consent` con versión incorrecta | 409 |
+| OPS-36 | CORS con origen no permitido | rechazo (corregido) |
+
+---
+
+## 9. Pruebas de accesibilidad y UX
+
+| # | Prueba | Herramienta | Esperado |
+|---|---|---|---|
+| UX-10 | Navegación completa con teclado | Manual | foco visible en todo |
+| UX-11 | Diálogo: foco atrapado | Manual | Tab no sale del diálogo |
+| UX-12 | Cerrar diálogo con Escape | Manual | cierra y restaura foco |
+| UX-13 | Contraste de texto | axe / Lighthouse | AA |
+| UX-14 | Lector de pantalla en login | VoiceOver/NVDA | anuncia campos y errores |
+| UX-15 | Vista a 360 px | DevTools | sin scroll horizontal |
+| UX-16 | `prefers-reduced-motion` | DevTools | sin animaciones |
+| UX-17 | Formularios con error | Manual | error asociado al campo |
+
+**Comando sugerido (Lighthouse):**
+
+```bash
+npx lighthouse https://<staging>/ --only-categories=accessibility --output=json
+```
+
+---
+
+## 10. Matriz de cobertura
+
+| Hallazgo | Prueba(s) | Tipo |
+|---|---|---|
+| SEC-01 | RLS-01…08 | SQL / HTTP |
+| SEC-02 | AUTH-20…28 + RLS-92…97 | E2E / SQL |
+| SEC-03 | AUTH-01…06 + RLS-89…91 | E2E / SQL |
+| PRIV-01 | PRIV-10…13, PRIV-17/18 + RLS-98…107 | E2E / SQL |
+| SEC-04 | AUTH-10…13 | E2E |
+| SEC-05 | OPS-36 | HTTP |
+| SEC-06 | AUTH-30…33 | E2E |
+| SEC-07 | AUTH-10…13 + auditoría | SQL |
+| SEC-08 | Inspección de bundle | Estática |
+| SEC-09 | Carga controlada | Manual |
+| DB-01 | FUN-12 | SQL |
+| DB-02 | Borrado de alumno de prueba | SQL (W) |
+| DB-03 | FUN-22 | HTTP |
+| DB-04 | FUN-21 | HTTP |
+| DB-05 | Rebuild desde cero | SQL |
+| DB-06 | Inspección de retención | SQL |
+| DB-07 | Consulta de migraciones | SQL |
+| DB-08 | RLS-16, RLS-50, RLS-85…88 | SQL |
+| FUN-01 | FUN-40…42 | E2E |
+| FUN-02 | FUN-30…35 | E2E |
+| FUN-03 | FUN-10…13 | E2E |
+| FUN-04 | FUN-23 | E2E |
+| FUN-05 | FUN-21 | E2E |
+| FUN-06 | Flujo de recuperación | E2E |
+| FUN-07 | Login con dominio alterno | Manual |
+| FUN-08 | Medición de tiempo de carga | Manual |
+| FUN-09 | Conteo con > límite | SQL |
+| FUN-10 | Pantalla de auditoría | E2E |
+| FUN-11 | Recarga tras logout | Manual |
+| COD-01 | Inspección de `localStorage` | Manual |
+| COD-02 | RLS-01…08 | SQL |
+| COD-03 | Revisión de interpolaciones | Estática |
+| COD-04 | Ejecutar `npm run lint`/`test` | CI |
+| COD-05 | Revisión de estructura | Estática |
+| COD-06 | Forzar fallo de `localStorage` | Manual |
+| COD-07 | Suite completa | CI |
+| COD-08 | `npm ci` + `npm audit` | CI |
+| COD-09 | Rebuild y comparación | CI |
+| UX-01…08 | UX-10…17 | Manual / axe |
+| PRIV-01 | PRIV-10…13 | E2E |
+| PRIV-02 | RLS-16, RLS-50, RLS-85…88 | SQL |
+| PRIV-03 | RLS-20…23 | SQL |
+| PRIV-04 | PRIV-14 | Manual |
+| PRIV-05 | PRIV-16 / OPS-10 | Manual |
+| PRIV-06 | PRIV-15 | E2E |
+| PRIV-07 | Consulta de retención | SQL |
+| PRIV-08 | AUTH-33 | Manual |
+| OPS-01 | OPS-10, OPS-11 | Manual |
+| OPS-02 | OPS-12…15 | Manual (W) |
+| OPS-03 | OPS-20…23 | Script |
+| OPS-04 | Simulación de despliegue | CI |
+| OPS-05 | Revisión de `config.toml` | Estática |
+| OPS-06 | Revisión de permisos | Manual |
+| OPS-07 | Simulación de fallo | Manual |
+| OPS-08 | Simulación de rotación | Manual |
+| OPS-09 | Existencia de staging | Manual |
+| OPS-10 | Rebuild reproducible | CI |
+
+---
+
+## 11. Plantilla de evidencia
+
+Cada prueba ejecutada debe dejar un registro como este:
+
+```markdown
+### <ID de prueba> · <título>
+
+- Fecha: 2026-11-XX HH:MM
+- Entorno: staging (<ref>)
+- Rol: alumno1 (<uuid>)
+- Comando / consulta: ...
+- Resultado observado: ...
+- Resultado esperado: ...
+- Veredicto: PASA / FALLA
+- Hallazgo relacionado: SEC-01
+- Evidencia: captura o salida (sin PII)
+- Notas: ...
+```
+
+**Reglas de evidencia:**
+
+- No incluir tokens, contraseñas ni cadenas de conexión.
+- No transcribir nombres, correos ni identificadores reales; usar `<uuid>` y `<correo>`.
+- Si se captura pantalla, ocultar datos personales.
+- Guardar la evidencia dentro de `AUDITORIA_ECOEMS/evidencias/` (subcarpeta permitida) o en el sistema de tickets.
+
+---
+
+## 12. Orden recomendado de ejecución
+
+1. **Preparar staging** y usuarios ficticios.
+2. **RLS-01…08** (contenido): confirma `SEC-01` y sirve de línea base.
+3. **RLS-16/50 y RLS-85…88** (notas internas).
+4. **RLS-30…33** (observaciones).
+5. **RLS-40…44** (finanzas).
+6. **AUTH-01…06 + RLS-89…91** (contraseña).
+7. **AUTH-20…28 + RLS-92…97** (invitaciones con token).
+8. **RLS-98…107 + PRIV-10…13, PRIV-17/18** (aviso y consentimiento).
+9. **AUTH-10…13** (desactivación).
+10. **FUN-20…26** (estudio y evaluación).
+11. **FUN-10…13** (activación).
+12. **PRIV-14…16** (datos y respaldos).
+13. **OPS-10…15** (respaldo/restore) — al final, porque modifica staging.
+14. **OPS-20…23** (smoke).
+15. **UX-10…17** (accesibilidad).
+16. **Repetir la suite** después de cada corrección de Fase 1.
+
+---
+
+## 13. Lo que no se debe probar
+
+| Prueba | Motivo |
+|---|---|
+| Cualquier escritura contra producción | Riesgo de contaminar datos reales |
+| `TEST_WRITE=1` con la URL de producción | Activa unidades y completa tests |
+| `restore-db.mjs` contra producción | Trunca tablas |
+| Fuerza bruta de contraseñas | Abuso y bloqueo de cuentas |
+| Escaneo de puertos o penetración activa | Fuera de alcance y sin autorización |
+| Extracción masiva de datos | Viola privacidad y el acuerdo de auditoría |
+| Cambio de políticas en el dashboard | Modifica producción |
+| Rotación de claves | Requiere coordinación y actualización de clientes |
+
+---
+
+## 14. Criterio de cierre de las pruebas
+
+Se considera que las pruebas pendientes están resueltas cuando:
+
+- [ ] Existe staging con datos ficticios.
+- [ ] Las pruebas RLS-01…08 demuestran 0 filas para el alumno sin asignación.
+- [ ] Las pruebas RLS-16/50 y RLS-85…88 demuestran que `notes_internal` ya no existe y que `student_staff_notes` no es accesible a la familia.
+- [ ] AUTH-01…06 y RLS-89…91 demuestran que la contraseña temporal deja de funcionar y que nadie puede limpiar la bandera sin cambiar la contraseña.
+- [ ] AUTH-20…28 y RLS-92…97 demuestran que la vinculación exige token, que el token no se lee por REST y que no se puede reutilizar.
+- [ ] RLS-98…107 y PRIV-10…13, PRIV-17/18 demuestran el bloqueo, la evidencia, la revocación y la ausencia de inserción directa de consentimientos.
+- [ ] AUTH-10…13 demuestran que el usuario desactivado no puede autenticarse.
+- [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
+- [ ] PRIV-10…13 demuestran el bloqueo, la evidencia y la revocación.
+- [ ] OPS-12/13 demuestran que el restore no se ejecuta por accidente.
+- [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
+- [ ] La suite corre en CI y bloquea el despliegue si falla.
+- [ ] Cada prueba tiene evidencia registrada sin PII.
+
+---
+
+## 15. Conclusión
+
+La auditoría encontró los problemas leyendo el código; las pruebas deben **demostrar que están cerrados**. La diferencia es importante: una política puede parecer correcta y fallar por una función `SECURITY DEFINER`, un `grant` olvidado o una vista que hereda permisos.
+
+La suite propuesta no es exhaustiva, pero cubre **todos los hallazgos, con énfasis en los de mayor riesgo**, y establece el hábito que hoy falta: probar la denegación, no solo el camino feliz. Ese hábito, más que cualquier migración, es lo que impide que `SEC-01` vuelva a ocurrir.

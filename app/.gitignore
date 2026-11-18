@@ -3,6 +3,8 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.staging.example
+frontend/public/env.js
 .DS_Store
 .supabase/
 .secrets/

@@ -6,6 +6,7 @@ import {
 import { handleError, handleOptions, HttpError, jsonResponse, readJson } from "../_shared/http.ts";
 import {
   asDate,
+  asPassword,
   asString,
   asUuid,
   defaultUsername,
@@ -23,7 +24,7 @@ Deno.serve(async (req) => {
     const body = await readJson(req);
 
     const fullName = asString(body.full_name, "full_name", 2, 120);
-    const password = asString(body.password, "password", 8, 72);
+    const password = asPassword(body.password);
     const groupId = asUuid(body.group_id, "group_id");
     const phone = optionalString(body.phone, "phone", 40);
     const birthDate = asDate(body.birth_date, "birth_date");

@@ -34,7 +34,8 @@ const assignmentStatusLabels = {
 };
 
 // Debe coincidir con settings.privacy_document_version de la base.
-const PRIVACY_DOCUMENT_VERSION = 'v1-2026';
+// La versión vigente también se lee de la vista pública `privacy_document`.
+const PRIVACY_DOCUMENT_VERSION = 'v2-2026';
 
 // Etiqueta de versión visible en la cabecera: sirve para confirmar que el
 // navegador cargó el build más reciente (no una versión en caché).
@@ -377,7 +378,9 @@ const state = {
   payDialog: null,
   subjectsGroupId: null,
   activeTest: null,
-  loading: true
+  loading: true,
+  pendingLoginUsername: '',
+  studentInvitation: null
 };
 
 let appRoot = null;
@@ -455,6 +458,21 @@ function headerMarkup() {
   `;
 }
 
+function privacyFooterMarkup() {
+  const version = state.dashboard?.privacy?.version || PRIVACY_DOCUMENT_VERSION;
+  const url = state.dashboard?.privacy?.url || '/privacidad.html';
+
+  return `
+    <footer class="privacy-footer">
+      <a href="${escapeHtml(url)}" target="_blank" rel="noopener">Aviso de privacidad</a>
+      <span aria-hidden="true">·</span>
+      <span>Versión ${escapeHtml(version)}</span>
+      <span aria-hidden="true">·</span>
+      <span>Documento en revisión legal</span>
+    </footer>
+  `;
+}
+
 function applyTheme() {
   const saved = localStorage.getItem('ecoems_theme');
   document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
@@ -520,6 +538,8 @@ npm run dev</code></pre>
 function renderLogin() {
   const isStudent = state.mode === 'student';
   const isGuardian = state.mode === 'guardian';
+  const prefillUsername = state.pendingLoginUsername || '';
+  state.pendingLoginUsername = '';
 
   appRoot.innerHTML = `
     <div class="shell">
@@ -542,7 +562,7 @@ function renderLogin() {
             ${isStudent ? `
               <label class="field">
                 <span>Usuario</span>
-                <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ana.martinez o tu correo" required>
+                <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ana.martinez o tu correo" value="${escapeHtml(prefillUsername)}" required>
               </label>
               <p class="hint">Entra con el usuario que te dio tu profesor, o con tu <strong>correo</strong> si ya tenías cuenta.</p>
               <label class="field">
@@ -570,6 +590,7 @@ function renderLogin() {
           </form>
 
           <p class="fine-print">Si olvidaste tu contraseña, pide una temporal a tu profesor. El tutor entra con el enlace que recibe por WhatsApp.</p>
+          ${privacyFooterMarkup()}
         </section>
       </main>
     </div>
@@ -604,17 +625,18 @@ function renderChangePassword() {
 
           <form id="change-password-form" class="form">
             <label class="field">
-              <span>Nueva contraseña (mínimo 8 caracteres)</span>
-              <input name="password" type="password" autocomplete="new-password" minlength="8" placeholder="Tu nueva contraseña" required>
+              <span>Nueva contraseña (mínimo 12 caracteres, con mayúscula, minúscula y número)</span>
+              <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Tu nueva contraseña" required>
             </label>
             <label class="field">
               <span>Confirma tu nueva contraseña</span>
-              <input name="confirm" type="password" autocomplete="new-password" minlength="8" placeholder="Repite la contraseña" required>
+              <input name="confirm" type="password" autocomplete="new-password" minlength="12" placeholder="Repite la contraseña" required>
             </label>
             <button class="btn primary" type="submit" id="change-password-btn">Guardar y continuar</button>
           </form>
 
           <p class="fine-print">Elige una contraseña que recuerdes: con ella entrarás a partir de ahora.</p>
+          ${privacyFooterMarkup()}
         </section>
       </main>
     </div>
@@ -636,8 +658,14 @@ async function changePassword(event) {
   state.error = '';
   state.notice = '';
 
-  if (password.length < 8) {
-    setError('La contraseña debe tener al menos 8 caracteres.');
+  if (password.length < 12) {
+    setError('La contraseña debe tener al menos 12 caracteres.');
+    renderChangePassword();
+    return;
+  }
+
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+    setError('La contraseña debe incluir al menos una minúscula, una mayúscula y un número.');
     renderChangePassword();
     return;
   }
@@ -652,14 +680,16 @@ async function changePassword(event) {
   button.textContent = 'Guardando…';
 
   try {
-    const { error } = await supabase.auth.updateUser({ password });
+    // SEC-03: el cambio y el borrado de la bandera ocurren en el servidor.
+    // La RPC anterior permitía limpiar la bandera sin cambiar la contraseña.
+    const { data: result, error } = await supabase.functions.invoke('complete-password-change', {
+      body: { new_password: password }
+    });
 
     if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo actualizar la contraseña');
 
-    const { error: rpcError } = await supabase.rpc('app_complete_password_change');
-
-    if (rpcError) throw rpcError;
-
+    state.profile = { ...(state.profile || {}), must_change_password: false };
     setNotice('Contraseña actualizada. ¡Bienvenido!');
     state.view = 'dashboard';
     renderDashboard();
@@ -668,6 +698,125 @@ async function changePassword(event) {
     setError(error?.message || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
     renderChangePassword();
   }
+}
+
+function clearLinkTokenFromUrl() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('link_token')) return;
+  url.searchParams.delete('link_token');
+  window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+}
+
+function renderLinkRedemption(token) {
+  appRoot.innerHTML = `
+    <div class="shell">
+      ${headerMarkup()}
+      <main class="center">
+        <section class="panel login-panel">
+          <span class="kicker">Invitación de alumno</span>
+          <h1>Crea tu contraseña</h1>
+          <p class="muted">Tu profesor generó este enlace de un solo uso. Elige una contraseña que solo tú conozcas.</p>
+
+          ${alertMarkup()}
+
+          <form id="link-redeem-form" class="form">
+            <label class="field">
+              <span>Nueva contraseña (mínimo 12, con mayúscula, minúscula y número)</span>
+              <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Tu nueva contraseña" required>
+            </label>
+            <label class="field">
+              <span>Confirma tu nueva contraseña</span>
+              <input name="confirm" type="password" autocomplete="new-password" minlength="12" placeholder="Repite la contraseña" required>
+            </label>
+            <button class="btn primary" type="submit" id="link-redeem-btn">Guardar contraseña</button>
+          </form>
+
+          <p class="fine-print">Si el enlace venció, pide a tu profesor que genere uno nuevo.</p>
+          <div class="row">
+            <button class="btn ghost" type="button" id="link-redeem-cancel">Ya tengo contraseña</button>
+          </div>
+          ${privacyFooterMarkup()}
+        </section>
+      </main>
+    </div>
+  `;
+
+  appRoot.querySelector('#link-redeem-form').addEventListener('submit', (event) => {
+    redeemLinkToken(event, token);
+  });
+  appRoot.querySelector('#link-redeem-cancel').addEventListener('click', () => {
+    clearLinkTokenFromUrl();
+    state.error = '';
+    state.notice = '';
+    renderLogin();
+  });
+  wireThemeToggle();
+}
+
+async function redeemLinkToken(event, token) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const button = appRoot.querySelector('#link-redeem-btn');
+
+  const password = String(data.get('password') || '');
+  const confirm = String(data.get('confirm') || '');
+
+  state.error = '';
+  state.notice = '';
+
+  if (password.length < 12) {
+    setError('La contraseña debe tener al menos 12 caracteres.');
+    renderLinkRedemption(token);
+    return;
+  }
+
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+    setError('La contraseña debe incluir al menos una minúscula, una mayúscula y un número.');
+    renderLinkRedemption(token);
+    return;
+  }
+
+  if (password !== confirm) {
+    setError('Las contraseñas no coinciden.');
+    renderLinkRedemption(token);
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('redeem-student-link-token', {
+      body: { token, new_password: password }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo canjear la invitación');
+
+    clearLinkTokenFromUrl();
+    state.mode = 'student';
+    state.pendingLoginUsername = result.username || result.email || '';
+    setNotice(`Contraseña creada. Entra con tu usuario ${result.username || result.email}.`);
+    renderLogin();
+  } catch (error) {
+    setError(await functionErrorMessage(error, 'No se pudo canjear la invitación. Pide un enlace nuevo.'));
+    renderLinkRedemption(token);
+  }
+}
+
+async function functionErrorMessage(error, fallback) {
+  try {
+    const response = error?.context;
+    if (response && typeof response.clone === 'function') {
+      const body = await response.clone().json();
+      if (body?.error) return String(body.error);
+    }
+  } catch {
+    // El cuerpo no era JSON: se usa el mensaje genérico.
+  }
+
+  return error?.message || fallback;
 }
 
 async function handleLogin(event) {
@@ -805,7 +954,7 @@ function assertNoError(error) {
 async function fetchDashboardData(profile) {
   if (profile.role === 'admin') return fetchAdminDashboard();
   if (profile.role === 'teacher') return fetchTeacherDashboard(profile.id);
-  if (profile.role === 'guardian') return fetchGuardianDashboard();
+  if (profile.role === 'guardian') return fetchGuardianDashboard(profile);
   return fetchStudentDashboard(profile.id);
 }
 
@@ -1299,11 +1448,83 @@ async function fetchStudentDashboard(studentId) {
   };
 }
 
-async function fetchGuardianDashboard() {
-  const studentsRes = await supabase
-    .from('students')
-    .select('id,student_code,group_id,profile_id')
-    .order('student_code');
+async function fetchGuardianDashboard(profile) {
+  const [guardianRes, privacyRes] = await Promise.all([
+    supabase
+      .from('guardians')
+      .select('id')
+      .eq('profile_id', profile.id)
+      .maybeSingle(),
+    supabase
+      .from('privacy_document')
+      .select('version,url,sha256')
+      .maybeSingle()
+  ]);
+
+  assertNoError(guardianRes.error);
+
+  const privacy = privacyRes.error || !privacyRes.data
+    ? { version: PRIVACY_DOCUMENT_VERSION, url: '/privacidad.html', sha256: '' }
+    : privacyRes.data;
+
+  const guardianId = guardianRes.data?.id;
+  if (!guardianId) {
+    return {
+      kind: 'guardian',
+      privacy,
+      billingByStudent: new Map(),
+      payments: [],
+      children: [],
+      pending: []
+    };
+  }
+
+  const linksRes = await supabase
+    .from('student_guardians')
+    .select('student_id')
+    .eq('guardian_id', guardianId)
+    .order('student_id');
+
+  assertNoError(linksRes.error);
+
+  const linkedIds = [...new Set((linksRes.data || []).map((link) => link.student_id))];
+  if (!linkedIds.length) {
+    return {
+      kind: 'guardian',
+      privacy,
+      billingByStudent: new Map(),
+      payments: [],
+      children: [],
+      pending: []
+    };
+  }
+
+  const consentsRes = await supabase
+    .from('privacy_consents')
+    .select('student_id,document_version,accepted_at,revoked_at')
+    .eq('guardian_id', guardianId)
+    .in('student_id', linkedIds);
+
+  assertNoError(consentsRes.error);
+
+  const currentVersion = privacy.version || PRIVACY_DOCUMENT_VERSION;
+  const consentsByStudent = new Map();
+  for (const consent of consentsRes.data || []) {
+    if (consent.document_version === currentVersion && !consent.revoked_at) {
+      consentsByStudent.set(consent.student_id, consent);
+    }
+  }
+
+  const consentedIds = linkedIds.filter((id) => consentsByStudent.has(id));
+  const pendingIds = linkedIds.filter((id) => !consentsByStudent.has(id));
+
+  const studentsRes = consentedIds.length
+    ? await supabase
+        .from('students')
+        .select('id,student_code,group_id,profile_id')
+        .in('id', consentedIds)
+        .order('student_code')
+    : { data: [], error: null };
 
   assertNoError(studentsRes.error);
 
@@ -1312,18 +1533,12 @@ async function fetchGuardianDashboard() {
   const groupIds = [...new Set(students.map((student) => student.group_id))];
   const studentIds = students.map((student) => student.id);
 
-  const [profilesRes, groupsRes, consentsRes, billingRes, paymentsRes] = await Promise.all([
+  const [profilesRes, groupsRes, billingRes, paymentsRes] = await Promise.all([
     profileIds.length
       ? supabase.from('profiles').select('id,full_name').in('id', profileIds)
       : Promise.resolve({ data: [], error: null }),
     groupIds.length
       ? supabase.from('groups').select('id,name').in('id', groupIds)
-      : Promise.resolve({ data: [], error: null }),
-    studentIds.length
-      ? supabase
-          .from('privacy_consents')
-          .select('student_id,document_version,accepted_at,revoked_at')
-          .in('student_id', studentIds)
       : Promise.resolve({ data: [], error: null }),
     studentIds.length
       ? supabase.from('student_billing').select('*').in('student_id', studentIds)
@@ -1340,22 +1555,15 @@ async function fetchGuardianDashboard() {
 
   assertNoError(profilesRes.error);
   assertNoError(groupsRes.error);
-  assertNoError(consentsRes.error);
   assertNoError(billingRes.error);
   assertNoError(paymentsRes.error);
 
-  const names = new Map((profilesRes.data || []).map((profile) => [profile.id, profile.full_name]));
+  const names = new Map((profilesRes.data || []).map((item) => [item.id, item.full_name]));
   const groupNames = new Map((groupsRes.data || []).map((group) => [group.id, group.name]));
-
-  const consentsByStudent = new Map();
-  for (const consent of consentsRes.data || []) {
-    if (consent.document_version === PRIVACY_DOCUMENT_VERSION && !consent.revoked_at) {
-      consentsByStudent.set(consent.student_id, consent);
-    }
-  }
 
   return {
     kind: 'guardian',
+    privacy,
     billingByStudent: new Map(
       (billingRes.data || []).map((row) => [row.student_id, row])
     ),
@@ -1364,7 +1572,12 @@ async function fetchGuardianDashboard() {
       ...student,
       full_name: names.get(student.profile_id) || 'Alumno sin nombre',
       group_name: groupNames.get(student.group_id) || 'Sin grupo',
-      consent_accepted: consentsByStudent.has(student.id)
+      consent_accepted: true,
+      consent_accepted_at: consentsByStudent.get(student.id)?.accepted_at || null
+    })),
+    pending: pendingIds.map((id, index) => ({
+      id,
+      label: pendingIds.length === 1 ? 'el alumno vinculado' : `el alumno ${index + 1}`
     }))
   };
 }
@@ -1497,8 +1710,8 @@ function adminUsersMarkup(data) {
             <input name="email" type="email" autocomplete="off" placeholder="profesor@colegio.mx" required>
           </label>
           <label class="field">
-            <span>Contraseña (mínimo 10 caracteres)</span>
-            <input name="password" type="text" autocomplete="off" minlength="10" placeholder="Contraseña temporal" required>
+            <span>Contraseña (mínimo 12, con mayúscula, minúscula y número)</span>
+            <input name="password" type="text" autocomplete="off" minlength="12" placeholder="Contraseña temporal" required>
           </label>
           <button class="btn primary" type="submit">Crear profesor</button>
         </form>
@@ -1520,7 +1733,10 @@ function adminUsersMarkup(data) {
                 <strong>${escapeHtml(student.full_name)}</strong>
                 <small>${escapeHtml(student.student_code)} · ${escapeHtml(student.group_name)} · ${escapeHtml(student.status)}</small>
               </div>
-              <button class="btn ghost" data-reset-student="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.full_name)}">Nueva contraseña</button>
+              <div class="row">
+                <button class="btn ghost" data-reset-student="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.full_name)}">Nueva contraseña</button>
+                <button class="btn ghost" data-reissue-invite="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.full_name)}">Enlace de acceso</button>
+              </div>
             </li>
           `).join('')}
         </ul>
@@ -1700,7 +1916,12 @@ function adminSettingsMarkup(data) {
 }
 
 function projectUrlLabel() {
-  return 'ioikcrdxneuydylyhvwi.supabase.co';
+  const url = import.meta.env.VITE_SUPABASE_URL || '';
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'sin configurar';
+  }
 }
 
 function formatDayShort(iso) {
@@ -1898,6 +2119,7 @@ function teacherGroupMarkup(group, data) {
                 <button class="btn ghost" data-student-detail="${escapeHtml(student.id)}">Ver ficha</button>
                 <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
                 <button class="btn ghost" data-advise-student="${escapeHtml(student.id)}" data-advise-name="${escapeHtml(student.full_name)}">Avisar tutor</button>
+                <button class="btn ghost" data-reissue-invite="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.full_name)}">Enlace de acceso</button>
               </div>
               <form class="form invite-form hidden" data-invite-form="${escapeHtml(student.id)}" data-student-code="${escapeHtml(student.student_code)}">
                 <label class="field">
@@ -1940,8 +2162,8 @@ function teacherGroupMarkup(group, data) {
             <input name="username" autocomplete="off" placeholder="ej. ana.martinez">
           </label>
           <label class="field">
-            <span>Contraseña temporal (mín. 8 caracteres)</span>
-            <input name="password" type="text" autocomplete="off" minlength="8" required>
+            <span>Contraseña temporal (mín. 12, con mayúscula, minúscula y número)</span>
+            <input name="password" type="text" autocomplete="off" minlength="12" required>
           </label>
           <label class="field">
             <span>Matrícula (opcional; si no, se usa el usuario)</span>
@@ -2083,6 +2305,7 @@ function staffShellMarkup(data) {
         <main class="staff-content">
           ${alertMarkup()}
           ${staffTabContentMarkup(data, tab)}
+          ${privacyFooterMarkup()}
         </main>
       </div>
     </div>
@@ -2330,19 +2553,11 @@ function staffCreateStudentMarkup(data) {
         </label>
         <label class="field">
           <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
-          <input name="username" autocomplete="off" placeholder="ej. alexa.mandujano">
+          <input name="username" autocomplete="off" placeholder="ej. maria.lopez">
         </label>
-        <label class="field checkbox-field" data-link-toggle-row>
-          <input type="checkbox" name="existing_account" data-link-toggle>
-          <span>El alumno ya tiene cuenta (se registró por su cuenta)</span>
-        </label>
-        <label class="field hidden" data-link-email-row>
-          <span>Correo de su cuenta</span>
-          <input name="existing_email" type="email" autocomplete="off" placeholder="alumno@correo.com">
-        </label>
-        <label class="field" data-password-row>
-          <span>Contraseña temporal (mín. 8 caracteres)</span>
-          <input name="password" type="text" autocomplete="off" minlength="8" required>
+        <label class="field">
+          <span>Contraseña temporal (mín. 12, con mayúscula, minúscula y número)</span>
+          <input name="password" type="text" autocomplete="off" minlength="12" required>
         </label>
         <label class="field">
           <span>Matrícula (opcional)</span>
@@ -2353,7 +2568,64 @@ function staffCreateStudentMarkup(data) {
         </div>
         <div class="create-student-result" data-create-result="${isAdmin ? 'admin' : 'teacher'}"></div>
       </form>
+
+      <details class="admin-details" ${state.studentInvitation ? 'open' : ''}>
+        <summary>Invitar alumno (elige su propia contraseña)</summary>
+        <p class="hint">Crea la cuenta y genera un enlace de un solo uso para que el alumno establezca su contraseña. Compártelo por WhatsApp: vence en 72 h y no se puede reutilizar.</p>
+        <form class="form" data-invite-student-form data-invite-group-default="${escapeHtml(groups[0]?.id || '')}">
+          ${isAdmin ? `
+            <label class="field">
+              <span>Grupo</span>
+              <select name="group_id" data-invite-groups required>
+                <option value="">Selecciona un grupo…</option>
+                ${groups.map((group) => `
+                  <option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}${group.teacher_name ? ` · ${escapeHtml(group.teacher_name)}` : ''}</option>
+                `).join('')}
+              </select>
+            </label>
+          ` : ''}
+          <label class="field">
+            <span>Nombre completo</span>
+            <input name="full_name" autocomplete="off" placeholder="Nombre y apellidos" required>
+          </label>
+          <label class="field">
+            <span>Usuario (opcional — si lo dejas vacío, se genera del nombre)</span>
+            <input name="username" autocomplete="off" placeholder="ej. maria.lopez">
+          </label>
+          <label class="field">
+            <span>Matrícula (opcional)</span>
+            <input name="student_code" autocomplete="off" placeholder="ECO-2027-001">
+          </label>
+          <div class="row">
+            <button class="btn primary" type="submit">Generar invitación</button>
+          </div>
+          <div class="create-student-result" data-invite-student-result></div>
+        </form>
+      </details>
+
+      ${invitationMarkup(state.studentInvitation)}
     </article>
+  `;
+}
+
+function invitationMarkup(invitation) {
+  if (!invitation) return '';
+
+  return `
+    <div class="answer-box correct" data-student-invitation>
+      <strong>Invitación para ${escapeHtml(invitation.fullName)}</strong>
+      <p>Comparte este enlace con el alumno o su tutor. Vence en 72 h y solo funciona una vez.</p>
+      <label class="field">
+        <span>Enlace de invitación</span>
+        <input readonly value="${escapeHtml(invitation.redeemUrl)}" data-invitation-url>
+      </label>
+      <div class="row">
+        <button class="btn ghost" type="button" data-copy-invitation>Copiar enlace</button>
+        <a class="btn ghost" href="${escapeHtml(invitation.whatsappUrl)}" target="_blank" rel="noopener">Compartir por WhatsApp</a>
+        <button class="btn ghost" type="button" data-dismiss-invitation>Ocultar</button>
+      </div>
+      <p><small>Usuario: ${escapeHtml(invitation.username)} · Matrícula: ${escapeHtml(invitation.studentCode)} · Vence: ${escapeHtml(invitation.expiresAtLabel)}</small></p>
+    </div>
   `;
 }
 
@@ -3101,6 +3373,7 @@ function staffTutoresTabMarkup(data) {
               <div class="row">
                 <button class="btn ghost" data-invite-toggle="${escapeHtml(student.id)}">Invitar tutor</button>
                 <button class="btn ghost" data-advise-student="${escapeHtml(student.id)}">Avisar tutor</button>
+                <button class="btn ghost" data-reissue-invite="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.full_name)}">Enlace de acceso</button>
               </div>
               <form class="form invite-form hidden" data-invite-form="${escapeHtml(student.id)}" data-student-code="${escapeHtml(student.student_code)}">
                 <label class="field"><span>Nombre del tutor</span><input name="full_name" required placeholder="Nombre completo"></label>
@@ -3935,36 +4208,86 @@ async function saveStudentTest(button) {
 }
 
 function guardianDashboardMarkup(data) {
+  const privacy = data.privacy || {};
+  const version = privacy.version || PRIVACY_DOCUMENT_VERSION;
+  const url = privacy.url || '/privacidad.html';
+  const children = data.children || [];
+  const pending = data.pending || [];
+  const hasConsent = children.length > 0;
+  const linkedCount = children.length + pending.length;
+  const statusLabel = !linkedCount ? 'Sin vínculos' : (pending.length ? 'Pendiente' : 'Aceptado');
+  const statusClass = linkedCount && !pending.length ? 'success' : '';
+
   return `
-    <article class="card wide">
+    <article class="card wide privacy-gate">
       <div class="card-heading">
         <div>
-          <span class="card-label">Mis hijos</span>
-          <h2>${data.children.length ? countLabel(data.children.length, 'alumno vinculado', 'alumnos vinculados') : 'Sin vínculos'}</h2>
+          <span class="card-label">Privacidad</span>
+          <h2>Aviso de privacidad ${escapeHtml(version)}</h2>
         </div>
-        <span class="pill">Solo lectura</span>
+        <span class="pill ${statusClass}">${statusLabel}</span>
       </div>
-      ${data.children.length ? `
+      ${linkedCount ? `
+        <p>Para consultar la información de tus hijos, lee el aviso y confirma que lo entiendes. Sin ese consentimiento, la plataforma no muestra datos del alumno.</p>
+      ` : `
+        <p>Cuando la institución vincule a tus hijos, aparecerán aquí. Antes de mostrar sus datos deberás leer y aceptar el aviso de privacidad.</p>
+      `}
+      <div class="row">
+        <a class="btn ghost" href="${escapeHtml(url)}" target="_blank" rel="noopener">Leer el aviso completo</a>
+      </div>
+      ${pending.length ? `
+        <label class="checkbox-field">
+          <input type="checkbox" data-consent-ack>
+          <span>He leído y entiendo el <a href="${escapeHtml(url)}" target="_blank" rel="noopener">aviso de privacidad</a> ${escapeHtml(version)}.</span>
+        </label>
         <ul class="data-list">
-          ${data.children.map((child) => `
+          ${pending.map((item) => `
             <li>
               <div>
-                <strong>${escapeHtml(child.full_name)}</strong>
-                <small>${escapeHtml(child.student_code)} · ${escapeHtml(child.group_name)}</small>
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>Sin consentimiento vigente. No se muestran sus datos.</small>
               </div>
-              ${child.consent_accepted ? `
-                <span class="pill success">Consentimiento registrado</span>
-              ` : `
-                <button class="btn primary" data-consent-student="${escapeHtml(child.id)}">Aceptar aviso de privacidad</button>
-              `}
+              <button class="btn primary" data-consent-student="${escapeHtml(item.id)}" disabled>Aceptar y ver datos</button>
             </li>
           `).join('')}
         </ul>
-        <p class="muted"><small>Aviso de privacidad versión ${escapeHtml(PRIVACY_DOCUMENT_VERSION)}. Al aceptar, autorizas el tratamiento de los datos del alumno con fines educativos. Puedes revocarlo cuando quieras.</small></p>
-      ` : '<p class="empty-state">Cuando la institución vincule a tus hijos, aparecerán aquí.</p>'}
+        <p class="hint">Marca la casilla para habilitar el botón. El consentimiento se registra por alumno.</p>
+      ` : linkedCount ? `
+        <p class="hint">Consentimiento vigente. Puedes revocarlo cuando quieras desde la lista de tus hijos.</p>
+      ` : ''}
     </article>
 
-    ${data.children.length ? guardianPaymentsMarkup(data) : ''}
+    ${hasConsent ? `
+      <article class="card wide">
+        <div class="card-heading">
+          <div>
+            <span class="card-label">Mis hijos</span>
+            <h2>${countLabel(children.length, 'alumno vinculado', 'alumnos vinculados')}</h2>
+          </div>
+          <span class="pill">Solo lectura</span>
+        </div>
+        <ul class="data-list">
+          ${children.map((child) => {
+            const accepted = child.consent_accepted_at
+              ? formatDate(String(child.consent_accepted_at).slice(0, 10))
+              : '';
+
+            return `
+              <li>
+                <div>
+                  <strong>${escapeHtml(child.full_name)}</strong>
+                  <small>${escapeHtml(child.student_code)} · ${escapeHtml(child.group_name)}${accepted ? ` · Consentimiento del ${escapeHtml(accepted)}` : ''}</small>
+                </div>
+                <button class="btn ghost" data-revoke-consent="${escapeHtml(child.id)}" data-revoke-name="${escapeHtml(child.full_name)}">Revocar consentimiento</button>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+        <p class="muted"><small>Si revocas el consentimiento, dejaremos de mostrar la información del alumno hasta que vuelvas a aceptar el aviso.</small></p>
+      </article>
+    ` : ''}
+
+    ${hasConsent ? guardianPaymentsMarkup(data) : ''}
   `;
 }
 
@@ -4107,6 +4430,7 @@ function dashboardMarkup(profile) {
           <button class="btn ghost" id="logout-btn">Cerrar sesión</button>
         </div>
       </main>
+      ${privacyFooterMarkup()}
     </div>
   `;
 }
@@ -6107,8 +6431,22 @@ function renderDashboard() {
     button.addEventListener('click', () => openUnit(button.dataset.openUnit));
   });
 
+  appRoot.querySelectorAll('[data-consent-ack]').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      appRoot.querySelectorAll('[data-consent-student]').forEach((button) => {
+        button.disabled = !checkbox.checked;
+      });
+    });
+  });
+
   appRoot.querySelectorAll('[data-consent-student]').forEach((button) => {
     button.addEventListener('click', () => acceptConsent(button.dataset.consentStudent, button));
+  });
+
+  appRoot.querySelectorAll('[data-revoke-consent]').forEach((button) => {
+    button.addEventListener('click', () => {
+      revokeConsent(button.dataset.revokeConsent, button.dataset.revokeName || '', button);
+    });
   });
 
   appRoot.querySelectorAll('[data-invite-toggle]').forEach((button) => {
@@ -6164,12 +6502,45 @@ function renderDashboard() {
   const createTeacherForm = appRoot.querySelector('#create-teacher-form');
   if (createTeacherForm) createTeacherForm.addEventListener('submit', createTeacher);
 
-  appRoot.querySelectorAll('[data-link-toggle]').forEach((checkbox) => {
-    checkbox.addEventListener('change', () => toggleLinkAccountFields(checkbox));
+  appRoot.querySelectorAll('[data-invite-student-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const select = form.querySelector('[data-invite-groups]');
+      const groupId = select?.value || form.dataset.inviteGroupDefault || '';
+      issueStudentLinkToken(event, groupId);
+    });
+  });
+
+  appRoot.querySelectorAll('[data-copy-invitation]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const input = button.closest('[data-student-invitation]')?.querySelector('[data-invitation-url]');
+      if (!input) return;
+
+      try {
+        await navigator.clipboard.writeText(input.value);
+        button.textContent = 'Copiado ✓';
+        setTimeout(() => {
+          button.textContent = 'Copiar enlace';
+        }, 2000);
+      } catch {
+        input.select();
+        button.textContent = 'Copia manual';
+      }
+    });
+  });
+
+  appRoot.querySelectorAll('[data-dismiss-invitation]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.studentInvitation = null;
+      renderDashboard();
+    });
   });
 
   appRoot.querySelectorAll('[data-reset-student]').forEach((button) => {
     button.addEventListener('click', () => resetStudentPassword(button.dataset.resetStudent, button));
+  });
+
+  appRoot.querySelectorAll('[data-reissue-invite]').forEach((button) => {
+    button.addEventListener('click', () => reissueStudentInvitation(button.dataset.reissueInvite, button));
   });
 
   appRoot.querySelectorAll('[data-toggle-user]').forEach((button) => {
@@ -6321,8 +6692,15 @@ async function createTeacher(event) {
   const email = String(data.get('email') || '').trim().toLowerCase();
   const password = String(data.get('password') || '');
 
-  if (!fullName || !email || password.length < 10) {
-    setError('Completa los datos: nombre, correo y contraseña de al menos 10 caracteres.');
+  if (
+    !fullName ||
+    !email ||
+    password.length < 12 ||
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/\d/.test(password)
+  ) {
+    setError('Completa los datos: nombre, correo y contraseña de al menos 12 caracteres con mayúscula, minúscula y número.');
     return;
   }
 
@@ -6478,29 +6856,6 @@ async function saveSetting(key, button) {
   }
 }
 
-function toggleLinkAccountFields(checkbox) {
-  if (!checkbox) return;
-  const form = checkbox.closest('form');
-  if (!form) return;
-
-  const linked = checkbox.checked;
-  const passwordRow = form.querySelector('[data-password-row]');
-  const emailRow = form.querySelector('[data-link-email-row]');
-  const passwordInput = form.querySelector('input[name="password"]');
-  const emailInput = form.querySelector('input[name="existing_email"]');
-
-  if (passwordRow) passwordRow.classList.toggle('hidden', linked);
-  if (emailRow) emailRow.classList.toggle('hidden', !linked);
-  if (passwordInput) {
-    passwordInput.disabled = linked;
-    passwordInput.required = !linked;
-  }
-  if (emailInput) {
-    emailInput.disabled = !linked;
-    emailInput.required = linked;
-  }
-}
-
 async function createStudent(event, groupId) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -6510,8 +6865,6 @@ async function createStudent(event, groupId) {
   const username = String(data.get('username') || '').trim().toLowerCase();
   const password = String(data.get('password') || '');
   const studentCode = String(data.get('student_code') || '').trim().toUpperCase();
-  const existingEmail = String(data.get('existing_email') || '').trim();
-  const linkExisting = Boolean(form.querySelector('input[name="existing_account"]')?.checked);
 
   if (!groupId) {
     setError('Selecciona un grupo para el alumno.');
@@ -6523,20 +6876,20 @@ async function createStudent(event, groupId) {
     return;
   }
 
-  if (linkExisting) {
-    if (!existingEmail) {
-      setError('Escribe el correo de la cuenta que ya tiene el alumno.');
-      return;
-    }
-  } else if (password.length < 8) {
-    setError('Completa los datos: nombre y contraseña temporal (8+ caracteres). El usuario se genera del nombre si lo dejas vacío.');
+  if (
+    password.length < 12 ||
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/\d/.test(password)
+  ) {
+    setError('Completa los datos: nombre y contraseña temporal (12+ caracteres, con mayúscula, minúscula y número). El usuario se genera del nombre si lo dejas vacío.');
     return;
   }
 
   const submitButton = form.querySelector('button[type="submit"]');
   if (submitButton) {
     submitButton.disabled = true;
-    submitButton.textContent = linkExisting ? 'Vinculando…' : 'Dando de alta…';
+    submitButton.textContent = 'Dando de alta…';
   }
 
   state.error = '';
@@ -6544,65 +6897,32 @@ async function createStudent(event, groupId) {
 
   try {
     const resultBox = form.querySelector('[data-create-result]');
-    let result = null;
-
-    if (linkExisting) {
-      const rpcRes = await supabase.rpc('app_link_student_account', {
-        p_email: existingEmail,
-        p_full_name: fullName,
-        p_group_id: groupId,
-        p_student_code: studentCode || null,
-        p_username: username || null
-      });
-
-      if (rpcRes.error) throw rpcRes.error;
-      result = rpcRes.data;
-
-      if (resultBox) {
-        const emailConfirmed = Boolean(result?.email_confirmed);
-        resultBox.innerHTML = `
-          <div class="answer-box ${emailConfirmed ? 'correct' : ''}">
-            <strong>Cuenta vinculada al curso</strong>
-            <p>El alumno entra en la pestaña <b>Alumno</b> con su correo:<br>
-            <b>${escapeHtml(result?.email || existingEmail)}</b></p>
-            ${emailConfirmed ? '' : '<p><small>⚠️ Su correo aún no está confirmado: que revise su bandeja y el spam para confirmarlo antes de entrar.</small></p>'}
-            <p><small>Matrícula: ${escapeHtml(result?.student_code || '')} · Usuario interno: ${escapeHtml(result?.username || '')}</small></p>
-          </div>
-        `;
+    const { data: result, error } = await supabase.functions.invoke('admin-create-student', {
+      body: {
+        full_name: fullName,
+        username: username || null,
+        password,
+        group_id: groupId,
+        student_code: studentCode || null
       }
+    });
 
-      setNotice(`Cuenta de ${fullName} vinculada al grupo como alumno.`);
-    } else {
-      const { data: invokeResult, error } = await supabase.functions.invoke('admin-create-student', {
-        body: {
-          full_name: fullName,
-          username: username || null,
-          password,
-          group_id: groupId,
-          student_code: studentCode || null
-        }
-      });
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo dar de alta al alumno');
 
-      if (error) throw error;
-      if (!invokeResult?.ok) throw new Error(invokeResult?.error || 'No se pudo dar de alta al alumno');
-      result = invokeResult;
-
-      if (resultBox) {
-        resultBox.innerHTML = `
-          <div class="answer-box correct">
-            <strong>Alumno dado de alta</strong>
-            <p>Usuario: <b>${escapeHtml(result.access.username)}</b><br>
-            Contraseña temporal: <b>${escapeHtml(password)}</b><br>
-            <small>Entrégaselas una vez. En su primer ingreso, el alumno deberá crear su propia contraseña.</small></p>
-          </div>
-        `;
-      }
-
-      setNotice(`Alumno ${result.student?.student_code || username} dado de alta en el grupo.`);
+    if (resultBox) {
+      resultBox.innerHTML = `
+        <div class="answer-box correct">
+          <strong>Alumno dado de alta</strong>
+          <p>Usuario: <b>${escapeHtml(result.access.username)}</b><br>
+          Contraseña temporal: <b>${escapeHtml(password)}</b><br>
+          <small>Entrégaselas una vez. En su primer ingreso, el alumno deberá crear su propia contraseña.</small></p>
+        </div>
+      `;
     }
 
+    setNotice(`Alumno ${result.student?.student_code || username} dado de alta en el grupo.`);
     form.reset();
-    toggleLinkAccountFields(form.querySelector('[data-link-toggle]'));
     await loadDashboard(state.profile);
   } catch (error) {
     setError(error?.message || 'No se pudo dar de alta al alumno.');
@@ -6610,6 +6930,140 @@ async function createStudent(event, groupId) {
       submitButton.disabled = false;
       submitButton.textContent = 'Dar de alta';
     }
+  }
+}
+
+function buildRedeemUrl(token) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('link_token', token);
+  return url.toString();
+}
+
+function invitationExpiryLabel(value) {
+  const date = new Date(value || '');
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+async function issueStudentLinkToken(event, groupId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const fullName = String(data.get('full_name') || '').trim();
+  const username = String(data.get('username') || '').trim().toLowerCase();
+  const studentCode = String(data.get('student_code') || '').trim().toUpperCase();
+
+  if (!groupId) {
+    setError('Selecciona un grupo para el alumno.');
+    return;
+  }
+
+  if (!fullName) {
+    setError('Escribe el nombre completo del alumno.');
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Generando…';
+  }
+
+  state.error = '';
+  state.notice = '';
+  state.studentInvitation = null;
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('issue-student-link-token', {
+      body: {
+        full_name: fullName,
+        username: username || null,
+        group_id: groupId,
+        student_code: studentCode || null
+      }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo generar la invitación');
+
+    const token = result.invitation?.token;
+    if (!token) throw new Error('La invitación llegó sin token.');
+
+    const redeemUrl = buildRedeemUrl(token);
+    const whatsappMessage = [
+      `Hola ${fullName} 👋`,
+      'Soy el Prof. Luis. Te invito a la plataforma ECOEMS.',
+      `Tu usuario será: ${result.access?.username || ''}`,
+      'Crea tu contraseña con este enlace. Vence en 72 h y funciona una sola vez:',
+      redeemUrl
+    ].join('\n');
+
+    state.studentInvitation = {
+      fullName,
+      username: result.access?.username || '',
+      studentCode: result.student?.student_code || studentCode || '',
+      redeemUrl,
+      whatsappUrl: `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`,
+      expiresAtLabel: invitationExpiryLabel(result.invitation?.expires_at)
+    };
+
+    setNotice(`Invitación generada para ${fullName}. Comparte el enlace; vence en 72 h.`);
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(await functionErrorMessage(error, 'No se pudo generar la invitación.'));
+    renderDashboard();
+  }
+}
+
+async function reissueStudentInvitation(studentId, button) {
+  if (!studentId || button.disabled) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Generando…';
+
+  try {
+    const { data: result, error } = await supabase.functions.invoke('issue-student-link-token', {
+      body: { student_id: studentId }
+    });
+
+    if (error) throw error;
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo generar el enlace');
+
+    const token = result.invitation?.token;
+    if (!token) throw new Error('La invitación llegó sin token.');
+
+    const redeemUrl = buildRedeemUrl(token);
+    const fullName = result.access?.full_name || button.dataset.studentName || 'el alumno';
+    const username = result.access?.username || '';
+    const whatsappMessage = [
+      `Hola ${fullName} 👋`,
+      'Soy el Prof. Luis. Este es tu nuevo enlace de acceso a ECOEMS.',
+      `Tu usuario es: ${username}`,
+      'Crea tu contraseña con este enlace. Vence en 72 h y funciona una sola vez:',
+      redeemUrl
+    ].join('\n');
+
+    state.studentInvitation = {
+      fullName,
+      username,
+      studentCode: result.student?.student_code || '',
+      redeemUrl,
+      whatsappUrl: `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`,
+      expiresAtLabel: invitationExpiryLabel(result.invitation?.expires_at)
+    };
+
+    state.staffTab = 'alumnos';
+    setNotice(`Enlace de acceso generado para ${fullName}. Compártelo; vence en 72 h.`);
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(await functionErrorMessage(error, 'No se pudo generar el enlace de acceso.'));
+    button.disabled = false;
+    button.textContent = 'Enlace de acceso';
   }
 }
 
@@ -6997,17 +7451,26 @@ async function inviteGuardian(event) {
 async function acceptConsent(studentId, button) {
   if (!studentId || button.disabled) return;
 
+  const acknowledged = Boolean(appRoot.querySelector('[data-consent-ack]')?.checked);
+  if (!acknowledged) {
+    setError('Marca la casilla “He leído y entiendo” antes de aceptar el aviso de privacidad.');
+    return;
+  }
+
   state.error = '';
   state.notice = '';
   button.disabled = true;
   button.textContent = 'Enviando…';
 
+  const documentVersion = state.dashboard?.privacy?.version || PRIVACY_DOCUMENT_VERSION;
+
   try {
     const { data, error } = await supabase.functions.invoke('guardian-consent', {
       body: {
         student_id: studentId,
-        document_version: PRIVACY_DOCUMENT_VERSION,
-        accepted: true
+        document_version: documentVersion,
+        accepted: true,
+        acknowledged: true
       }
     });
 
@@ -7018,10 +7481,48 @@ async function acceptConsent(studentId, button) {
 
     state.notice = 'Consentimiento registrado. Gracias por confiar en nosotros.';
     await loadDashboard(state.profile);
-  } catch {
-    setError('No se pudo registrar el consentimiento. Revisa la conexión e intenta de nuevo.');
+  } catch (error) {
+    setError(await functionErrorMessage(error, 'No se pudo registrar el consentimiento. Revisa la conexión e intenta de nuevo.'));
     button.disabled = false;
-    button.textContent = 'Aceptar aviso de privacidad';
+    button.textContent = 'Aceptar y ver datos';
+  }
+}
+
+async function revokeConsent(studentId, name, button) {
+  if (!studentId || button.disabled) return;
+
+  const label = name ? `a ${name}` : 'a este alumno';
+  const confirmed = typeof window.confirm === 'function'
+    ? window.confirm(`¿Revocar el consentimiento ${label}? Dejarás de ver su información hasta que vuelvas a aceptar el aviso de privacidad.`)
+    : false;
+
+  if (!confirmed) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Revocando…';
+
+  try {
+    const { data, error } = await supabase.functions.invoke('guardian-consent', {
+      body: {
+        student_id: studentId,
+        revoke: true,
+        confirm: true
+      }
+    });
+
+    if (error) throw error;
+    if (data?.status !== 'revoked') {
+      throw new Error(data?.error || 'No se pudo revocar el consentimiento');
+    }
+
+    state.notice = 'Consentimiento revocado. La información del alumno ya no se muestra.';
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(await functionErrorMessage(error, 'No se pudo revocar el consentimiento. Intenta de nuevo.'));
+    button.disabled = false;
+    button.textContent = 'Revocar consentimiento';
   }
 }
 
@@ -7046,6 +7547,15 @@ export function initApp(root) {
 
   if (!isConfigured) {
     renderConfig();
+    return;
+  }
+
+  // SEC-02: enlace de invitación de alumno. Se atiende antes de restaurar
+  // cualquier sesión para no mezclar el panel del staff con el canje.
+  const incomingLinkToken = new URLSearchParams(window.location.search).get('link_token');
+  if (incomingLinkToken) {
+    supabase.auth.signOut().catch(() => {});
+    renderLinkRedemption(incomingLinkToken);
     return;
   }
 

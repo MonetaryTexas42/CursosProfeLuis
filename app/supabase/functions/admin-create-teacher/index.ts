@@ -4,7 +4,7 @@ import {
   requireCaller,
 } from "../_shared/auth.ts";
 import { handleError, handleOptions, HttpError, jsonResponse, readJson } from "../_shared/http.ts";
-import { asEmail, asString } from "../_shared/validation.ts";
+import { asEmail, asPassword, asString } from "../_shared/validation.ts";
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
 
     const fullName = asString(body.full_name, "full_name", 2, 120);
     const email = asEmail(body.email);
-    const password = asString(body.password, "password", 10, 72);
+    const password = asPassword(body.password);
 
     const existing = await findAuthUserByEmail(admin, email);
     if (existing) {

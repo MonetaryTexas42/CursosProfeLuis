@@ -147,12 +147,73 @@ export function defaultUsername(fullName: string): string {
   return base;
 }
 
-export function randomPassword(length = 14): string {
-  const alphabet =
-    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
+/**
+ * Valida una contraseña nueva contra la política de `config.toml`:
+ * mínimo 12, con minúscula, mayúscula y dígito. No se recorta el valor:
+ * los espacios pueden formar parte de la contraseña.
+ */
+export function asPassword(value: unknown, field = "password"): string {
+  if (typeof value !== "string") {
+    throw new HttpError(400, `${field} debe ser texto`);
+  }
 
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+  if (value.length < 12 || value.length > 128) {
+    throw new HttpError(
+      400,
+      `${field} debe tener entre 12 y 128 caracteres`,
+    );
+  }
+
+  if (!/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/\d/.test(value)) {
+    throw new HttpError(
+      400,
+      `${field} debe incluir al menos una minúscula, una mayúscula y un número`,
+    );
+  }
+
+  return value;
+}
+
+function randomInt(maxExclusive: number): number {
+  if (maxExclusive <= 0 || maxExclusive > 256) {
+    throw new Error("maxExclusive fuera de rango");
+  }
+
+  // Rechazo de bytes fuera del rango para no introducir sesgo por módulo.
+  const limit = 256 - (256 % maxExclusive);
+  const bytes = new Uint8Array(1);
+  for (;;) {
+    crypto.getRandomValues(bytes);
+    if (bytes[0] < limit) return bytes[0] % maxExclusive;
+  }
+}
+
+/**
+ * Contraseña aleatoria que **siempre** cumple la política (minúscula,
+ * mayúscula y dígito). La cuenta se crea con ella y nunca se revela: el
+ * alumno fija la suya al canjear el token. Garantizar la composición evita
+ * que `createUser` falle de forma intermitente por la política de Auth.
+ */
+export function randomPassword(length = 14): string {
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const digits = "23456789";
+  const symbols = "!@#$%";
+  const all = lower + upper + digits + symbols;
+
+  const size = Math.max(4, Math.min(length, 128));
+  const pick = (alphabet: string) => alphabet[randomInt(alphabet.length)];
+  const chars = [pick(lower), pick(upper), pick(digits), pick(symbols)];
+
+  while (chars.length < size) chars.push(pick(all));
+
+  // Mezcla Fisher-Yates para que las clases obligatorias no queden al inicio.
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join("");
 }
 
 export function asMetadata(value: unknown): Record<string, unknown> {

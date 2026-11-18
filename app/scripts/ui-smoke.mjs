@@ -12,9 +12,31 @@ import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  assertSafeTestEnvironment,
+  readEnvFile,
+} from "./lib/env-guard.mjs";
+import {
+  deleteCreatedAssignments,
+  restoreStudentProfile,
+  snapshotStudentProfile,
+} from "./lib/e2e-teardown.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const APP_URL = process.env.APP_URL || "http://localhost:5173";
+
+const FRONTEND_ENV = readEnvFile(resolve(here, "../frontend/.env"));
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || FRONTEND_ENV.VITE_SUPABASE_URL || "";
+const ANON_KEY =
+  process.env.VITE_SUPABASE_ANON_KEY || FRONTEND_ENV.VITE_SUPABASE_ANON_KEY || "";
+const WRITE_MODE = process.env.TEST_WRITE === "1";
+
+// Estado que el teardown debe deshacer al terminar.
+const runState = {
+  createdAssignmentIds: [],
+  studentProfileSnapshot: null,
+};
 const CHROME =
   process.env.CHROME_PATH ||
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -124,6 +146,13 @@ class Cdp {
 }
 
 async function main() {
+  assertSafeTestEnvironment({
+    supabaseUrl: SUPABASE_URL,
+    appUrl: APP_URL,
+    write: WRITE_MODE,
+    label: "ui-smoke",
+  });
+
   const mode = process.env.MODE || "student";
   const { chrome, wsUrl } = await launchChrome();
   const cdp = new Cdp(wsUrl);
@@ -180,8 +209,45 @@ async function main() {
 
     await runStudentFlow(pageEval, waitFor);
   } finally {
+    try {
+      await runTeardown(pageEval);
+    } catch (error) {
+      console.error(`  (teardown) no se pudo limpiar del todo: ${error.message}`);
+    }
     cdp.close();
     chrome.kill();
+  }
+}
+
+async function runTeardown(pageEval) {
+  if (!WRITE_MODE) return;
+  if (!SUPABASE_URL || !ANON_KEY) return;
+
+  const cleaned = [];
+
+  if (runState.createdAssignmentIds.length) {
+    const result = await deleteCreatedAssignments({
+      pageEval,
+      supabaseUrl: SUPABASE_URL,
+      anonKey: ANON_KEY,
+      assignmentIds: runState.createdAssignmentIds,
+    });
+    if (result.deleted) cleaned.push(`${result.deleted} asignación(es) de unidad`);
+  }
+
+  if (runState.studentProfileSnapshot) {
+    const result = await restoreStudentProfile({
+      supabaseUrl: SUPABASE_URL,
+      anonKey: ANON_KEY,
+      snapshot: runState.studentProfileSnapshot,
+    });
+    if (result.restored) cleaned.push("perfil de tests del alumno");
+  }
+
+  if (cleaned.length) {
+    console.log(`\n(teardown) restaurado: ${cleaned.join(", ")}.`);
+  } else {
+    console.log("\n(teardown) no había datos que limpiar.");
   }
 }
 
@@ -376,8 +442,11 @@ async function runCourseFlow(pageEval, waitFor) {
 }
 
 async function runAdminFlow(pageEval, waitFor) {
-  const email = process.env.ADMIN_EMAIL || "cursosprofeluis@gmail.com";
+  const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
+  if (!email) {
+    throw new Error("Define ADMIN_EMAIL en el entorno (cuenta admin de staging)");
+  }
   if (!password) {
     throw new Error("Define ADMIN_PASSWORD en el entorno");
   }
@@ -416,7 +485,7 @@ async function runAdminFlow(pageEval, waitFor) {
   await pageEval(`document.querySelector('[data-staff-tab="alumnos"]').click(); true`);
   await waitFor(`document.querySelector('.student-card')`, "tarjeta de alumna");
   await waitFor(`document.querySelector('#admin-create-student-form')`, "formulario de alta");
-  console.log("  ✓ alumna (Alexa) y alta de alumnos visibles");
+  console.log("  ✓ alumna de prueba y alta de alumnos visibles");
 
   console.log("Sección Materias…");
   await pageEval(`document.querySelector('[data-staff-tab="materias"]').click(); true`);
@@ -473,7 +542,7 @@ async function runAdminFlow(pageEval, waitFor) {
 
 async function runTeacherFlow(pageEval, waitFor) {
   const teacher = readTestUser("teacher");
-  const writeMode = process.env.TEST_WRITE === "1";
+  const writeMode = WRITE_MODE;
 
   console.log(`Entrando como profesor (${teacher.email})…`);
   await pageEval(`document.querySelector('[data-mode="teacher"]').click(); true`);
@@ -525,14 +594,17 @@ async function runTeacherFlow(pageEval, waitFor) {
   await pageEval(`document.querySelector('[data-ficha-close]').click(); true`);
   console.log("  ✓ ficha completa: modal con avance, perfil profesional y observaciones");
 
-  console.log("Alta con vinculación de cuenta existente…");
-  await waitFor(`document.querySelector('[data-link-toggle]')`, "casilla de cuenta existente en el alta");
-  await pageEval(`document.querySelector('[data-link-toggle]').click(); true`);
-  await waitFor(`!document.querySelector('[data-link-email-row]').classList.contains('hidden')`, "campo de correo visible");
-  await waitFor(`document.querySelector('[data-password-row]').classList.contains('hidden')`, "contraseña temporal oculta");
-  await pageEval(`document.querySelector('[data-link-toggle]').click(); true`);
-  await waitFor(`document.querySelector('[data-link-email-row]').classList.contains('hidden')`, "vuelta al alta normal");
-  console.log("  ✓ alta normal (usuario + contraseña temporal) y vinculación por correo se conmutan");
+  console.log("Alta de alumno e invitación con token…");
+  await waitFor(`document.querySelector('[data-invite-student-form]')`, "formulario de invitación por token");
+  const inviteText = await pageEval(`document.querySelector('[data-invite-student-form]').closest('details').innerText`);
+  if (!inviteText.includes('Invitar alumno')) {
+    throw new Error("El formulario de invitación no muestra su título");
+  }
+  const legacyLink = await pageEval(`document.querySelector('[data-link-toggle]') === null`);
+  if (!legacyLink) {
+    throw new Error("La vinculación por correo sin token sigue presente en la UI");
+  }
+  console.log("  ✓ alta normal (usuario + contraseña temporal) e invitación por token disponibles");
 
   console.log("Sección Materias…");
   await pageEval(`document.querySelector('[data-staff-tab="materias"]').click(); true`);
@@ -571,9 +643,20 @@ async function runTeacherFlow(pageEval, waitFor) {
   console.log("  ✓ se pueden seleccionar y deseleccionar alumnos con botones Todos/Ninguno");
 
   if (writeMode) {
+    const assignmentsBefore = new Set(
+      await pageEval(
+        `[...document.querySelectorAll('[data-manage-assignment]')].map((el) => el.dataset.manageAssignment).filter(Boolean)`,
+      ),
+    );
     console.log("  (TEST_WRITE=1) activando la unidad para todo el grupo…");
     await pageEval(`document.querySelector('[data-unit-assign-save]').click(); true`);
     await waitFor(`document.body.innerText.includes('Unidad activada')`, "aviso de unidad activada");
+    const assignmentsAfter = await pageEval(
+      `[...document.querySelectorAll('[data-manage-assignment]')].map((el) => el.dataset.manageAssignment).filter(Boolean)`,
+    );
+    for (const id of assignmentsAfter) {
+      if (!assignmentsBefore.has(id)) runState.createdAssignmentIds.push(id);
+    }
     console.log("  ✓ la unidad se activó de verdad y el aviso se mostró");
 
     console.log("  (TEST_WRITE=1) abriendo la edición de alumnos de la unidad activa…");
@@ -669,7 +752,7 @@ async function runTeacherFlow(pageEval, waitFor) {
 }
 
 async function runStudentFlow(pageEval, waitFor) {
-  const writeMode = process.env.TEST_WRITE === "1";
+  const writeMode = WRITE_MODE;
 
   console.log("Entrando como alumno…");
   await loginAsStudent(pageEval, waitFor);
@@ -743,6 +826,19 @@ async function runStudentFlow(pageEval, waitFor) {
     await waitFor(`!document.querySelector('.test-dialog')`, "test vocacional cerrado");
 
     if (writeMode) {
+      try {
+        runState.studentProfileSnapshot = await snapshotStudentProfile({
+          pageEval,
+          supabaseUrl: SUPABASE_URL,
+          anonKey: ANON_KEY,
+        });
+        if (runState.studentProfileSnapshot) {
+          console.log("  (teardown) perfil de tests guardado antes de la prueba");
+        }
+      } catch (error) {
+        console.warn(`  (teardown) no se pudo guardar el perfil previo: ${error.message}`);
+      }
+
       console.log("  (TEST_WRITE=1) completando el test de personalidad…");
       await pageEval(`document.querySelector('[data-start-test="personality"]').click(); true`);
       await waitFor(`document.querySelector('.test-dialog')`, "ventana del test");

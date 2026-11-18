@@ -12,10 +12,8 @@
 (function () {
   "use strict";
 
-  var SUPABASE_URL = "https://ioikcrdxneuydylyhvwi.supabase.co";
-  // Llave pública (anon). Es la misma que usa el portal; no da poderes de escritura.
-  var SUPABASE_ANON_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvaWtjcmR4bmV1eWR5bHlodndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzc4NTIsImV4cCI6MjEwODk1Mzg1Mn0.dQTvZ6YjjD3SthqvgZjoj7NmHNI1bNk-pSILYmS1N4M";
+  var SUPABASE_URL = window.ECOEMS_SUPABASE_URL || "";
+  var SUPABASE_ANON_KEY = window.ECOEMS_SUPABASE_ANON_KEY || "";
   var SUPABASE_CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
   function redirectToPortal() {
@@ -23,6 +21,16 @@
     var target = location.pathname.replace(/\/curso\/?.*$/, "/");
     location.replace(target);
   }
+
+  function renderMessage(title, detail) {
+    document.body.innerHTML =
+      '<div style="font-family:system-ui;display:grid;place-items:center;min-height:100vh;padding:24px;color:#334155;text-align:center">' +
+      '<div><h2 style="margin:0 0 8px">' + title + "</h2>" +
+      '<p style="margin:0 0 16px;max-width:38ch">' + detail + "</p>" +
+      '<a href="' + location.pathname.replace(/\/curso\/?.*$/, "/") +
+      '" style="color:#2563eb">Volver al portal</a></div></div>';
+  }
+
 
   function buildData(subjects, units, versions) {
     var versionByUnit = {};
@@ -201,6 +209,14 @@
   }
 
   function run() {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      renderMessage(
+        "Falta configurar el curso",
+        "Este build no tiene la URL ni la clave pública de Supabase. Revisa el entorno de despliegue."
+      );
+      return;
+    }
+
     import(SUPABASE_CDN)
       .then(function (mod) {
         var supabase = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -297,6 +313,16 @@
                     var visibleSubjects = allSubjects.filter(function (s) {
                       return allowedSubjectIds[s.id] === true;
                     });
+
+                    if (!allowedUnits.length) {
+                      // SEC-01: sin asignación activa la base devuelve 0 filas.
+                      // No arrancamos el reproductor vacío.
+                      renderMessage(
+                        "Aún no hay unidades activas",
+                        "Tu profesor todavía no ha activado una unidad para tu grupo. Cuando lo haga, aparecerá aquí."
+                      );
+                      return;
+                    }
 
                     window.DATA = buildData(visibleSubjects, allowedUnits, versions);
                     window.ECOEMS_STUDENT = { id: profile.id, name: profile.full_name };

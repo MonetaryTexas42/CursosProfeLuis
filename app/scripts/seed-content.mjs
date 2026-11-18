@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const contentPath = resolve(here, "../supabase/seed/content-v1.json");
+const privacyPath = resolve(here, "../supabase/seed/privacy-document.json");
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
@@ -22,6 +23,7 @@ if (!databaseUrl) {
 }
 
 const payload = JSON.parse(readFileSync(contentPath, "utf8"));
+const privacyDocument = JSON.parse(readFileSync(privacyPath, "utf8"));
 
 const client = new pg.Client({ connectionString: databaseUrl });
 await client.connect();
@@ -108,13 +110,22 @@ try {
 
   await client.query("commit");
 
-  // Versión del aviso de privacidad vigente (la usa el flujo de consentimiento).
-  await client.query(
-    `insert into public.settings (key, value, updated_by)
-     values ('privacy_document_version', '"v1-2026"'::jsonb, $1)
-     on conflict (key) do nothing`,
-    [adminId],
-  );
+  // Aviso de privacidad vigente (PRIV-01). El hash debe coincidir con
+  // frontend/public/privacidad.html; se verifica con scripts/privacy-doc.mjs.
+  for (const [key, value] of [
+    ["privacy_document_version", privacyDocument.version],
+    ["privacy_document_url", privacyDocument.url],
+    ["privacy_document_sha256", privacyDocument.sha256],
+  ]) {
+    await client.query(
+      `insert into public.settings (key, value, updated_by)
+       values ($1, to_jsonb($2::text), $3)
+       on conflict (key) do update
+         set value = excluded.value,
+             updated_at = now()`,
+      [key, value, adminId],
+    );
+  }
 
   const counts = await client.query(`
     select

@@ -4,9 +4,8 @@
 (function () {
   "use strict";
 
-  var SUPABASE_URL = "https://ioikcrdxneuydylyhvwi.supabase.co";
-  var SUPABASE_ANON_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvaWtjcmR4bmV1eWR5bHlodndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzc4NTIsImV4cCI6MjEwODk1Mzg1Mn0.dQTvZ6YjjD3SthqvgZjoj7NmHNI1bNk-pSILYmS1N4M";
+  var SUPABASE_URL = window.ECOEMS_SUPABASE_URL || "";
+  var SUPABASE_ANON_KEY = window.ECOEMS_SUPABASE_ANON_KEY || "";
   var SUPABASE_CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
   function blocked() {
@@ -21,6 +20,14 @@
   }
 
   function run() {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      document.body.innerHTML =
+        '<div style="font-family:system-ui;display:grid;place-items:center;min-height:100vh;padding:24px;color:#334155;text-align:center">' +
+        '<div><h2 style="margin:0 0 8px">Herramienta sin configurar</h2>' +
+        '<p style="margin:0">Este build no tiene la URL ni la clave pública de Supabase.</p></div></div>';
+      return;
+    }
+
     import(SUPABASE_CDN)
       .then(function (mod) {
         var supabase = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

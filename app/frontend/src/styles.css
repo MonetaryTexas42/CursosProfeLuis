@@ -383,6 +383,37 @@ h2 {
   border-top: 1px solid var(--line);
 }
 
+.privacy-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.privacy-footer a {
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.privacy-footer a:hover,
+.privacy-footer a:focus {
+  text-decoration: underline;
+}
+
+.privacy-gate .checkbox-field {
+  margin-top: 14px;
+}
+
+.privacy-gate .data-list {
+  margin-top: 10px;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

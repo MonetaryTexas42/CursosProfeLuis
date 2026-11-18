@@ -8,8 +8,16 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertSafeTestEnvironment, readEnvFile } from "./lib/env-guard.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+// Versión vigente del aviso: se toma del manifiesto que también usa el seed y
+// la migración 0027, para que la prueba no quede fijada a una versión vieja.
+const privacyManifest = JSON.parse(
+  readFileSync(resolve(here, "../supabase/seed/privacy-document.json"), "utf8"),
+);
+const PRIVACY_VERSION = privacyManifest.version;
 
 function readTestUsers() {
   const text = readFileSync(resolve(here, "../.secrets/test-users.txt"), "utf8");
@@ -40,13 +48,7 @@ function readTestUsers() {
 }
 
 function readEnv() {
-  const text = readFileSync(resolve(here, "../frontend/.env"), "utf8");
-  const values = {};
-  for (const line of text.split("\n")) {
-    const match = line.match(/^([A-Z_]+)=(.*)$/);
-    if (match) values[match[1]] = match[2].trim();
-  }
-  return values;
+  return readEnvFile(resolve(here, "../frontend/.env"));
 }
 
 const users = readTestUsers();
@@ -91,23 +93,38 @@ async function callFunction(name, token, body) {
 }
 
 async function main() {
+  // Este script crea y modifica datos (invitaciones, consentimientos,
+  // cuentas de prueba). Solo puede ejecutarse contra staging.
+  assertSafeTestEnvironment({
+    supabaseUrl: SUPABASE_URL,
+    write: true,
+    label: "test-functions",
+  });
+
   const teacher = users.teacher;
   const guardian = users.guardian;
   if (!teacher?.email || !guardian?.email) {
     throw new Error("No se encontraron las credenciales en test-users.txt");
   }
 
+  const studentCode = process.env.TEST_STUDENT_CODE || "STAGING.ALUMNO.UNO";
+
   console.log("1) Login del profesor…");
   const teacherToken = await login(teacher.email, teacher.password);
 
-  console.log("2) Obteniendo el alumno ALEXA.GUADALUPE.MONTOYA.MANUDUJA…");
+  console.log(`2) Obteniendo el alumno ${studentCode}…`);
   const studentsRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/students?student_code=eq.ALEXA.GUADALUPE.MONTOYA.MANUDUJA&select=id`,
+    `${SUPABASE_URL}/rest/v1/students?student_code=eq.${encodeURIComponent(studentCode)}&select=id`,
     { headers: { apikey: ANON_KEY, Authorization: `Bearer ${teacherToken}` } },
   );
   const students = await studentsRes.json();
   const studentId = students?.[0]?.id;
-  if (!studentId) throw new Error("No se pudo obtener ALEXA.GUADALUPE.MONTOYA.MANUDUJA");
+  if (!studentId) {
+    throw new Error(
+      `No se encontró el alumno ${studentCode}. ` +
+        "Ajusta TEST_STUDENT_CODE o ejecuta el seed de staging.",
+    );
+  }
   console.log("   student_id:", studentId);
 
   console.log("3) invite-guardian (profesor)…");
@@ -147,8 +164,9 @@ async function main() {
   console.log("5) guardian-consent llamado por un PROFESOR (debe ser rechazado)…");
   const teacherConsent = await callFunction("guardian-consent", teacherToken, {
     student_id: studentId,
-    document_version: "v1-2026",
+    document_version: PRIVACY_VERSION,
     accepted: true,
+    acknowledged: true,
   });
   if (teacherConsent.status !== 403) {
     throw new Error(`Se esperaba 403 y llegó ${teacherConsent.status}`);
@@ -163,6 +181,7 @@ async function main() {
     student_id: studentId,
     document_version: "v9-9999",
     accepted: true,
+    acknowledged: true,
   });
   if (wrongVersion.status !== 409) {
     throw new Error(`Se esperaba 409 por versión y llegó ${wrongVersion.status}: ${JSON.stringify(wrongVersion.data)}`);
@@ -174,13 +193,16 @@ async function main() {
 
   // ---- Funciones de administración (requieren ADMIN_PASSWORD) ----
   if (process.env.ADMIN_PASSWORD) {
-    const adminEmail = process.env.ADMIN_EMAIL || "cursosprofeluis@gmail.com";
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) {
+      throw new Error("Define ADMIN_EMAIL en el entorno (cuenta admin de staging)");
+    }
     const testTeacherEmail = `profesor.test.${Date.now()}@ecoems.local`;
 
     console.log("9) Login del admin…");
     const adminToken = await login(adminEmail, process.env.ADMIN_PASSWORD);
 
-    console.log("8b) Vínculo temporal tutor1 → Alexa y consentimiento…");
+    console.log("8b) Vínculo temporal tutor1 → alumno de prueba y consentimiento…");
     const guardiansRes = await fetch(
       `${SUPABASE_URL}/rest/v1/guardians?select=id&email=eq.${encodeURIComponent(guardian.email)}`,
       { headers: { apikey: ANON_KEY, Authorization: `Bearer ${adminToken}` } },
@@ -199,8 +221,9 @@ async function main() {
 
     const consent = await callFunction("guardian-consent", guardianToken, {
       student_id: studentId,
-      document_version: "v1-2026",
+      document_version: PRIVACY_VERSION,
       accepted: true,
+      acknowledged: true,
     });
     if (consent.status !== 200 || consent.data?.status !== "accepted") {
       throw new Error(`consent falló: ${JSON.stringify(consent)}`);

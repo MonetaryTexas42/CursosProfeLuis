@@ -1,7 +1,7 @@
 begin;
 
 -- Prueba de humo con contenido real: asigna espanol-u01 y matematicas-u01
--- al grupo Piloto A y recorre el flujo completo del alumno ALEXA.GUADALUPE.MONTOYA.MANUDUJA.
+-- al grupo Piloto A y recorre el flujo completo del alumno indicado en test.student_code.
 create temporary table _smoke_ids on commit drop as
 select
   (select id from public.groups where name = 'Piloto A') as group_id,
@@ -12,7 +12,7 @@ select
   gp.id as guardian_profile_id
 from public.students s
 join public.profiles gp on gp.email = 'tutor1@ecoems.local'
-where s.student_code = 'ALEXA.GUADALUPE.MONTOYA.MANUDUJA'
+where s.student_code = current_setting('test.student_code')
 limit 1;
 
 grant select on _smoke_ids to authenticated;
@@ -20,7 +20,7 @@ grant select on _smoke_ids to authenticated;
 do $$
 begin
   if not exists (select 1 from _smoke_ids) then
-    raise exception 'No se encontraron los datos base de ALEXA.GUADALUPE.MONTOYA.MANUDUJA';
+    raise exception 'No se encontraron los datos base del alumno de prueba';
   end if;
 end;
 $$;

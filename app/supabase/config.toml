@@ -1,0 +1,105 @@
+#:schema https://supabase.com/schemas/config/v1.json
+# Configuración de Supabase versionada (OPS-05).
+#
+# Esta configuración describe el proyecto, no sustituye al dashboard: los
+# valores se aplican con `supabase config push` sobre el proyecto enlazado.
+# Antes de hacerlo, comparar con el estado real de producción; el proyecto
+# actual no tenía `config.toml` y su Auth nunca se verificó (ver auditoría
+# OPS-05 y SEC-02).
+#
+# Reglas:
+# - Nunca incluir secretos aquí. Las claves van por variables de entorno.
+# - `enable_signup = false` es intencional: las cuentas se crean con las
+#   Edge Functions administrativas, no por autorregistro (SEC-02).
+
+project_id = "ecoems-plataforma"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+health_timeout = "2m"
+# Verificar con `show server_version;` en producción antes de usar un stack
+# local. Los proyectos nuevos de Supabase suelen ser 15 o 17.
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+# El contenido se carga con `scripts/seed-content.mjs` desde
+# `supabase/seed/content-v1.json`, no con `supabase db reset`.
+enabled = false
+sql_paths = []
+
+[auth]
+enabled = true
+# URL del frontend POR ENTORNO. Antes de `config push`, ajústala:
+#   local:      http://localhost:5173
+#   staging:    URL del frontend de staging
+#   producción: https://monetarytexas42.github.io/CursosProfeLuis/
+# No dejes la URL de producción al empujar staging: los correos y enlaces
+# mágicos de staging apuntarían a producción.
+site_url = "http://localhost:5173"
+additional_redirect_urls = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Sin autorregistro: el alta pasa por admin-create-student / invite-guardian.
+enable_signup = false
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+# Contraseñas temporales más fuertes que el mínimo de 6 por defecto.
+minimum_password_length = 12
+password_requirements = "lower_upper_letters_digits"
+
+[auth.rate_limit]
+email_sent = 30
+sms_sent = 30
+anonymous_users = 30
+token_refresh = 150
+sign_in_sign_ups = 30
+token_verifications = 30
+web3 = 30
+
+[auth.email]
+enabled = true
+double_confirm_changes = true
+# Confirmación obligatoria: no se aceptan correos sin verificar.
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m"
+otp_length = 6
+otp_expiry = 3600
+
+[auth.sms]
+enabled = false
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+# Disponible en planes de pago; activar solo si el proyecto lo soporta.
+enroll_enabled = false
+verify_enabled = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8083
+deno_version = 2
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"

@@ -7,13 +7,13 @@ select
   gp.id as guardian_profile_id
 from public.students s
 join public.profiles gp on gp.email = 'tutor1@ecoems.local'
-where s.student_code = 'ALEXA.GUADALUPE.MONTOYA.MANUDUJA'
+where s.student_code = current_setting('test.student_code')
 limit 1;
 
 do $$
 begin
   if not exists (select 1 from _game_reading_test_ids) then
-    raise exception 'No se encontraron los datos base de ALEXA.GUADALUPE.MONTOYA.MANUDUJA';
+    raise exception 'No se encontraron los datos base del alumno de prueba';
   end if;
 end;
 $$;

@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditoría ECOEMS · Plataforma CursosProfeLuis</title>
+<style>
+  :root {
+    --bg: #0a0f1f;
+    --panel: #111a2e;
+    --panel-2: #16213a;
+    --line: #24324f;
+    --text: #e6ecf7;
+    --muted: #93a2bd;
+    --brand: #6ea8fe;
+    --crit: #ff5d6c;
+    --high: #ff9f43;
+    --med: #ffd166;
+    --low: #6ee7b7;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 20% -10%, #17233d 0%, var(--bg) 60%);
+    color: var(--text);
+    font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--brand); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .86em;
+    background: #0c1424;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: blur(12px);
+    background: rgba(10,15,31,.82);
+    border-bottom: 1px solid var(--line);
+  }
+  .top-inner {
+    max-width: 1180px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--crit); box-shadow: 0 0 14px var(--crit); }
+  .top nav { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .top nav a {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 10px; border-radius: 8px;
+  }
+  .top nav a:hover { color: var(--text); background: var(--panel-2); }
+
+  .hero { padding: 56px 0 28px; }
+  .kicker { color: var(--muted); text-transform: uppercase; letter-spacing: .16em; font-size: 11px; font-weight: 700; }
+  h1 { font-size: clamp(30px, 4.2vw, 46px); line-height: 1.1; margin: 12px 0 10px; }
+  .sub { color: var(--muted); max-width: 820px; font-size: 17px; }
+  .meta { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; color: var(--muted); font-size: 13px; }
+  .meta b { color: var(--text); font-weight: 600; }
+
+  .verdict {
+    margin: 28px 0 8px; padding: 18px 20px; border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,93,108,.12), rgba(255,93,108,.04));
+    border: 1px solid rgba(255,93,108,.35);
+  }
+  .verdict strong { color: #ffb3ba; }
+  .verdict p { margin: 6px 0 0; color: #f3d7da; }
+
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 8px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; cursor: pointer; transition: transform .15s, border-color .15s, background .15s;
+    text-align: left; color: var(--text);
+  }
+  .card:hover { transform: translateY(-2px); border-color: #3a4d75; background: var(--panel-2); }
+  .card.active { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+  .card .n { font-size: 32px; font-weight: 800; line-height: 1; }
+  .card .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; margin-top: 6px; }
+  .card.crit .n { color: var(--crit); }
+  .card.high .n { color: var(--high); }
+  .card.med .n { color: var(--med); }
+  .card.low .n { color: var(--low); }
+
+  section { margin-top: 46px; }
+  h2 { font-size: 24px; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 18px; }
+
+  .top10 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .t10 {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  }
+  .t10 .rank {
+    flex: 0 0 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--panel-2); border: 1px solid var(--line); font-weight: 700; font-size: 13px;
+  }
+  .t10 .id { font-family: ui-monospace, monospace; font-size: 12px; color: var(--brand); }
+  .t10 p { margin: 2px 0 0; font-size: 14px; }
+  .t10 .why { color: var(--muted); font-size: 13px; }
+
+  .toolbar {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    margin: 14px 0 12px; padding: 12px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px;
+  }
+  .toolbar input[type=search] {
+    flex: 1 1 260px; min-width: 200px; background: #0c1424; color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; font: inherit;
+  }
+  .toolbar input[type=search]:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .toolbar select {
+    background: #0c1424; color: var(--text); border: 1px solid var(--line);
+    border-radius: 9px; padding: 10px 12px; font: inherit;
+  }
+  .count { color: var(--muted); font-size: 13px; margin-left: auto; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    position: sticky; top: 57px; background: #0d1628; text-align: left;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    padding: 11px 12px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  tbody td { padding: 11px 12px; border-bottom: 1px solid rgba(36,50,79,.6); vertical-align: top; }
+  tbody tr:hover { background: rgba(110,168,254,.05); }
+  .id { font-family: ui-monospace, monospace; font-size: 12px; color: var(--brand); white-space: nowrap; }
+  .sev {
+    display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .sev.crit { color: var(--crit); background: rgba(255,93,108,.12); border-color: rgba(255,93,108,.35); }
+  .sev.high { color: var(--high); background: rgba(255,159,67,.12); border-color: rgba(255,159,67,.35); }
+  .sev.med { color: var(--med); background: rgba(255,209,102,.10); border-color: rgba(255,209,102,.32); }
+  .sev.low { color: var(--low); background: rgba(110,231,183,.10); border-color: rgba(110,231,183,.3); }
+  .prio { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+  .prio.p0 { color: var(--crit); font-weight: 700; }
+  .prio.p1 { color: var(--high); font-weight: 700; }
+  td.title { min-width: 280px; }
+  td.loc code { font-size: 11px; color: #b9c7e2; }
+  button.detail {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer;
+  }
+  button.detail:hover { border-color: var(--brand); color: var(--brand); }
+  button.detail:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .empty { padding: 30px; text-align: center; color: var(--muted); display: none; }
+
+  .docs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .doc {
+    display: flex; gap: 12px; align-items: center; text-decoration: none; color: var(--text);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  }
+  .doc:hover { border-color: var(--brand); background: var(--panel-2); }
+  .doc-num {
+    font-family: ui-monospace, monospace; font-size: 12px; color: var(--brand);
+    border: 1px solid var(--line); border-radius: 7px; padding: 3px 7px; background: #0c1424;
+  }
+  .doc-label { font-size: 14px; }
+
+  .note {
+    margin-top: 18px; padding: 14px 16px; border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  .note b { color: var(--text); }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(4,8,18,.72); backdrop-filter: blur(3px);
+    display: none; z-index: 50; padding: 24px;
+  }
+  .overlay.open { display: grid; place-items: center; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    width: min(820px, 100%); max-height: 86vh; overflow: auto; box-shadow: var(--shadow);
+  }
+  .modal-head {
+    position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--line);
+    padding: 16px 20px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .modal-head .t { font-size: 17px; font-weight: 700; margin: 0; }
+  .modal-head .m { color: var(--muted); font-size: 12px; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .modal-body { padding: 8px 20px 24px; }
+  .modal-body h3 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 20px 0 6px; }
+  .modal-body p { margin: 6px 0; }
+  .modal-body ul, .modal-body ol { margin: 6px 0; padding-left: 22px; }
+  .modal-body li { margin: 3px 0; }
+  .modal-body pre {
+    background: #0a1222; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; overflow: auto; font-size: 12.5px; line-height: 1.55;
+  }
+  .modal-body pre code { background: none; border: none; padding: 0; }
+  .modal-body blockquote {
+    margin: 10px 0; padding: 8px 14px; border-left: 3px solid var(--brand);
+    background: rgba(110,168,254,.06); color: #cdd9ee;
+  }
+  .modal-body hr { border: none; border-top: 1px solid var(--line); margin: 18px 0; }
+  .close {
+    margin-left: auto; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 9px; padding: 6px 12px; font: inherit; cursor: pointer;
+  }
+  .close:hover { border-color: var(--brand); }
+  .close:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 900px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .top10 { grid-template-columns: 1fr; }
+    .docs { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 620px) {
+    .docs { grid-template-columns: 1fr; }
+    .top nav { width: 100%; margin-left: 0; }
+    thead th { top: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="dot" aria-hidden="true"></span> Auditoría ECOEMS</div>
+    <nav aria-label="Secciones">
+      <a href="#resumen">Resumen</a>
+      <a href="#top10">Top 10</a>
+      <a href="#hallazgos">Hallazgos</a>
+      <a href="#informes">Informes</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div role="note" style="margin: 18px 0 0; padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 10px; background: var(--panel); color: var(--muted); font-size: 13.5px;">
+    <strong style="color: var(--text);">Instantánea de la auditoría original (15 nov 2026).</strong>
+    Este informe no refleja las correcciones de Fase 0 y Fase 1. El estado actualizado de cada hallazgo está en los informes <code>00</code>–<code>12</code> de esta carpeta.
+  </div>
+
+  <div class="hero" id="resumen">
+    <div class="kicker">Auditoría integral · solo lectura</div>
+    <h1>Plataforma ECOEMS<br>Informe consolidado</h1>
+    <p class="sub">Revisión de seguridad, base de datos, funcionalidad, código, UX, privacidad y operación de la plataforma de aprendizaje del Prof. Luis. Sin correcciones aplicadas.</p>
+    <div class="meta">
+      <span><b>Fecha de corte</b> 15 nov 2026</span>
+      <span><b>Producción</b> monetarytexas42.github.io/CursosProfeLuis</span>
+      <span><b>Supabase</b> ioikcrdxneuydylyhvwi</span>
+      <span><b>Hallazgos</b> 63</span>
+    </div>
+
+    <div class="verdict">
+      <strong>Nivel de riesgo global: Alto</strong>, con un foco <strong>Crítico</strong> en la exposición de contenido evaluable.
+      <p>La plataforma es funcional para un piloto controlado, pero no está lista para operar con datos reales de menores sin cerrar el acceso al contenido, verificar la identidad y publicar el aviso de privacidad.</p>
+    </div>
+
+    <div class="cards" role="group" aria-label="Filtrar por severidad">
+      <button class="card crit" data-filter-sev="Crítico">
+        <div class="n">1</div><div class="l">Crítico</div>
+      </button>
+      <button class="card high" data-filter-sev="Alto">
+        <div class="n">11</div><div class="l">Alto</div>
+      </button>
+      <button class="card med" data-filter-sev="Medio">
+        <div class="n">25</div><div class="l">Medio</div>
+      </button>
+      <button class="card low" data-filter-sev="Bajo">
+        <div class="n">26</div><div class="l">Bajo</div>
+      </button>
+    </div>
+    <div class="note">
+      <b>Cómo leer este índice.</b> Las tarjetas filtran la tabla por severidad. Cada fila abre el hallazgo completo con evidencia, problema, escenario, impacto y recomendación. Los 13 informes en Markdown están enlazados al final y en la tabla de navegación.
+    </div>
+  </div>
+
+  <section id="top10">
+    <h2>Los 10 que deben atenderse primero</h2>
+    <p class="lead">Ordenados por riesgo real: probabilidad de abuso × impacto sobre menores, integridad académica y datos.</p>
+    <div class="top10">
+      <div class="t10"><div class="rank">1</div><div><div class="id">SEC-01 · Crítico</div><p>RLS permite leer todo el contenido publicado</p><p class="why">Cualquier alumno descarga las respuestas. Se corrige con dos <code>drop policy</code>.</p></div></div>
+      <div class="t10"><div class="rank">2</div><div><div class="id">PRIV-02 · Alto</div><p>Notas internas visibles al alumno y al tutor</p><p class="why">RLS filtra filas, no columnas: <code>notes_internal</code> viaja en la fila.</p></div></div>
+      <div class="t10"><div class="rank">3</div><div><div class="id">SEC-03 · Alto</div><p>El cambio obligatorio de contraseña se evita</p><p class="why">La RPC limpia la bandera sin comprobar el cambio.</p></div></div>
+      <div class="t10"><div class="rank">4</div><div><div class="id">SEC-02 · Alto</div><p>Vinculación sin verificar titularidad</p><p class="why">Fuerza <code>email_confirmed_at</code> y permite apropiarse de una ficha.</p></div></div>
+      <div class="t10"><div class="rank">5</div><div><div class="id">PRIV-01 · Alto</div><p>Aviso no publicado y consentimiento sin evidencia</p><p class="why">El botón no enlaza al texto y no bloquea el acceso.</p></div></div>
+      <div class="t10"><div class="rank">6</div><div><div class="id">OPS-03 · Alto</div><p>Las pruebas escriben en la base configurada</p><p class="why"><code>TEST_WRITE=1</code> sin staging termina en producción.</p></div></div>
+      <div class="t10"><div class="rank">7</div><div><div class="id">OPS-01 · Alto</div><p>Respaldos sin cifrar con PII y <code>auth.users</code></p><p class="why">857 KB legibles con el expediente completo de menores.</p></div></div>
+      <div class="t10"><div class="rank">8</div><div><div class="id">OPS-02 · Alto</div><p>Restauración que trunca sin confirmación</p><p class="why">Un error de dedo puede vaciar producción.</p></div></div>
+      <div class="t10"><div class="rank">9</div><div><div class="id">SEC-04 · Alto</div><p>Desactivar no revoca sesiones ni banea</p><p class="why">El usuario sigue autenticándose en Auth.</p></div></div>
+      <div class="t10"><div class="rank">10</div><div><div class="id">FUN-01 · Alto</div><p>El tutor no ve calificaciones ni asistencia</p><p class="why">La base lo permite; la UI no lo muestra.</p></div></div>
+    </div>
+  </section>
+
+  <section id="hallazgos">
+    <h2>Tabla consolidada</h2>
+    <p class="lead">63 hallazgos con severidad, prioridad, categoría y ubicación. Usa los filtros o abre el detalle.</p>
+
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Buscar por ID, título, categoría o archivo…" aria-label="Buscar hallazgos">
+      <select id="f-sev" aria-label="Filtrar por severidad">
+        <option value="">Toda severidad</option>
+        <option>Crítico</option><option>Alto</option><option>Medio</option><option>Bajo</option>
+      </select>
+      <select id="f-cat" aria-label="Filtrar por categoría">
+        <option value="">Toda categoría</option>
+        <option value="SEC">Seguridad</option>
+        <option value="DB">Base de datos</option>
+        <option value="FUN">Funcionalidad</option>
+        <option value="COD">Código</option>
+        <option value="UX">UX</option>
+        <option value="PRIV">Privacidad</option>
+        <option value="OPS">DevOps</option>
+      </select>
+      <select id="f-prio" aria-label="Filtrar por prioridad">
+        <option value="">Toda prioridad</option>
+        <option value="P0">P0</option><option value="P1">P1</option>
+        <option value="P2">P2</option><option value="P3">P3</option>
+      </select>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Severidad</th><th>Prioridad</th><th>Categoría</th>
+            <th>Hallazgo</th><th>Ubicación</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+    <tr data-sev="Crítico" data-cat="SEC" data-prio="P0"
+        data-search="sec-01 rls permite que cualquier alumno lea todo el contenido publicado seguridad / rls / control de acceso `app/supabase/migrations/0009_student_published_content.sql:8-24`; políticas base en `0003_rls.sql:625-642`; consumo en `frontend/public/curso/js/login-gate.js:248-301`">
+      <td><span class="id">SEC-01</span></td>
+      <td><span class="sev crit">Crítico</span></td>
+      <td><span class="prio p0">P0</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">RLS permite que cualquier alumno lea todo el contenido publicado</td>
+      <td class="loc"><code>`app/supabase/migrations/0009_student_published_content.sql:8-24`; políticas base en `0003_rls.sql:625-642`; consumo en `frontend/public/curso/js/login-gate.js:248-301`</code></td>
+      <td><button class="detail" data-id="SEC-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="OPS" data-prio="P0"
+        data-search="ops-03 las pruebas e2e escriben en la base configurada y no distinguen producción devops / pruebas / integridad de datos `app/scripts/ui-smoke.mjs:476,554-580,672,746-770`; `app/scripts/test-functions.mjs:105`">
+      <td><span class="id">OPS-03</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p0">P0</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Las pruebas E2E escriben en la base configurada y no distinguen producción</td>
+      <td class="loc"><code>`app/scripts/ui-smoke.mjs:476,554-580,672,746-770`; `app/scripts/test-functions.mjs:105`</code></td>
+      <td><button class="detail" data-id="OPS-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="PRIV" data-prio="P0"
+        data-search="priv-01 aviso de privacidad no publicado, consentimiento sin evidencia y sin bloqueo de acceso privacidad / consentimiento / cumplimiento `app/frontend/src/ui/app.js:37,3958,3963,6997-7026`; `app/supabase/functions/guardian-consent/index.ts:99-110`; `fase-0/05-privacidad-y-consentimiento.md`">
+      <td><span class="id">PRIV-01</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p0">P0</span></td>
+      <td>Privacidad</td>
+      <td class="title">Aviso de privacidad no publicado, consentimiento sin evidencia y sin bloqueo de acceso</td>
+      <td class="loc"><code>`app/frontend/src/ui/app.js:37,3958,3963,6997-7026`; `app/supabase/functions/guardian-consent/index.ts:99-110`; `Fase-0/05-privacidad-y-consentimiento.md`</code></td>
+      <td><button class="detail" data-id="PRIV-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="PRIV" data-prio="P0"
+        data-search="priv-02 `students.notes_internal` se entrega al alumno y al tutor privacidad / minimización / datos sensibles `app/supabase/migrations/0001_schema.sql:111`; política en `0003_rls.sql:560`">
+      <td><span class="id">PRIV-02</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p0">P0</span></td>
+      <td>Privacidad</td>
+      <td class="title">`students.notes_internal` se entrega al alumno y al tutor</td>
+      <td class="loc"><code>`app/supabase/migrations/0001_schema.sql:111`; política en `0003_rls.sql:560`</code></td>
+      <td><button class="detail" data-id="PRIV-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="SEC" data-prio="P0"
+        data-search="sec-02 vinculación de cuentas sin verificar titularidad y con confirmación forzada de correo seguridad / identidad / apropiación de cuenta `app/supabase/migrations/0018_link_confirm.sql:7-141`; redefinición en `0019_link_username_fix.sql:7-141`; punto crítico en `0019:116-120`">
+      <td><span class="id">SEC-02</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p0">P0</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">Vinculación de cuentas sin verificar titularidad y con confirmación forzada de correo</td>
+      <td class="loc"><code>`app/supabase/migrations/0018_link_confirm.sql:7-141`; redefinición en `0019_link_username_fix.sql:7-141`; punto crítico en `0019:116-120`</code></td>
+      <td><button class="detail" data-id="SEC-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="SEC" data-prio="P0"
+        data-search="sec-03 el cambio obligatorio de contraseña se puede saltar seguridad / autenticación / gestión de credenciales `app/supabase/migrations/0011_force_password_change.sql:9-30`; `frontend/src/ui/app.js:775`; `app.js:650-665`">
+      <td><span class="id">SEC-03</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p0">P0</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">El cambio obligatorio de contraseña se puede saltar</td>
+      <td class="loc"><code>`app/supabase/migrations/0011_force_password_change.sql:9-30`; `frontend/src/ui/app.js:775`; `app.js:650-665`</code></td>
+      <td><button class="detail" data-id="SEC-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="FUN" data-prio="P1"
+        data-search="fun-01 el tutor no ve calificaciones, asistencia ni observaciones familiares funcionalidad / tutores `app/frontend/src/ui/app.js:1296-1400` (consulta) y `3937-3970` (render)">
+      <td><span class="id">FUN-01</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">El tutor no ve calificaciones, asistencia ni observaciones familiares</td>
+      <td class="loc"><code>`app/frontend/src/ui/app.js:1296-1400` (consulta) y `3937-3970` (render)</code></td>
+      <td><button class="detail" data-id="FUN-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="FUN" data-prio="P1"
+        data-search="fun-02 pagos sin saldo, periodo, duplicados ni anulación funcionalidad / finanzas `app/supabase/migrations/0020_payments.sql`; `app.js:2593-2700` (staff) y `3966-4020` (tutor)">
+      <td><span class="id">FUN-02</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">Pagos sin saldo, periodo, duplicados ni anulación</td>
+      <td class="loc"><code>`app/supabase/migrations/0020_payments.sql`; `app.js:2593-2700` (staff) y `3966-4020` (tutor)</code></td>
+      <td><button class="detail" data-id="FUN-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="OPS" data-prio="P1"
+        data-search="ops-01 respaldos completos sin cifrar, con `auth.users` y pii, sin retención devops / respaldos / privacidad `app/scripts/backup-db.mjs:20-51`; `.backups/backup-2026-10-31-22-59-01.json`">
+      <td><span class="id">OPS-01</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Respaldos completos sin cifrar, con `auth.users` y PII, sin retención</td>
+      <td class="loc"><code>`app/scripts/backup-db.mjs:20-51`; `.backups/backup-2026-10-31-22-59-01.json`</code></td>
+      <td><button class="detail" data-id="OPS-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="OPS" data-prio="P1"
+        data-search="ops-02 la restauración trunca tablas sin confirmación ni respaldo previo devops / recuperación / riesgo de pérdida de datos `app/scripts/restore-db.mjs:39-49`">
+      <td><span class="id">OPS-02</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">La restauración trunca tablas sin confirmación ni respaldo previo</td>
+      <td class="loc"><code>`app/scripts/restore-db.mjs:39-49`</code></td>
+      <td><button class="detail" data-id="OPS-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="OPS" data-prio="P1"
+        data-search="ops-04 despliegue manual con `push -f`, sin ci, sin staging y sin rollback devops / despliegue `app/readme.md:28-36`; ausencia de `.github/workflows`">
+      <td><span class="id">OPS-04</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Despliegue manual con `push -f`, sin CI, sin staging y sin rollback</td>
+      <td class="loc"><code>`app/README.md:28-36`; ausencia de `.github/workflows`</code></td>
+      <td><button class="detail" data-id="OPS-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Alto" data-cat="SEC" data-prio="P1"
+        data-search="sec-04 desactivar un usuario no revoca sesiones ni banea la cuenta en auth seguridad / offboarding / gestión de sesiones `app/supabase/functions/deactivate-user/index.ts:43-46`">
+      <td><span class="id">SEC-04</span></td>
+      <td><span class="sev high">Alto</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">Desactivar un usuario no revoca sesiones ni banea la cuenta en Auth</td>
+      <td class="loc"><code>`app/supabase/functions/deactivate-user/index.ts:43-46`</code></td>
+      <td><button class="detail" data-id="SEC-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="COD" data-prio="P1"
+        data-search="cod-07 no hay pruebas negativas de rls código / pruebas de seguridad `app/supabase/tests/*.sql`">
+      <td><span class="id">COD-07</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Código y calidad</td>
+      <td class="title">No hay pruebas negativas de RLS</td>
+      <td class="loc"><code>`app/supabase/tests/*.sql`</code></td>
+      <td><button class="detail" data-id="COD-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="DB" data-prio="P1"
+        data-search="db-07 el estado real de las migraciones en producción no se pudo verificar base de datos / gobernanza `app/supabase/.temp/linked-project.json`; no hay `supabase/config.toml`">
+      <td><span class="id">DB-07</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Base de datos</td>
+      <td class="title">El estado real de las migraciones en producción no se pudo verificar</td>
+      <td class="loc"><code>`app/supabase/.temp/linked-project.json`; no hay `supabase/config.toml`</code></td>
+      <td><button class="detail" data-id="DB-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="OPS" data-prio="P1"
+        data-search="ops-05 configuración de supabase no versionada y auth sin verificar devops / configuración como código `app/supabase/.temp/linked-project.json`; ausencia de `app/supabase/config.toml`">
+      <td><span class="id">OPS-05</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Configuración de Supabase no versionada y Auth sin verificar</td>
+      <td class="loc"><code>`app/supabase/.temp/linked-project.json`; ausencia de `app/supabase/config.toml`</code></td>
+      <td><button class="detail" data-id="OPS-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="PRIV" data-prio="P1"
+        data-search="priv-03 el perfil psicopedagógico y vocacional es visible para el tutor sin finalidad explícita privacidad / datos psicoeducativos `app/supabase/migrations/0001_schema.sql:386-396`; política en `0003_rls.sql:774-776`">
+      <td><span class="id">PRIV-03</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Privacidad</td>
+      <td class="title">El perfil psicopedagógico y vocacional es visible para el tutor sin finalidad explícita</td>
+      <td class="loc"><code>`app/supabase/migrations/0001_schema.sql:386-396`; política en `0003_rls.sql:774-776`</code></td>
+      <td><button class="detail" data-id="PRIV-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="PRIV" data-prio="P1"
+        data-search="priv-05 respaldos locales con `auth.users` y pii sin cifrar ni retención privacidad / respaldos `app/scripts/backup-db.mjs:20-51`; `app/.backups/backup-2026-10-31-22-59-01.json`">
+      <td><span class="id">PRIV-05</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Privacidad</td>
+      <td class="title">Respaldos locales con `auth.users` y PII sin cifrar ni retención</td>
+      <td class="loc"><code>`app/scripts/backup-db.mjs:20-51`; `app/.backups/backup-2026-10-31-22-59-01.json`</code></td>
+      <td><button class="detail" data-id="PRIV-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="COD" data-prio="P2"
+        data-search="cod-01 reproductor legacy con gestión en `localstorage` y rutas muertas código / deuda técnica `frontend/public/curso/js/app.js:5,62-104,382-390,444-460`">
+      <td><span class="id">COD-01</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Código y calidad</td>
+      <td class="title">Reproductor legacy con gestión en `localStorage` y rutas muertas</td>
+      <td class="loc"><code>`frontend/public/curso/js/app.js:5,62-104,382-390,444-460`</code></td>
+      <td><button class="detail" data-id="COD-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="COD" data-prio="P2"
+        data-search="cod-02 la autorización se duplica y el cliente es la única barrera en el curso código / seguridad `login-gate.js:248-301`; `app.js` (múltiples `if (profile.role ...)`)">
+      <td><span class="id">COD-02</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Código y calidad</td>
+      <td class="title">La autorización se duplica y el cliente es la única barrera en el curso</td>
+      <td class="loc"><code>`login-gate.js:248-301`; `app.js` (múltiples `if (profile.role ...)`)</code></td>
+      <td><button class="detail" data-id="COD-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="DB" data-prio="P2"
+        data-search="db-01 `unit_assignments` permite duplicados por grupo y unidad base de datos / integridad `app/supabase/migrations/0001_schema.sql:194-211`">
+      <td><span class="id">DB-01</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Base de datos</td>
+      <td class="title">`unit_assignments` permite duplicados por grupo y unidad</td>
+      <td class="loc"><code>`app/supabase/migrations/0001_schema.sql:194-211`</code></td>
+      <td><button class="detail" data-id="DB-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="DB" data-prio="P2"
+        data-search="db-02 las fks sin `on delete` impiden borrar alumnos y perfiles base de datos / integridad referencial `0001_schema.sql` (múltiples tablas); `0020_payments.sql` (excepciones con cascade)">
+      <td><span class="id">DB-02</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Base de datos</td>
+      <td class="title">Las FKs sin `on delete` impiden borrar alumnos y perfiles</td>
+      <td class="loc"><code>`0001_schema.sql` (múltiples tablas); `0020_payments.sql` (excepciones con cascade)</code></td>
+      <td><button class="detail" data-id="DB-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="DB" data-prio="P2"
+        data-search="db-03 `app_sync_player_state` acepta xp y racha del cliente sin validación base de datos / integridad de gamificación `app/supabase/migrations/0010_player_sync_whatsapp.sql:12-75`">
+      <td><span class="id">DB-03</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Base de datos</td>
+      <td class="title">`app_sync_player_state` acepta XP y racha del cliente sin validación</td>
+      <td class="loc"><code>`app/supabase/migrations/0010_player_sync_whatsapp.sql:12-75`</code></td>
+      <td><button class="detail" data-id="DB-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="DB" data-prio="P2"
+        data-search="db-04 `app_complete_unit` permite completar sin actividades base de datos / integridad académica `app/supabase/migrations/0004_progress_rpcs.sql:398-465`">
+      <td><span class="id">DB-04</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Base de datos</td>
+      <td class="title">`app_complete_unit` permite completar sin actividades</td>
+      <td class="loc"><code>`app/supabase/migrations/0004_progress_rpcs.sql:398-465`</code></td>
+      <td><button class="detail" data-id="DB-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="FUN" data-prio="P2"
+        data-search="fun-03 la activación parcial de una unidad se hereda a alumnos nuevos funcionalidad / control de acceso pedagógico `app/frontend/src/ui/app.js:4880-4925`; `0001_schema.sql:194-211`; `0009` (agravante)">
+      <td><span class="id">FUN-03</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">La activación parcial de una unidad se hereda a alumnos nuevos</td>
+      <td class="loc"><code>`app/frontend/src/ui/app.js:4880-4925`; `0001_schema.sql:194-211`; `0009` (agravante)</code></td>
+      <td><button class="detail" data-id="FUN-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="FUN" data-prio="P2"
+        data-search="fun-04 reintentos de quiz ilimitados y sin política de intentos funcionalidad / integridad académica `app/supabase/migrations/0022_quiz_retry.sql`; `app.js` (botón “reintentar”)">
+      <td><span class="id">FUN-04</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">Reintentos de quiz ilimitados y sin política de intentos</td>
+      <td class="loc"><code>`app/supabase/migrations/0022_quiz_retry.sql`; `app.js` (botón “Reintentar”)</code></td>
+      <td><button class="detail" data-id="FUN-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="FUN" data-prio="P2"
+        data-search="fun-05 “completar unidad” no valida ni advierte funcionalidad / integridad `app.js:4610-4635`; `0004:398-465`">
+      <td><span class="id">FUN-05</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">“Completar unidad” no valida ni advierte</td>
+      <td class="loc"><code>`app.js:4610-4635`; `0004:398-465`</code></td>
+      <td><button class="detail" data-id="FUN-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="FUN" data-prio="P2"
+        data-search="fun-06 no hay recuperación de contraseña para alumnos funcionalidad / autenticación `app.js:572`; `functions/admin-reset-student-password/index.ts`">
+      <td><span class="id">FUN-06</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">No hay recuperación de contraseña para alumnos</td>
+      <td class="loc"><code>`app.js:572`; `functions/admin-reset-student-password/index.ts`</code></td>
+      <td><button class="detail" data-id="FUN-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="FUN" data-prio="P2"
+        data-search="fun-09 listados truncados por `.limit()` sin paginación funcionalidad / datos `app.js:855` (`.limit(600)`), `1067` (`.limit(400)`), `1337` (`.limit(120)`), `6044` (`.limit(12)`)">
+      <td><span class="id">FUN-09</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">Listados truncados por `.limit()` sin paginación</td>
+      <td class="loc"><code>`app.js:855` (`.limit(600)`), `1067` (`.limit(400)`), `1337` (`.limit(120)`), `6044` (`.limit(12)`)</code></td>
+      <td><button class="detail" data-id="FUN-09">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="FUN" data-prio="P2"
+        data-search="fun-10 no hay auditoría visible de cambios funcionalidad / trazabilidad `app.js:813-860` (no consulta `audit_log`); `0001_schema.sql` (`audit_log`)">
+      <td><span class="id">FUN-10</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">No hay auditoría visible de cambios</td>
+      <td class="loc"><code>`app.js:813-860` (no consulta `audit_log`); `0001_schema.sql` (`audit_log`)</code></td>
+      <td><button class="detail" data-id="FUN-10">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="OPS" data-prio="P2"
+        data-search="ops-06 secretos locales sin rotación, con residuos y permisos inconsistentes devops / gestión de secretos `app/.secrets/database-url`, `test-users.txt`, `staging-db-password.txt`">
+      <td><span class="id">OPS-06</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Secretos locales sin rotación, con residuos y permisos inconsistentes</td>
+      <td class="loc"><code>`app/.secrets/database-url`, `test-users.txt`, `staging-db-password.txt`</code></td>
+      <td><button class="detail" data-id="OPS-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="OPS" data-prio="P2"
+        data-search="ops-07 sin monitoreo, alertas ni respaldos automáticos verificados devops / observabilidad todo el proyecto; ausencia de configuración de logs, métricas o alertas">
+      <td><span class="id">OPS-07</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Sin monitoreo, alertas ni respaldos automáticos verificados</td>
+      <td class="loc"><code>todo el proyecto; ausencia de configuración de logs, métricas o alertas</code></td>
+      <td><button class="detail" data-id="OPS-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="PRIV" data-prio="P2"
+        data-search="priv-04 el reproductor conserva datos en `localstorage` sin política de limpieza privacidad / almacenamiento local `app/frontend/public/curso/js/app.js:62-104,395-400,492-499,1932`">
+      <td><span class="id">PRIV-04</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Privacidad</td>
+      <td class="title">El reproductor conserva datos en `localStorage` sin política de limpieza</td>
+      <td class="loc"><code>`app/frontend/public/curso/js/app.js:62-104,395-400,492-499,1932`</code></td>
+      <td><button class="detail" data-id="PRIV-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="SEC" data-prio="P2"
+        data-search="sec-05 cors permisivo por defecto en edge functions seguridad / configuración `app/supabase/functions/_shared/http.ts:1-6`">
+      <td><span class="id">SEC-05</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">CORS permisivo por defecto en Edge Functions</td>
+      <td class="loc"><code>`app/supabase/functions/_shared/http.ts:1-6`</code></td>
+      <td><button class="detail" data-id="SEC-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="SEC" data-prio="P2"
+        data-search="sec-06 magic link de tutor compartido por whatsapp y reenviable seguridad / identidad / tutores `app/supabase/functions/invite-guardian/index.ts:115-134,158-160`">
+      <td><span class="id">SEC-06</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">Magic link de tutor compartido por WhatsApp y reenviable</td>
+      <td class="loc"><code>`app/supabase/functions/invite-guardian/index.ts:115-134,158-160`</code></td>
+      <td><button class="detail" data-id="SEC-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="SEC" data-prio="P2"
+        data-search="sec-07 el baneo de cuentas sin perfil no audita ni revoca sesiones seguridad / administración `app/supabase/migrations/0017_external_accounts.sql:169-205`">
+      <td><span class="id">SEC-07</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">El baneo de cuentas sin perfil no audita ni revoca sesiones</td>
+      <td class="loc"><code>`app/supabase/migrations/0017_external_accounts.sql:169-205`</code></td>
+      <td><button class="detail" data-id="SEC-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="UX" data-prio="P2"
+        data-search="ux-01 accesibilidad limitada: foco, contraste y semántica ux / accesibilidad `frontend/src/styles.css:422-425` (solo 2 `:focus-visible`); `app.js` (diálogos, tarjetas); `index.html`">
+      <td><span class="id">UX-01</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Accesibilidad limitada: foco, contraste y semántica</td>
+      <td class="loc"><code>`frontend/src/styles.css:422-425` (solo 2 `:focus-visible`); `app.js` (diálogos, tarjetas); `index.html`</code></td>
+      <td><button class="detail" data-id="UX-01">Ver</button></td>
+    </tr>
+    <tr data-sev="Medio" data-cat="UX" data-prio="P2"
+        data-search="ux-02 diálogos sin focus trap ni cierre consistente con escape ux / accesibilidad `app.js:2731` (pagos), `3601/3625` (tests), `4703` (asignación), `5401` (ficha)">
+      <td><span class="id">UX-02</span></td>
+      <td><span class="sev med">Medio</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Diálogos sin focus trap ni cierre consistente con Escape</td>
+      <td class="loc"><code>`app.js:2731` (pagos), `3601/3625` (tests), `4703` (asignación), `5401` (ficha)</code></td>
+      <td><button class="detail" data-id="UX-02">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="DB" data-prio="P1"
+        data-search="db-08 `notes_internal` vive en la tabla que se expone al alumno y al tutor base de datos / diseño de privacidad `app/supabase/migrations/0001_schema.sql:103-115`; política en `0003_rls.sql:560`">
+      <td><span class="id">DB-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p1">P1</span></td>
+      <td>Base de datos</td>
+      <td class="title">`notes_internal` vive en la tabla que se expone al alumno y al tutor</td>
+      <td class="loc"><code>`app/supabase/migrations/0001_schema.sql:103-115`; política en `0003_rls.sql:560`</code></td>
+      <td><button class="detail" data-id="DB-08">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="OPS" data-prio="P2"
+        data-search="ops-09 sin staging real: todo se prueba contra producción devops / ambientes `.env` local apunta a producción; `.secrets/staging-db-password.txt` sin proyecto">
+      <td><span class="id">OPS-09</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Sin staging real: todo se prueba contra producción</td>
+      <td class="loc"><code>`.env` local apunta a producción; `.secrets/staging-db-password.txt` sin proyecto</code></td>
+      <td><button class="detail" data-id="OPS-09">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="PRIV" data-prio="P2"
+        data-search="priv-06 no hay canal ni procedimiento arco en la aplicación privacidad / derechos del titular `fase-0/05-privacidad-y-consentimiento.md:59,75,185`; `app/frontend/src/ui/app.js` (sin formulario)">
+      <td><span class="id">PRIV-06</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p2">P2</span></td>
+      <td>Privacidad</td>
+      <td class="title">No hay canal ni procedimiento ARCO en la aplicación</td>
+      <td class="loc"><code>`Fase-0/05-privacidad-y-consentimiento.md:59,75,185`; `app/frontend/src/ui/app.js` (sin formulario)</code></td>
+      <td><button class="detail" data-id="PRIV-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="COD" data-prio="P3"
+        data-search="cod-03 interpolaciones sin escape y `catch` silenciosos código / robustez `app.js:6344`, `6677`; `catch {}` en `399`, `4566`, `4602`, `5662`, `6454`, `6983`, `7021`">
+      <td><span class="id">COD-03</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Código y calidad</td>
+      <td class="title">Interpolaciones sin escape y `catch` silenciosos</td>
+      <td class="loc"><code>`app.js:6344`, `6677`; `catch {}` en `399`, `4566`, `4602`, `5662`, `6454`, `6983`, `7021`</code></td>
+      <td><button class="detail" data-id="COD-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="COD" data-prio="P3"
+        data-search="cod-04 sin lint, tests unitarios ni verificación de tipos código / calidad `frontend/package.json` (solo `dev`, `build`, `preview`); no hay `.eslintrc`, `tsconfig`, `vitest`, `jest`">
+      <td><span class="id">COD-04</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Código y calidad</td>
+      <td class="title">Sin lint, tests unitarios ni verificación de tipos</td>
+      <td class="loc"><code>`frontend/package.json` (solo `dev`, `build`, `preview`); no hay `.eslintrc`, `tsconfig`, `vitest`, `jest`</code></td>
+      <td><button class="detail" data-id="COD-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="COD" data-prio="P3"
+        data-search="cod-05 monolito de 7,072 líneas sin módulos código / mantenibilidad `frontend/src/ui/app.js`">
+      <td><span class="id">COD-05</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Código y calidad</td>
+      <td class="title">Monolito de 7,072 líneas sin módulos</td>
+      <td class="loc"><code>`frontend/src/ui/app.js`</code></td>
+      <td><button class="detail" data-id="COD-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="COD" data-prio="P3"
+        data-search="cod-06 `catch` vacíos que ocultan fallos código / observabilidad `app.js:399,4566,4602,5662,6454,6983,7021`">
+      <td><span class="id">COD-06</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Código y calidad</td>
+      <td class="title">`catch` vacíos que ocultan fallos</td>
+      <td class="loc"><code>`app.js:399,4566,4602,5662,6454,6983,7021`</code></td>
+      <td><button class="detail" data-id="COD-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="COD" data-prio="P3"
+        data-search="cod-08 sin lockfile versionado ni auditoría de dependencias código / cadena de suministro `frontend/package.json`; no hay `package-lock.json` en el repositorio observado">
+      <td><span class="id">COD-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Código y calidad</td>
+      <td class="title">Sin lockfile versionado ni auditoría de dependencias</td>
+      <td class="loc"><code>`frontend/package.json`; no hay `package-lock.json` en el repositorio observado</code></td>
+      <td><button class="detail" data-id="COD-08">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="COD" data-prio="P3"
+        data-search="cod-09 `dist` es un repositorio anidado sin build reproducible código / despliegue `frontend/dist/.git` (rama `gh-pages`); `readme.md:30-35`">
+      <td><span class="id">COD-09</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Código y calidad</td>
+      <td class="title">`dist` es un repositorio anidado sin build reproducible</td>
+      <td class="loc"><code>`frontend/dist/.git` (rama `gh-pages`); `README.md:30-35`</code></td>
+      <td><button class="detail" data-id="COD-09">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="DB" data-prio="P3"
+        data-search="db-05 migraciones sin rollback y parcialmente no idempotentes base de datos / operación `app/supabase/migrations/*.sql`; por ejemplo `0003_rls.sql:625` y `0009:8`">
+      <td><span class="id">DB-05</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Base de datos</td>
+      <td class="title">Migraciones sin rollback y parcialmente no idempotentes</td>
+      <td class="loc"><code>`app/supabase/migrations/*.sql`; por ejemplo `0003_rls.sql:625` y `0009:8`</code></td>
+      <td><button class="detail" data-id="DB-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="DB" data-prio="P3"
+        data-search="db-06 sin retención ni partición para `audit_log` y `email_outbox` base de datos / operación `0001_schema.sql` (`audit_log`, `email_outbox`); índices en `0001:559-561`">
+      <td><span class="id">DB-06</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Base de datos</td>
+      <td class="title">Sin retención ni partición para `audit_log` y `email_outbox`</td>
+      <td class="loc"><code>`0001_schema.sql` (`audit_log`, `email_outbox`); índices en `0001:559-561`</code></td>
+      <td><button class="detail" data-id="DB-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="FUN" data-prio="P3"
+        data-search="fun-07 el login del alumno depende de un dominio sintético fijo funcionalidad / autenticación `frontend/src/lib/supabase.js:5,19-26`; `app.js:684-687`">
+      <td><span class="id">FUN-07</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">El login del alumno depende de un dominio sintético fijo</td>
+      <td class="loc"><code>`frontend/src/lib/supabase.js:5,19-26`; `app.js:684-687`</code></td>
+      <td><button class="detail" data-id="FUN-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="FUN" data-prio="P3"
+        data-search="fun-08 el dashboard admin carga todo en el navegador funcionalidad / rendimiento `app.js:813-860`">
+      <td><span class="id">FUN-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">El dashboard admin carga todo en el navegador</td>
+      <td class="loc"><code>`app.js:813-860`</code></td>
+      <td><button class="detail" data-id="FUN-08">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="FUN" data-prio="P3"
+        data-search="fun-11 el modo de login no persiste funcionalidad / ux `app.js:7036`">
+      <td><span class="id">FUN-11</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Funcionalidad</td>
+      <td class="title">El modo de login no persiste</td>
+      <td class="loc"><code>`app.js:7036`</code></td>
+      <td><button class="detail" data-id="FUN-11">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="OPS" data-prio="P3"
+        data-search="ops-08 sin rotación de claves ni plan de respuesta a incidentes devops / seguridad operativa `.secrets/`, `frontend/.env`, edge functions">
+      <td><span class="id">OPS-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">Sin rotación de claves ni plan de respuesta a incidentes</td>
+      <td class="loc"><code>`.secrets/`, `frontend/.env`, Edge Functions</code></td>
+      <td><button class="detail" data-id="OPS-08">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="OPS" data-prio="P3"
+        data-search="ops-10 `dist` es un repositorio anidado que deriva de `src` devops / artefactos `app/frontend/dist/.git` (rama `gh-pages`, commit `2114eba`); `main` en `40b01a4`">
+      <td><span class="id">OPS-10</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>DevOps / respaldos</td>
+      <td class="title">`dist` es un repositorio anidado que deriva de `src`</td>
+      <td class="loc"><code>`app/frontend/dist/.git` (rama `gh-pages`, commit `2114eba`); `main` en `40b01a4`</code></td>
+      <td><button class="detail" data-id="OPS-10">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="PRIV" data-prio="P3"
+        data-search="priv-07 `audit_log` guarda pii sin retención ni control de acceso visible privacidad / logs `app/supabase/migrations/0001_schema.sql:508-519`; políticas en `0003_rls.sql`">
+      <td><span class="id">PRIV-07</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Privacidad</td>
+      <td class="title">`audit_log` guarda PII sin retención ni control de acceso visible</td>
+      <td class="loc"><code>`app/supabase/migrations/0001_schema.sql:508-519`; políticas en `0003_rls.sql`</code></td>
+      <td><button class="detail" data-id="PRIV-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="PRIV" data-prio="P3"
+        data-search="priv-08 el magic link del tutor viaja por whatsapp con el nombre del alumno privacidad / comunicación con terceros `app/supabase/functions/invite-guardian/index.ts:128-134`">
+      <td><span class="id">PRIV-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Privacidad</td>
+      <td class="title">El magic link del tutor viaja por WhatsApp con el nombre del alumno</td>
+      <td class="loc"><code>`app/supabase/functions/invite-guardian/index.ts:128-134`</code></td>
+      <td><button class="detail" data-id="PRIV-08">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="SEC" data-prio="P3"
+        data-search="sec-08 anon key duplicada y hardcodeada en dos puertas seguridad / configuración `frontend/public/curso/js/login-gate.js:15-17`; `frontend/public/tool-gate.js:7-9`; bundle en `frontend/dist/assets/*.js`">
+      <td><span class="id">SEC-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">Anon key duplicada y hardcodeada en dos puertas</td>
+      <td class="loc"><code>`frontend/public/curso/js/login-gate.js:15-17`; `frontend/public/tool-gate.js:7-9`; bundle en `frontend/dist/assets/*.js`</code></td>
+      <td><button class="detail" data-id="SEC-08">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="SEC" data-prio="P3"
+        data-search="sec-09 sin rate limiting propio en edge functions seguridad / abuso `app/supabase/functions/**`">
+      <td><span class="id">SEC-09</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>Seguridad / RLS</td>
+      <td class="title">Sin rate limiting propio en Edge Functions</td>
+      <td class="loc"><code>`app/supabase/functions/**`</code></td>
+      <td><button class="detail" data-id="SEC-09">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="UX" data-prio="P3"
+        data-search="ux-03 mensajes de error genéricos y sin pasos siguientes ux / feedback `app.js` (múltiples `seterror('no se pudo...')`)">
+      <td><span class="id">UX-03</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Mensajes de error genéricos y sin pasos siguientes</td>
+      <td class="loc"><code>`app.js` (múltiples `setError('No se pudo...')`)</code></td>
+      <td><button class="detail" data-id="UX-03">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="UX" data-prio="P3"
+        data-search="ux-04 estados de carga inconsistentes ux / feedback `app.js` (`renderloading`, `loaddashboard`)">
+      <td><span class="id">UX-04</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Estados de carga inconsistentes</td>
+      <td class="loc"><code>`app.js` (`renderLoading`, `loadDashboard`)</code></td>
+      <td><button class="detail" data-id="UX-04">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="UX" data-prio="P3"
+        data-search="ux-05 tablas y grids que se comprimen en móvil ux / responsive `styles.css` (media queries), `app.js` (pagos, calificaciones, asistencia)">
+      <td><span class="id">UX-05</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Tablas y grids que se comprimen en móvil</td>
+      <td class="loc"><code>`styles.css` (media queries), `app.js` (pagos, calificaciones, asistencia)</code></td>
+      <td><button class="detail" data-id="UX-05">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="UX" data-prio="P3"
+        data-search="ux-06 falta un indicador “solo lectura” consistente ux / claridad `app.js:3942` (pill “solo lectura” en tutor); otras vistas no lo tienen">
+      <td><span class="id">UX-06</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Falta un indicador “solo lectura” consistente</td>
+      <td class="loc"><code>`app.js:3942` (pill “Solo lectura” en tutor); otras vistas no lo tienen</code></td>
+      <td><button class="detail" data-id="UX-06">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="UX" data-prio="P3"
+        data-search="ux-07 acciones destructivas sin confirmación ux / prevención de errores `app.js:4960-4995` (cerrar unidad); `6389-6390` (activar/desactivar usuario sí confirma)">
+      <td><span class="id">UX-07</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Acciones destructivas sin confirmación</td>
+      <td class="loc"><code>`app.js:4960-4995` (cerrar unidad); `6389-6390` (activar/desactivar usuario sí confirma)</code></td>
+      <td><button class="detail" data-id="UX-07">Ver</button></td>
+    </tr>
+    <tr data-sev="Bajo" data-cat="UX" data-prio="P3"
+        data-search="ux-08 sin ayuda contextual sobre intentos y completado ux / aprendizaje `app.js` (quiz, botón “completar unidad”)">
+      <td><span class="id">UX-08</span></td>
+      <td><span class="sev low">Bajo</span></td>
+      <td><span class="prio p3">P3</span></td>
+      <td>UX / accesibilidad</td>
+      <td class="title">Sin ayuda contextual sobre intentos y completado</td>
+      <td class="loc"><code>`app.js` (quiz, botón “Completar unidad”)</code></td>
+      <td><button class="detail" data-id="UX-08">Ver</button></td>
+    </tr>
+        </tbody>
+      </table>
+      <div class="empty" id="empty">No hay hallazgos que coincidan con los filtros.</div>
+    </div>
+  </section>
+
+  <section id="informes">
+    <h2>Informes</h2>
+    <p class="lead">Los 13 documentos en Markdown, dentro de <code>AUDITORIA_ECOEMS/</code>.</p>
+    <div class="docs">
+      <a class="doc" href="00_RESUMEN_EJECUTIVO.md">
+        <span class="doc-num">00</span>
+        <span class="doc-label">Resumen ejecutivo</span>
+      </a>
+      <a class="doc" href="01_ALCANCE_Y_METODOLOGIA.md">
+        <span class="doc-num">01</span>
+        <span class="doc-label">Alcance y metodología</span>
+      </a>
+      <a class="doc" href="02_ARQUITECTURA_Y_RECONOCIMIENTO.md">
+        <span class="doc-num">02</span>
+        <span class="doc-label">Arquitectura y reconocimiento</span>
+      </a>
+      <a class="doc" href="03_SEGURIDAD_Y_RLS.md">
+        <span class="doc-num">03</span>
+        <span class="doc-label">Seguridad y RLS</span>
+      </a>
+      <a class="doc" href="04_BASE_DE_DATOS.md">
+        <span class="doc-num">04</span>
+        <span class="doc-label">Base de datos</span>
+      </a>
+      <a class="doc" href="05_FUNCIONALIDAD_Y_FLUJOS.md">
+        <span class="doc-num">05</span>
+        <span class="doc-label">Funcionalidad y flujos</span>
+      </a>
+      <a class="doc" href="06_CODIGO_Y_CALIDAD.md">
+        <span class="doc-num">06</span>
+        <span class="doc-label">Código y calidad</span>
+      </a>
+      <a class="doc" href="07_UX_ACCESIBILIDAD.md">
+        <span class="doc-num">07</span>
+        <span class="doc-label">UX y accesibilidad</span>
+      </a>
+      <a class="doc" href="08_PRIVACIDAD_Y_DATOS_PERSONALES.md">
+        <span class="doc-num">08</span>
+        <span class="doc-label">Privacidad y datos personales</span>
+      </a>
+      <a class="doc" href="09_DEVOPS_DESPLIEGUE_Y_RESPALDOS.md">
+        <span class="doc-num">09</span>
+        <span class="doc-label">DevOps, despliegue y respaldos</span>
+      </a>
+      <a class="doc" href="10_HALLAZGOS_PRIORIZADOS.md">
+        <span class="doc-num">10</span>
+        <span class="doc-label">Hallazgos priorizados</span>
+      </a>
+      <a class="doc" href="11_PLAN_DE_REMEDIACION.md">
+        <span class="doc-num">11</span>
+        <span class="doc-label">Plan de remediación</span>
+      </a>
+      <a class="doc" href="12_PRUEBAS_PENDIENTES.md">
+        <span class="doc-num">12</span>
+        <span class="doc-label">Pruebas pendientes</span>
+      </a>
+    </div>
+    <div class="note">
+      <b>Declaración de no modificación.</b> Esta auditoría no modificó archivos existentes, no aplicó migraciones, no escribió en la base de datos, no desplegó, no cambió contraseñas ni permisos, y no publicó secretos ni datos personales. Los entregables viven únicamente en esta carpeta.
+    </div>
+  </section>
+
+  <footer>
+    Auditoría técnica asistida por IA · 15 de noviembre de 2026 · Documento de solo lectura.
+    Los hallazgos están abiertos; no se aplicó ninguna corrección.
+  </footer>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div>
+        <h2 class="t" id="modal-title"></h2>
+        <div class="m" id="modal-meta"></div>
+      </div>
+      <button class="close" id="close" aria-label="Cerrar detalle">Cerrar</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const DATA = {"SEC-01":{"id":"SEC-01","title":"RLS permite que cualquier alumno lea todo el contenido publicado","sev":"Crítico","prio":"P0","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Crítico</li>\n<li><strong>Categoría:</strong> Seguridad / RLS / control de acceso</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0009_student_published_content.sql:8-24</code>; políticas base en <code>0003_rls.sql:625-642</code>; consumo en <code>frontend/public/curso/js/login-gate.js:248-301</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>-- 0009:8-15\ncreate policy units_select_published_students\non public.units for select to authenticated\nusing (\n  public.app_is_admin()\n  or public.app_is_staff()\n  or (public.app_current_role() = 'student'::public.user_role\n      and status = 'published'::public.unit_status)\n);\n\n-- 0009:17-24\ncreate policy unit_versions_select_published_students\non public.unit_versions for select to authenticated\nusing (\n  public.app_is_admin()\n  or public.app_is_staff()\n  or (public.app_current_role() = 'student'::public.user_role\n      and published_at is not null)\n);</code></pre>\n<p>PostgreSQL combina políticas <strong>permisivas</strong> con <code>OR</code>. Las políticas restrictivas de <code>0003</code> (<code>units_select</code>, <code>unit_versions_select</code>) siguen existiendo, pero la política de <code>0009</code> concede acceso por sí sola. El resultado es que <strong>todo alumno activo ve todas las unidades publicadas y todas las versiones publicadas</strong>, sin importar asignación, grupo, ventana de fechas ni override.</p>\n<p>El reproductor confirma el diseño inseguro: descarga <code>units</code>, <code>unit_versions</code>, <code>unit_assignments</code> y <code>student_unit_overrides</code>, y <strong>filtra en el cliente</strong>:</p>\n<pre data-lang=\"js\"><code>// login-gate.js:277-301\nvar allowed = {};\nassignments.forEach(function (a) {\n  var o = overrideByAssignment[a.id] || {};\n  var status = o.status || a.status;\n  if (status !== &quot;active&quot;) return;\n  var opensAt = o.opens_at || a.opens_at;\n  var closesAt = o.closes_at || a.closes_at;\n  if (opensAt &amp;&amp; new Date(opensAt).getTime() &gt; now) return;\n  if (closesAt &amp;&amp; new Date(closesAt).getTime() &lt;= now) return;\n  allowed[a.unit_id] = true;\n});\n\nvar allowedUnits = allUnits.filter(function (u) {\n  return allowed[u.id] === true;\n});</code></pre>\n<ul>\n<li><strong>Problema:</strong> la autorización real ocurre en el navegador. La base de datos entrega el contenido completo antes de que el cliente decida qué mostrar.</li>\n<li><strong>Escenario de abuso:</strong> un alumno inicia sesión normalmente, abre la consola del navegador y ejecuta:</li>\n</ul>\n<pre data-lang=\"js\"><code>const { data } = await supabase\n  .from('unit_versions')\n  .select('unit_id,version,content')\n  .not('published_at', 'is', null);\nconsole.log(data);</code></pre>\n<p>O, sin sesión de la app, usa <code>curl</code> con su JWT y la anon key. Obtiene <code>content</code> con <code>correctIndex</code>, respuestas, explicaciones y unidades que el profesor no ha activado. Puede copiar las respuestas, adelantar contenido o compartirlo.</p>\n<ul>\n<li><strong>Impacto:</strong></li>\n<li><strong>Integridad académica:</strong> los quizzes y ejercicios dejan de medir aprendizaje.</li>\n<li><strong>Control pedagógico:</strong> el profesor pierde la secuencia de activación.</li>\n<li><strong>Negocio:</strong> el contenido evaluable es el activo principal; su fuga reduce el valor del producto.</li>\n<li><strong>Menores:</strong> el contenido puede incluir material no previsto para su edad o momento.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Crear una migración correctiva (<code>0023</code>) que <strong>elimine</strong> las dos políticas de <code>0009</code>:</li>\n</ol>\n<pre data-lang=\"sql\"><code>drop policy if exists units_select_published_students on public.units;\ndrop policy if exists unit_versions_select_published_students on public.unit_versions;</code></pre>\n<ol>\n<li>Dejar que las políticas de <code>0003</code> hagan el trabajo: <code>units_select</code> usa <code>app_has_active_unit(id)</code> y <code>unit_versions_select</code> usa <code>app_can_access_version(id)</code>. Ambas dependen de <code>app_has_active_assignment</code>, que ya valida visibilidad, estado, fechas, override y publicación.</li>\n<li>Ajustar <code>login-gate.js</code> para no depender del filtrado cliente; puede seguir filtrando como defensa en profundidad, pero la base ya no debe entregar lo no permitido.</li>\n<li>Añadir una prueba negativa: un alumno sin asignación debe recibir <strong>0 filas</strong> de <code>unit_versions</code>.</li>\n<li>Rotar o revisar el contenido si el piloto ya estuvo abierto a alumnos.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P0</li>\n<li><strong>Confianza:</strong> Alta (código y semántica de RLS verificadas; no se ejecutó contra producción)</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-03":{"id":"OPS-03","title":"Las pruebas E2E escriben en la base configurada y no distinguen producción","sev":"Alto","prio":"P0","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> DevOps / pruebas / integridad de datos</li>\n<li><strong>Ubicación:</strong> <code>app/scripts/ui-smoke.mjs:476,554-580,672,746-770</code>; <code>app/scripts/test-functions.mjs:105</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// ui-smoke.mjs:476\nconst writeMode = process.env.TEST_WRITE === &quot;1&quot;;\n...\n// ui-smoke.mjs:574\nconsole.log(&quot;  (TEST_WRITE=1) activando la unidad para todo el grupo…&quot;);\n...\n// ui-smoke.mjs:746\nconsole.log(&quot;  (TEST_WRITE=1) completando el test de personalidad…&quot;);</code></pre>\n<p><code>test-functions.mjs:105</code> consulta un <code>student_code</code> que <strong>contiene el nombre completo de una alumna del piloto</strong>, escrito literalmente en el repositorio.</p>\n<ul>\n<li><strong>Problema:</strong> con <code>TEST_WRITE=1</code>, el smoke test activa unidades, edita alumnos, completa tests y deja datos. No verifica que el entorno sea staging. Como no hay staging, la ruta natural es ejecutarlo contra producción. Además, el script de funciones contiene PII en el código.</li>\n<li><strong>Escenario:</strong> el desarrollador ejecuta <code>TEST_WRITE=1 node scripts/ui-smoke.mjs</code> para validar un cambio; activa una unidad para todo el grupo “Piloto A” y completa los tests de la alumna de prueba; los datos reales del piloto se contaminan y las métricas se distorsionan.</li>\n<li><strong>Impacto:</strong> datos sucios, métricas falsas, exposición de PII en el repo, riesgo de que una prueba destructiva se ejecute en producción.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Crear un proyecto staging real y apuntar ahí las pruebas.</li>\n<li>Bloquear <code>TEST_WRITE=1</code> si <code>VITE_SUPABASE_URL</code> coincide con el <code>ref</code> de producción.</li>\n<li>Exigir <code>APP_ENV=staging</code> además de <code>TEST_WRITE</code>.</li>\n<li>Quitar el <code>student_code</code> con nombre real del script; usar un identificador ficticio o una variable.</li>\n<li>Limpiar los datos creados por la prueba al final (teardown).</li>\n<li>Ejecutar el smoke en CI contra staging, no en local contra producción.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P0 (mientras no exista staging)</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-01":{"id":"PRIV-01","title":"Aviso de privacidad no publicado, consentimiento sin evidencia y sin bloqueo de acceso","sev":"Alto","prio":"P0","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> Privacidad / consentimiento / cumplimiento</li>\n<li><strong>Ubicación:</strong> <code>app/frontend/src/ui/app.js:37,3958,3963,6997-7026</code>; <code>app/supabase/functions/guardian-consent/index.ts:99-110</code>; <code>Fase-0/05-privacidad-y-consentimiento.md</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// app.js:37\nconst PRIVACY_DOCUMENT_VERSION = 'v1-2026';\n\n// app.js:3958-3963\n&lt;button class=&quot;btn primary&quot; data-consent-student=&quot;${escapeHtml(child.id)}&quot;&gt;\n  Aceptar aviso de privacidad\n&lt;/button&gt;\n...\n&lt;p class=&quot;muted&quot;&gt;&lt;small&gt;Aviso de privacidad versión ${escapeHtml(PRIVACY_DOCUMENT_VERSION)}.\nAl aceptar, autorizas el tratamiento de los datos del alumno con fines educativos.\nPuedes revocarlo cuando quieras.&lt;/small&gt;&lt;/p&gt;</code></pre>\n<pre data-lang=\"ts\"><code>// guardian-consent/index.ts:99-110\nmetadata: {\n  accepted_by: profile.full_name,\n  channel: &quot;portal&quot;,\n},</code></pre>\n<ul>\n<li><strong>Problema:</strong> el botón no enlaza a ningún documento; el texto completo vive solo en <code>Fase-0/</code>. No se guarda el texto ni su hash. El panel del tutor se renderiza completo antes de aceptar, así que el consentimiento es un trámite posterior, no una puerta. La frase “puedes revocarlo cuando quieras” no tiene botón ni canal.</li>\n<li><strong>Escenario:</strong> un tutor acepta sin haber leído el aviso; meses después pide saber qué autorizó. La base solo dice <code>v1-2026</code>, pero el texto pudo cambiar sin cambiar la versión. No hay evidencia de qué aceptó. Otro tutor quiere revocar y no encuentra cómo.</li>\n<li><strong>Impacto:</strong> consentimiento no informado, evidencia débil, imposibilidad de demostrar cumplimiento, riesgo legal y reputacional con menores.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Publicar el aviso como página estática (<code>/privacidad.html</code>) enlazada desde el login, el panel del tutor y el pie de página.</li>\n<li>Guardar en <code>privacy_consents.metadata</code> el <strong>hash SHA-256 del texto</strong> y la URL mostrada, además de la versión.</li>\n<li>Bloquear el acceso a datos del alumno hasta que exista consentimiento vigente del tutor; mostrar solo el aviso y el botón.</li>\n<li>Exigir una casilla “He leído y entiendo” antes de aceptar.</li>\n<li>Exponer la revocación en el panel, con confirmación y efecto claro.</li>\n<li>Versionar el texto: cualquier cambio de fondo sube la versión y exige nueva aceptación.</li>\n<li>Validar el texto con un abogado antes del piloto real.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P0</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-02":{"id":"PRIV-02","title":"`students.notes_internal` se entrega al alumno y al tutor","sev":"Alto","prio":"P0","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> Privacidad / minimización / datos sensibles</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0001_schema.sql:111</code>; política en <code>0003_rls.sql:560</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>-- 0001:103-115\ncreate table if not exists public.students (\n  ...\n  notes_internal text,\n  ...\n);</code></pre>\n<pre data-lang=\"sql\"><code>-- 0003:560-562\ncreate policy students_select\non public.students for select to authenticated\nusing (public.app_can_access_student(id));</code></pre>\n<p><code>app_can_access_student</code> incluye al alumno propio y a su tutor (<code>0003:201-216</code>). RLS filtra <strong>filas</strong>, no <strong>columnas</strong>: la fila completa viaja con <code>notes_internal</code>.</p>\n<ul>\n<li><strong>Problema:</strong> una columna pensada para uso interno del profesor comparte tabla y política con datos que la familia sí debe ver.</li>\n<li><strong>Escenario:</strong> el profesor anota “situación familiar delicada, evitar presión por calificaciones”. El alumno abre la consola y ejecuta <code>supabase.from('students').select('*')</code>. Ve la nota. O el tutor la ve y estalla un conflicto.</li>\n<li><strong>Impacto:</strong> fuga de información sensible sobre un menor, daño a la relación pedagógica, posible riesgo emocional, incumplimiento del principio de minimización.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Mover <code>notes_internal</code> a <code>student_private_notes</code> (o <code>student_staff_notes</code>) con política solo para admin y profesor del alumno.</li>\n<li>O crear una vista <code>students_family</code> sin la columna y usarla en el frontend.</li>\n<li>Nunca depender de que la UI no muestre el campo.</li>\n<li>Auditar el acceso a notas internas (quién las lee y cuándo).</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P0 (por su efecto; el cambio es pequeño)</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-02":{"id":"SEC-02","title":"Vinculación de cuentas sin verificar titularidad y con confirmación forzada de correo","sev":"Alto","prio":"P0","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Alto (Crítico si el autorregistro está abierto y la confirmación de correo está desactivada)</li>\n<li><strong>Categoría:</strong> Seguridad / identidad / apropiación de cuenta</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0018_link_confirm.sql:7-141</code>; redefinición en <code>0019_link_username_fix.sql:7-141</code>; punto crítico en <code>0019:116-120</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>-- 0019:116-120\nif v_email_confirmed_at is null then\n  update auth.users\n     set email_confirmed_at = now()\n   where id = v_user_id;\nend if;</code></pre>\n<p>La función:</p>\n<ol>\n<li>Busca una cuenta existente por correo (<code>0019:45-50</code>).</li>\n<li>Verifica que no tenga perfil (<code>0019:58-65</code>).</li>\n<li>Inserta <code>profiles</code> y <code>students</code> (<code>0019:107-113</code>).</li>\n<li><strong>Marca el correo como confirmado</strong> aunque el titular nunca haya abierto el enlace.</li>\n<li>No verifica que quien controla la cuenta sea el alumno o su tutor.</li>\n</ol>\n<ul>\n<li><strong>Problema:</strong> la confianza se deposita en el profesor (“el profesor respalda que el correo es de su alumno”, comentario en <code>0019:114-115</code>), pero no hay prueba de titularidad. Además, una función <code>SECURITY DEFINER</code> ejecutable por cualquier profesor permite escribir directamente en <code>auth.users</code>, un esquema que normalmente está fuera del alcance de la aplicación.</li>\n<li><strong>Escenario de abuso:</strong></li>\n</ul>\n<ol>\n<li>El autorregistro está abierto (no verificado).</li>\n<li>Un atacante crea una cuenta con el correo de un alumno objetivo (o con un correo que el profesor creerá válido).</li>\n<li>El profesor da de alta al alumno con ese correo; <code>app_link_student_account</code> confirma la cuenta y la vincula a la ficha.</li>\n<li>El atacante inicia sesión y ve la ficha, el progreso, los datos del tutor y, si aplica, los pagos.</li>\n</ol>\n<ul>\n<li>Variante: un profesor malicioso vincula una cuenta propia a la ficha de un alumno.</li>\n<li><strong>Impacto:</strong> apropiación de ficha, acceso a datos de menores, suplantación, pérdida de confianza. Escala a Crítico porque el daño es directo y difícil de detectar.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li><strong>Deshabilitar el autorregistro</strong> en Supabase Auth.</li>\n<li><strong>No forzar <code>email_confirmed_at</code></strong> desde una RPC de aplicación; usar el flujo nativo de invitación (<code>inviteUserByEmail</code>) o un token de un solo uso.</li>\n<li>Implementar un <strong>token de vinculación</strong> ligado a <code>student_id</code>, con expiración, un solo uso y auditoría de quién lo emitió y quién lo canjeó.</li>\n<li>Registrar en <code>audit_log</code> el <code>user_id</code>, el <code>student_id</code>, el profesor y el momento de la vinculación.</li>\n<li>Añadir una verificación manual (documento de identidad o confirmación del tutor) para casos dudosos.</li>\n<li>Revisar las cuentas ya vinculadas y confirmar que el correo pertenece al alumno.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P0</li>\n<li><strong>Confianza:</strong> Alta en el código; Media en la explotabilidad (depende de la configuración de Auth)</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-03":{"id":"SEC-03","title":"El cambio obligatorio de contraseña se puede saltar","sev":"Alto","prio":"P0","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> Seguridad / autenticación / gestión de credenciales</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0011_force_password_change.sql:9-30</code>; <code>frontend/src/ui/app.js:775</code>; <code>app.js:650-665</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>-- 0011:9-30\ncreate or replace function public.app_complete_password_change()\nreturns jsonb\nlanguage plpgsql\nsecurity definer\nset search_path = public, pg_temp\nset row_security = off\nas $$\ndeclare\n  v_profile_id uuid := auth.uid();\nbegin\n  if v_profile_id is null then\n    raise exception 'No autenticado' using errcode = '42501';\n  end if;\n\n  update public.profiles p\n     set must_change_password = false,\n         updated_at = now()\n   where p.id = v_profile_id;\n\n  if not found then\n    raise exception 'No se pudo completar el cambio de contraseña' using errcode = '42501';\n  end if;\n\n  return jsonb_build_object('ok', true);\nend;\n$$;</code></pre>\n<p>El frontend solo muestra la pantalla de cambio si <code>data.must_change_password</code> es verdadero (<code>app.js:775</code>). La RPC no comprueba que la contraseña haya cambiado: solo limpia la bandera.</p>\n<ul>\n<li><strong>Problema:</strong> la política de “contraseña temporal obligatoria” es <strong>solo cosmética</strong>. Un alumno puede ejecutar la RPC directamente y conservar la contraseña que el profesor conoce.</li>\n<li><strong>Escenario de abuso:</strong></li>\n</ul>\n<ol>\n<li>El profesor crea al alumno con contraseña temporal y la comparte.</li>\n<li>El alumno (o cualquier persona con esa contraseña) inicia sesión.</li>\n<li>En la consola: <code>await supabase.rpc('app_complete_password_change')</code>.</li>\n<li>La bandera se limpia; la contraseña sigue siendo la temporal.</li>\n<li>El profesor, o quien conozca la contraseña, puede entrar como el alumno.</li>\n</ol>\n<ul>\n<li><strong>Impacto:</strong> suplantación, acceso a datos del menor, pérdida de trazabilidad. En un piloto con contraseñas compartidas, el riesgo es alto.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Implementar el cambio en una <strong>Edge Function</strong> con <code>service_role</code> que:</li>\n</ol>\n<ul>\n<li>Reciba la nueva contraseña.</li>\n<li>Llame <code>auth.admin.updateUserById(userId, { password })</code>.</li>\n<li>Registre <code>password_changed_at</code> y limpie la bandera en la misma transacción lógica.</li>\n</ul>\n<ol>\n<li>O eliminar <code>must_change_password</code> y usar el flujo nativo de <strong>recuperación de contraseña</strong> de Supabase, con expiración y token de un solo uso.</li>\n<li>Añadir una política de contraseñas (longitud, complejidad, no reutilización) y registrar el evento.</li>\n<li>Mientras se corrige, no reutilizar contraseñas temporales entre alumnos y rotarlas después del primer ingreso.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P0</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-01":{"id":"FUN-01","title":"El tutor no ve calificaciones, asistencia ni observaciones familiares","sev":"Alto","prio":"P1","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> Funcionalidad / tutores</li>\n<li><strong>Ubicación:</strong> <code>app/frontend/src/ui/app.js:1296-1400</code> (consulta) y <code>3937-3970</code> (render)</li>\n<li><strong>Evidencia:</strong> <code>fetchGuardianDashboard</code> solo consulta <code>students</code>, <code>profiles</code>, <code>groups</code>, <code>privacy_consents</code>, <code>student_billing</code> y <code>payments</code>. <code>guardianDashboardMarkup</code> solo renderiza hijos, consentimiento y pagos. No hay llamadas a <code>grades</code>, <code>attendance</code>, <code>observations</code> ni <code>tasks</code>.</li>\n<li><strong>Problema:</strong> la base y la RLS permiten al tutor ver calificaciones visibles, asistencia y observaciones <code>family</code>, pero la interfaz no las muestra. La finalidad declarada del tutor (“acompañar el avance”) no se cumple.</li>\n<li><strong>Escenario:</strong> un tutor entra, ve el plan y los pagos, pero no sabe si su hijo asistió, cómo va en la materia o si el profesor dejó una observación familiar. Llama al profesor o pide una reunión.</li>\n<li><strong>Impacto:</strong> baja adopción del rol tutor, carga operativa para el profesor, incumplimiento de la promesa del producto.</li>\n<li><strong>Recomendación:</strong> añadir pestañas de solo lectura en el panel del tutor:</li>\n<li><strong>Avance:</strong> unidades activas/completadas, precisión, última actividad.</li>\n<li><strong>Calificaciones:</strong> evaluaciones con <code>visible_to_guardian = true</code>.</li>\n<li><strong>Asistencia:</strong> sesiones y estado.</li>\n<li><strong>Observaciones:</strong> solo <code>visibility = 'family'</code>.</li>\n<li><strong>Tareas:</strong> entregas y estado.</li>\n<p>Reutilizar las políticas existentes; no ampliar RLS. Añadir un indicador “Solo lectura”.</p>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-02":{"id":"FUN-02","title":"Pagos sin saldo, periodo, duplicados ni anulación","sev":"Alto","prio":"P1","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> Funcionalidad / finanzas</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0020_payments.sql</code>; <code>app.js:2593-2700</code> (staff) y <code>3966-4020</code> (tutor)</li>\n<li><strong>Evidencia:</strong> <code>student_billing</code> guarda <code>plan</code>, <code>fee</code>, <code>notes</code>; <code>payments</code> guarda <code>amount</code>, <code>paid_at</code>, <code>method</code>, <code>concept</code>. No hay <code>period_start</code>, <code>period_end</code>, <code>status</code>, <code>voided_at</code>, <code>receipt_no</code>, <code>balance</code> ni restricción de duplicados.</li>\n<li><strong>Problema:</strong> el módulo registra pagos, pero no responde a las preguntas operativas: ¿está al corriente?, ¿este pago cubre qué periodo?, ¿es duplicado?, ¿cómo se anula?, ¿cuánto debe?</li>\n<li><strong>Escenario:</strong> un tutor paga la mensualidad dos veces; el staff registra ambos; el resumen suma el doble; no hay forma de anular sin borrar la fila (y el borrado no está expuesto). Otro tutor pregunta su saldo y no hay dato.</li>\n<li><strong>Impacto:</strong> errores de cobro, desconfianza, imposibilidad de rendir cuentas, riesgo de pérdida de ingresos.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Añadir <code>period_start</code>, <code>period_end</code>, <code>status</code> (<code>paid</code>, <code>voided</code>, <code>partial</code>), <code>voided_at</code>, <code>void_reason</code>, <code>receipt_no</code>, <code>idempotency_key</code>.</li>\n<li>Calcular saldo por alumno y periodo con una vista o RPC.</li>\n<li>Detectar duplicados por <code>(student_id, amount, period_start, period_end)</code>.</li>\n<li>Implementar anulación con motivo y auditoría, sin borrar.</li>\n<li>Mostrar al tutor “al corriente / pendiente / vencido” y el desglose.</li>\n<li>Añadir un recibo descargable (PDF o texto).</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-01":{"id":"OPS-01","title":"Respaldos completos sin cifrar, con `auth.users` y PII, sin retención","sev":"Alto","prio":"P1","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> DevOps / respaldos / privacidad</li>\n<li><strong>Ubicación:</strong> <code>app/scripts/backup-db.mjs:20-51</code>; <code>.backups/backup-2026-10-31-22-59-01.json</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// backup-db.mjs:20-24\nselect schemaname, tablename\n  from pg_tables\n where schemaname in ('public', 'auth')\n order by schemaname, tablename</code></pre>\n<pre data-lang=\"js\"><code>// backup-db.mjs:41-51\nconst rowsRes = await client.query(\n  `select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) as data from ${quoted} t`,\n);\n...\nwriteFileSync(outPath, JSON.stringify(backup), &quot;utf8&quot;);</code></pre>\n<p>El archivo observado: 878,057 bytes, permisos <code>-rw-r--r--</code>, sin cifrado.</p>\n<ul>\n<li><strong>Problema:</strong> se vuelca toda la base, incluido el esquema <code>auth</code>, a un JSON legible. No hay cifrado, control de acceso, retención ni registro. El respaldo contiene identidades, correos, hashes y datos académicos de menores.</li>\n<li><strong>Escenario:</strong> el equipo se pierde, se comparte o se sincroniza a una nube personal; un tercero lee el archivo y obtiene el expediente completo. O el archivo se sube por error a un chat.</li>\n<li><strong>Impacto:</strong> brecha de datos personales, obligación de notificación, daño reputacional, riesgo legal.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Cifrar en origen con <code>age</code> o GPG y guardar la clave fuera del equipo.</li>\n<li>Excluir <code>auth.users</code> del volcado manual; usar el respaldo nativo de Supabase para Auth.</li>\n<li>Aplicar <code>chmod 600</code> y una carpeta con permisos restringidos.</li>\n<li>Definir retención (30 días) y borrado automático.</li>\n<li>Calcular un checksum y registrar la generación en un log.</li>\n<li>Probar la restauración en staging al menos una vez.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-02":{"id":"OPS-02","title":"La restauración trunca tablas sin confirmación ni respaldo previo","sev":"Alto","prio":"P1","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> DevOps / recuperación / riesgo de pérdida de datos</li>\n<li><strong>Ubicación:</strong> <code>app/scripts/restore-db.mjs:39-49</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>await client.query(&quot;begin&quot;);\nawait client.query(&quot;set local session_replication_role = replica&quot;);\nawait client.query(&quot;set local statement_timeout = '5min'&quot;);\n\nfor (const [name] of tables) {\n  if (SKIP.has(name)) continue;\n  const [schema, table] = name.split(&quot;.&quot;);\n  await client.query(`truncate table &quot;${schema}&quot;.&quot;${table}&quot; cascade`);\n}</code></pre>\n<ul>\n<li><strong>Problema:</strong> el script vacía todas las tablas antes de cargar, sin pedir confirmación, sin verificar el entorno y sin respaldo previo. Un error de dedo en <code>DATABASE_URL</code> o en la ruta del archivo puede borrar producción.</li>\n<li><strong>Escenario:</strong> el operador quiere restaurar en staging, pero <code>DATABASE_URL</code> apunta a producción (no hay staging). Ejecuta el script con un respaldo viejo o parcial. Todas las tablas se truncan y la carga falla; la transacción revierte si todo está dentro de <code>begin</code>, pero cualquier paso fuera de ella deja la base vacía.</li>\n<li><strong>Impacto:</strong> pérdida total o parcial de datos, interrupción del servicio, imposibilidad de rendir cuentas.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Exigir una bandera explícita (<code>--confirm=restore</code>) y escribir el nombre del proyecto/entorno en pantalla.</li>\n<li>Rechazar URLs que contengan el <code>ref</code> de producción salvo una bandera adicional (<code>--i-know</code>).</li>\n<li>Hacer un respaldo automático antes de truncar.</li>\n<li>Validar el JSON de entrada (esquema, tablas, conteos, checksum).</li>\n<li>Ejecutar siempre en staging primero; documentar el runbook.</li>\n<li>Registrar en <code>audit_log</code> o en un log externo quién restauró, cuándo y desde qué archivo.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-04":{"id":"OPS-04","title":"Despliegue manual con `push -f`, sin CI, sin staging y sin rollback","sev":"Alto","prio":"P1","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> DevOps / despliegue</li>\n<li><strong>Ubicación:</strong> <code>app/README.md:28-36</code>; ausencia de <code>.github/workflows</code></li>\n<li><strong>Evidencia:</strong> el proceso es <code>npm run build</code>, <code>git init</code> en <code>dist</code>, <code>git add</code>, <code>git commit</code>, <code>git push -f</code>. No hay workflow, ni PR obligatorio, ni check de build, ni health check.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> el artefacto publicado no se puede reconstruir de forma determinista, no hay trazabilidad con <code>main</code>, y el <code>push -f</code> puede sobrescribir cambios. Un error de build se publica sin aviso.</li>\n<li><strong>Escenario:</strong> se publica un cambio que rompe el login; nadie lo detecta hasta que un alumno escribe. El rollback requiere buscar a mano un commit anterior de <code>gh-pages</code> y volver a hacer <code>push -f</code>, con el mismo riesgo.</li>\n<li><strong>Impacto:</strong> interrupciones, pérdida de trabajo, dificultad para auditar qué se publicó y cuándo.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Crear un workflow de GitHub Actions: <code>npm ci</code>, <code>npm run build</code>, pruebas, y publicación a <code>gh-pages</code> solo desde <code>main</code>.</li>\n<li>Etiquetar cada despliegue con el commit de origen (<code>v8-pulido+40b01a4</code>).</li>\n<li>Añadir un health check post-deploy (login, carga de dashboard).</li>\n<li>Documentar el rollback: revertir el commit y volver a desplegar, sin <code>-f</code>.</li>\n<li>Separar staging y producción con entornos de GitHub.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-04":{"id":"SEC-04","title":"Desactivar un usuario no revoca sesiones ni banea la cuenta en Auth","sev":"Alto","prio":"P1","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Alto</li>\n<li><strong>Categoría:</strong> Seguridad / offboarding / gestión de sesiones</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/functions/deactivate-user/index.ts:43-46</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"ts\"><code>const { error: updateError } = await admin\n  .from(&quot;profiles&quot;)\n  .update({ active, updated_at: new Date().toISOString() })\n  .eq(&quot;id&quot;, targetId);</code></pre>\n<p>La función solo cambia <code>profiles.active</code>. No llama a <code>admin.auth.admin.updateUserById(id, { ban_duration: ... })</code>, no invalida sesiones y no revoca refresh tokens.</p>\n<ul>\n<li><strong>Problema:</strong> el usuario desactivado <strong>sigue pudiendo autenticarse</strong> en Auth. La app lo rechaza después de consultar <code>profiles.active</code>, pero:</li>\n<li>El token sigue siendo válido hasta su expiración.</li>\n<li>Las RPC que solo verifican <code>auth.uid()</code> (por ejemplo, <code>app_complete_password_change</code>) siguen funcionando.</li>\n<li>Si el perfil se reactiva, la sesión antigua puede seguir viva.</li>\n<li>El mensaje “Perderá el acceso de inmediato” (<code>app.js:6390</code>) no es exacto.</li>\n<li><strong>Escenario:</strong> un alumno es desactivado por conducta grave; conserva el refresh token y, si el perfil se reactiva por error, vuelve a entrar sin credenciales nuevas. O un atacante con una sesión robada mantiene acceso hasta que expire.</li>\n<li><strong>Impacto:</strong> offboarding incompleto, acceso residual, dificultad para contener incidentes.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>En <code>deactivate-user</code>, llamar a <code>admin.auth.admin.updateUserById(targetId, { ban_duration: '876000h' })</code> (o <code>'none'</code> al reactivar).</li>\n<li>Invalidar sesiones: Supabase no tiene “revoke all” directo; una opción es rotar el <code>JWT secret</code> (global, no ideal) o mantener una tabla de <code>session_version</code> y verificarla en un hook. Como mínimo, banear la cuenta impide nuevos logins y refresh.</li>\n<li>Añadir <code>deactivated_at</code>, <code>deactivated_by</code> y motivo en <code>profiles</code> o <code>audit_log</code>.</li>\n<li>Probar el flujo: desactivar → intentar login → debe fallar en Auth, no solo en la app.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-07":{"id":"COD-07","title":"No hay pruebas negativas de RLS","sev":"Medio","prio":"P1","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Código / pruebas de seguridad</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/tests/*.sql</code></li>\n<li><strong>Evidencia:</strong> las 3 pruebas existentes recorren caminos felices con datos reales. No hay aserciones del tipo “el alumno A no ve al alumno B” o “el alumno sin asignación no ve la versión”.</li>\n<li><strong>Problema:</strong> la regresión de <code>0009</code> no se habría detectado con las pruebas actuales. Cualquier cambio futuro de políticas puede abrir una brecha sin que el CI lo note.</li>\n<li><strong>Escenario:</strong> alguien agrega una política permisiva para “arreglar” el reproductor; las pruebas siguen pasando; el contenido queda expuesto.</li>\n<li><strong>Impacto:</strong> seguridad no verificada, confianza excesiva en la revisión manual.</li>\n<li><strong>Recomendación:</strong> crear una suite de pruebas de RLS con JWT por rol y aserciones de filas; ejecutarla en CI contra staging. Ver <code>12_PRUEBAS_PENDIENTES.md</code>.</li>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-07":{"id":"DB-07","title":"El estado real de las migraciones en producción no se pudo verificar","sev":"Medio","prio":"P1","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Medio (riesgo de verificación, no defecto confirmado)</li>\n<li><strong>Categoría:</strong> Base de datos / gobernanza</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/.temp/linked-project.json</code>; no hay <code>supabase/config.toml</code></li>\n<li><strong>Evidencia:</strong> el proyecto está enlazado a <code>ioikcrdxneuydylyhvwi</code>, pero no se autorizó conexión de solo lectura ni acceso al dashboard. No se puede afirmar que las 22 migraciones estén aplicadas, ni en qué orden, ni si hay cambios manuales fuera de las migraciones.</li>\n<li><strong>Problema:</strong> la auditoría se basa en el código; si producción difiere, los hallazgos pueden cambiar.</li>\n<li><strong>Escenario:</strong> una política se aplicó a mano en el dashboard y no está en el repositorio; el <code>drop policy</code> propuesto no la elimina.</li>\n<li><strong>Impacto:</strong> correcciones incompletas, falsa sensación de seguridad.</li>\n<li><strong>Recomendación:</strong> ejecutar en una réplica/staging:</li>\n</ul>\n<pre data-lang=\"sql\"><code>select version, name, inserted_at\nfrom supabase_migrations.schema_migrations\norder by version;</code></pre>\n<p>y comparar con los 22 archivos. Revisar también <code>pg_policies</code> y <code>pg_proc</code> para detectar objetos no versionados. Ver <code>12_PRUEBAS_PENDIENTES.md</code>.</p>\n<ul>\n<li><strong>Prioridad:</strong> P1 (verificación)</li>\n<li><strong>Confianza:</strong> Alta en la limitación</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-05":{"id":"OPS-05","title":"Configuración de Supabase no versionada y Auth sin verificar","sev":"Medio","prio":"P1","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> DevOps / configuración como código</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/.temp/linked-project.json</code>; ausencia de <code>app/supabase/config.toml</code></li>\n<li><strong>Evidencia:</strong> el proyecto está enlazado (<code>ref: ioikcrdxneuydylyhvwi</code>), pero no hay <code>config.toml</code> ni un archivo equivalente que declare Auth, correo, rate limits, CORS o funciones.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> la configuración vive solo en el dashboard. No se puede revisar, versionar ni reproducir. Si alguien cambia el autorregistro o la confirmación de correo, no queda rastro. Esto agrava <code>SEC-02</code>.</li>\n<li><strong>Escenario:</strong> se reconstruye staging desde el repo; el Auth queda con valores por defecto distintos a producción; las pruebas pasan en un entorno y fallan en otro.</li>\n<li><strong>Impacto:</strong> deriva de configuración, imposibilidad de auditar, riesgos de seguridad invisibles.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Ejecutar <code>supabase init</code> y versionar <code>config.toml</code> con valores no secretos.</li>\n<li>Documentar en el README los ajustes del dashboard (sign-ups, confirmación, expiración, rate limits, plantillas).</li>\n<li>Revisar y registrar el estado actual de Auth antes del piloto real.</li>\n<li>Aplicar la configuración por entorno con <code>supabase config push</code>.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-03":{"id":"PRIV-03","title":"El perfil psicopedagógico y vocacional es visible para el tutor sin finalidad explícita","sev":"Medio","prio":"P1","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Privacidad / datos psicoeducativos</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0001_schema.sql:386-396</code>; política en <code>0003_rls.sql:774-776</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>-- 0001:386-396\ncreate table if not exists public.student_profiles (\n  student_id uuid primary key references public.students(id),\n  interests text[] not null default '{}',\n  aptitudes text[] not null default '{}',\n  strengths text[] not null default '{}',\n  weaknesses text[] not null default '{}',\n  extras text[] not null default '{}',\n  vocational_notes text,\n  reading_goal text,\n  updated_at timestamptz not null default now()\n);</code></pre>\n<pre data-lang=\"sql\"><code>-- 0003:774-776\ncreate policy student_profiles_select\non public.student_profiles for select to authenticated\nusing (public.app_can_access_student(student_id));</code></pre>\n<ul>\n<li><strong>Problema:</strong> intereses, aptitudes, fortalezas, debilidades y notas vocacionales se consideran datos de cuidado alto. La política los entrega al alumno y al tutor junto con el resto del expediente, sin que el aviso los distinga ni exista una finalidad específica aceptada.</li>\n<li><strong>Escenario:</strong> el tutor consulta “debilidades” y “notas vocacionales” de su hijo sin contexto; el alumno ve cómo el profesor lo describió. Los resultados de tests de personalidad se usan fuera del proceso de orientación para el que se recabaron.</li>\n<li><strong>Impacto:</strong> interpretación fuera de contexto, etiquetado del menor, conflicto familia-institución, tratamiento sin finalidad explícita.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Definir una finalidad específica y separada para los tests y el perfil vocacional, con consentimiento expreso.</li>\n<li>Mostrar al tutor solo el <strong>resumen orientativo</strong> acordado (no las notas internas ni las “debilidades” crudas).</li>\n<li>Reservar <code>vocational_notes</code> para staff; exponer al alumno/tutor una vista curada.</li>\n<li>Añadir una leyenda de que los tests son orientativos y no diagnósticos.</li>\n<li>Documentar quién puede ver qué y con qué propósito.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-05":{"id":"PRIV-05","title":"Respaldos locales con `auth.users` y PII sin cifrar ni retención","sev":"Medio","prio":"P1","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Medio (la operación se trata en <code>OPS-01</code>)</li>\n<li><strong>Categoría:</strong> Privacidad / respaldos</li>\n<li><strong>Ubicación:</strong> <code>app/scripts/backup-db.mjs:20-51</code>; <code>app/.backups/backup-2026-10-31-22-59-01.json</code></li>\n<li><strong>Evidencia:</strong> el script recorre <code>pg_tables</code> para <code>public</code> y <code>auth</code> y escribe un JSON único:</li>\n</ul>\n<pre data-lang=\"js\"><code>// backup-db.mjs:20-51\nwhere schemaname in ('public', 'auth')\n...\nbackup.tables[`${schemaname}.${tablename}`] = rowsRes.rows[0].data;\n...\nwriteFileSync(outPath, JSON.stringify(backup), &quot;utf8&quot;);</code></pre>\n<p>El archivo observado pesa <strong>878,057 bytes</strong> y tiene permisos <code>-rw-r--r--</code> (legible por cualquier usuario del equipo). Contiene <code>auth.users</code> (correos, hashes, metadatos) y las tablas con PII.</p>\n<ul>\n<li><strong>Problema:</strong> un respaldo completo de datos personales de menores queda en disco sin cifrar, sin control de acceso y sin fecha de borrado. No hay política de retención aplicada ni registro de quién accedió.</li>\n<li><strong>Escenario:</strong> el equipo se pierde o se comparte; el archivo se sincroniza a una nube personal; un tercero con acceso al equipo lee identidades y datos académicos.</li>\n<li><strong>Impacto:</strong> brecha de datos personales, obligación de notificación, daño reputacional, incumplimiento de medidas de seguridad.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Cifrar el respaldo en origen (<code>age</code>, GPG o <code>openssl</code> con clave fuera del repo).</li>\n<li>Guardar solo <code>public</code>; para <code>auth.users</code> usar el respaldo nativo de Supabase, no un volcado manual.</li>\n<li>Restringir permisos a <code>600</code> y al usuario propietario.</li>\n<li>Definir retención (30 días) y borrado automático.</li>\n<li>Registrar en un log quién genera y quién restaura.</li>\n<li>No versionar ni sincronizar <code>.backups/</code> (ya está en <code>.gitignore</code>, pero puede estar en iCloud/Dropbox).</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P1</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-01":{"id":"COD-01","title":"Reproductor legacy con gestión en `localStorage` y rutas muertas","sev":"Medio","prio":"P2","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Código / deuda técnica</li>\n<li><strong>Ubicación:</strong> <code>frontend/public/curso/js/app.js:5,62-104,382-390,444-460</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// app.js:5\nRouter hash + renderizador + gamificación + gestión alumnos/pagos (localStorage).\n\n// app.js:62-104\nconst STORE_KEY = &quot;...&quot;;\nconst ALUMNOS_KEY = &quot;...&quot;;\nconst PAGOS_KEY = &quot;...&quot;;\nconst ASISTENCIA_KEY = &quot;...&quot;;\nfunction loadState() { ... localStorage.getItem(STORE_KEY) ... }\nfunction saveState() { ... localStorage.setItem(STORE_KEY, ...) ... }</code></pre>\n<pre data-lang=\"js\"><code>// app.js:382-390\nconst legacyViews = [&quot;asistencia&quot;, &quot;pagos&quot;, &quot;planificacion&quot;, &quot;taller&quot;, &quot;perfil&quot;, &quot;concentrado&quot;, &quot;catalogo&quot;];\nif (legacyViews.indexOf(r.view) &gt;= 0) { setAccent(null); renderHome(); return; }</code></pre>\n<ul>\n<li><strong>Problema:</strong> el reproductor conserva código de una versión anterior que gestionaba alumnos, pagos y asistencia en <code>localStorage</code>. Ya no se muestra, pero:</li>\n<li>Aumenta el tamaño y la superficie de ataque.</li>\n<li>Puede contener datos residuales de usuarios que usaron la versión anterior.</li>\n<li>Confunde a quien mantiene el código.</li>\n<li><strong>Escenario:</strong> un alumno que usó la versión antigua tiene <code>ecoems_*</code> en <code>localStorage</code> con nombres o pagos; el código sigue leyendo/escribiendo esas claves.</li>\n<li><strong>Impacto:</strong> deuda, posible exposición local, mantenimiento más caro.</li>\n<li><strong>Recomendación:</strong> eliminar el código legacy y las claves de <code>localStorage</code>; si se necesita compatibilidad, migrar una vez y borrar. Reducir <code>app.js</code> a lo que el reproductor realmente usa.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-02":{"id":"COD-02","title":"La autorización se duplica y el cliente es la única barrera en el curso","sev":"Medio","prio":"P2","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Código / seguridad</li>\n<li><strong>Ubicación:</strong> <code>login-gate.js:248-301</code>; <code>app.js</code> (múltiples <code>if (profile.role ...)</code>)</li>\n<li><strong>Evidencia:</strong> el reproductor descarga todo y filtra con <code>allowed[unit_id]</code>; el portal decide vistas por <code>profile.role</code>; la base tiene sus propias políticas.</li>\n<li><strong>Problema:</strong> tres fuentes de verdad para la misma decisión. Cuando divergen, gana la más permisiva (el cliente) o se producen comportamientos inconsistentes.</li>\n<li><strong>Escenario:</strong> se agrega un rol nuevo o se cambia una regla; se actualiza RLS pero no el filtro de cliente, o viceversa.</li>\n<li><strong>Impacto:</strong> regresiones de seguridad, bugs difíciles de reproducir.</li>\n<li><strong>Recomendación:</strong> una sola fuente de verdad en la base; el cliente solo renderiza lo que recibe. Si se necesita ocultar UI, derivar de permisos calculados por el servidor, no de <code>role</code> hardcodeado.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-01":{"id":"DB-01","title":"`unit_assignments` permite duplicados por grupo y unidad","sev":"Medio","prio":"P2","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Base de datos / integridad</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0001_schema.sql:194-211</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>create table if not exists public.unit_assignments (\n  ...\n  unique (id, unit_id, unit_version_id),\n  ...\n);</code></pre>\n<p>La única restricción única es para la terna <code>(id, unit_id, unit_version_id)</code>, que sirve para la FK compuesta de <code>unit_progress</code>/<code>exercise_attempts</code>, no para evitar duplicados de negocio. No hay <code>unique (group_id, unit_id)</code>.</p>\n<ul>\n<li><strong>Problema:</strong> se pueden crear dos asignaciones activas para la misma unidad y grupo.</li>\n<li><strong>Escenario:</strong> el profesor activa una unidad, la cierra y la vuelve a activar; la UI crea otra fila. Los alumnos ven dos tarjetas, el progreso se reparte y las estadísticas se duplican.</li>\n<li><strong>Impacto:</strong> confusión, métricas incorrectas, esfuerzo de soporte.</li>\n<li><strong>Recomendación:</strong> añadir <code>unique (group_id, unit_id)</code> (o un índice único parcial que permita reabrir la misma fila) y ajustar la UI para reutilizar la asignación existente. Limpiar duplicados antes de aplicar la restricción.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-02":{"id":"DB-02","title":"Las FKs sin `on delete` impiden borrar alumnos y perfiles","sev":"Medio","prio":"P2","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Base de datos / integridad referencial</li>\n<li><strong>Ubicación:</strong> <code>0001_schema.sql</code> (múltiples tablas); <code>0020_payments.sql</code> (excepciones con cascade)</li>\n<li><strong>Evidencia:</strong> <code>students.profile_id references profiles(id)</code> sin <code>on delete</code>; <code>unit_progress.student_id references students(id)</code> sin <code>on delete</code>; <code>exercise_attempts.student_id</code>, <code>quiz_attempts.student_id</code>, <code>game_sessions.student_id</code>, <code>reading_assessments.student_id</code>, <code>xp_events.student_id</code>, <code>student_stats.student_id</code>, <code>attendance.student_id</code>, <code>grades.student_id</code>, <code>task_status.student_id</code>, <code>task_submissions.student_id</code>, <code>observations.student_id</code>, <code>guardian_messages.student_id</code>, <code>privacy_consents.student_id</code>, <code>student_profiles.student_id</code> — todas sin cascade.</li>\n<li><strong>Problema:</strong> la política <code>students_delete_admin</code> existe, pero el borrado falla por las FKs. El “borrado” real requiere desactivar (<code>status='inactive'</code>), no eliminar.</li>\n<li><strong>Escenario:</strong> un tutor ejerce su derecho de cancelación; el admin intenta borrar al alumno y recibe un error de FK. Se queda con datos personales que debía eliminar.</li>\n<li><strong>Impacto:</strong> incumplimiento de privacidad, imposibilidad de limpiar datos de prueba, crecimiento indefinido.</li>\n<li><strong>Recomendación:</strong> definir una política de borrado: <code>on delete cascade</code> para datos derivados (progreso, intentos, stats) y <code>on delete set null</code> o anonimización para datos contables (<code>payments</code>, <code>audit_log</code>). Implementar una función <code>app_anonymize_student(id)</code> que borre/anonimice en orden y registre la acción.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-03":{"id":"DB-03","title":"`app_sync_player_state` acepta XP y racha del cliente sin validación","sev":"Medio","prio":"P2","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Base de datos / integridad de gamificación</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0010_player_sync_whatsapp.sql:12-75</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>v_xp int := coalesce((p_payload -&gt;&gt; 'xp')::int, 0);\nv_streak int := coalesce((p_payload -&gt;&gt; 'racha')::int, 0);\nv_best int := coalesce((p_payload -&gt;&gt; 'best')::int, 0);\nv_done int := coalesce(jsonb_array_length(p_payload -&gt; 'done'), 0);\n...\ninsert into public.student_stats (...)\nvalues (v_student_id, v_xp, v_streak, v_best, v_done, current_date, now())\non conflict (student_id) do update\n  set xp_total = greatest(student_stats.xp_total, excluded.xp_total),\n      ...</code></pre>\n<ul>\n<li><strong>Problema:</strong> el servidor confía en el cliente. No verifica que el XP corresponda a unidades completadas, intentos correctos o eventos registrados. <code>greatest</code> impide bajar el XP, pero no impide inflarlo.</li>\n<li><strong>Escenario:</strong> el alumno ejecuta <code>supabase.rpc('app_sync_player_state', { p_payload: { xp: 999999, racha: 999, best: 999, done: [...] } })</code>. Su perfil aparece como el mejor de la plataforma.</li>\n<li><strong>Impacto:</strong> gamificación sin valor, comparaciones injustas, posible desmotivación, datos sucios para reportes.</li>\n<li><strong>Recomendación:</strong> calcular XP y racha en el servidor a partir de <code>unit_progress</code>, <code>exercise_attempts</code>, <code>quiz_attempts</code> y <code>xp_events</code>; no aceptar valores del cliente. Si se necesita sincronizar el reproductor, aceptar solo eventos (<code>unit_completed</code>, <code>exercise_correct</code>) y derivar el total. Añadir topes y auditoría.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-04":{"id":"DB-04","title":"`app_complete_unit` permite completar sin actividades","sev":"Medio","prio":"P2","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Base de datos / integridad académica</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0004_progress_rpcs.sql:398-465</code></li>\n<li><strong>Evidencia:</strong> la función valida que la asignación esté activa y luego hace <code>insert ... on conflict ... status = 'completed'</code> sin comprobar <code>unit_progress.attempts_count</code>, <code>best_accuracy</code>, ejercicios respondidos ni quiz completado.</li>\n<li><strong>Problema:</strong> un alumno puede marcar una unidad como completada sin estudiarla.</li>\n<li><strong>Escenario:</strong> <code>await supabase.rpc('app_complete_unit', { p_assignment_id })</code> en la consola; la unidad aparece completada y cuenta para <code>units_completed</code>.</li>\n<li><strong>Impacto:</strong> métricas de avance falsas, credenciales sin sustento, reportes engañosos.</li>\n<li><strong>Recomendación:</strong> exigir un mínimo configurable (por ejemplo, 80 % de ejercicios intentados y precisión mínima) antes de <code>completed</code>; distinguir <code>completed</code> de <code>mastered</code>; registrar la regla aplicada.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-03":{"id":"FUN-03","title":"La activación parcial de una unidad se hereda a alumnos nuevos","sev":"Medio","prio":"P2","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Funcionalidad / control de acceso pedagógico</li>\n<li><strong>Ubicación:</strong> <code>app/frontend/src/ui/app.js:4880-4925</code>; <code>0001_schema.sql:194-211</code>; <code>0009</code> (agravante)</li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// app.js:4900-4915\nconst excluded = active.students.filter((student) =&gt; !student.selected);\nif (excluded.length) {\n  const rows = excluded.map((student) =&gt; ({\n    assignment_id: assignmentId,\n    student_id: student.id,\n    status: 'closed',\n    ...\n  }));\n  await supabase.from('student_unit_overrides').upsert(rows, ...);\n}</code></pre>\n<p>La asignación se crea a nivel de grupo; los excluidos se marcan con override <code>closed</code>. Un alumno que se agregue al grupo después no tiene override, así que <code>coalesce(o.status, a.status)</code> devuelve <code>active</code>.</p>\n<ul>\n<li><strong>Problema:</strong> el profesor cree que activó la unidad “para 5 alumnos”, pero el grupo completo tiene la asignación y los futuros alumnos entran sin decisión explícita.</li>\n<li><strong>Escenario:</strong> el profesor activa una unidad para 5 de 20 alumnos; al día siguiente inscribe a un alumno nuevo; ese alumno ve la unidad sin que nadie la haya activado para él.</li>\n<li><strong>Impacto:</strong> control pedagógico difuso, posible exposición de contenido a quien no corresponde, confusión.</li>\n<li><strong>Recomendación:</strong> modelar la audiencia explícitamente:</li>\n<li>Opción A: crear una asignación por alumno (más filas, más control).</li>\n<li>Opción B: añadir <code>audience</code> (<code>group</code>/<code>students</code>) y una tabla <code>unit_assignment_students</code>; RLS exige pertenencia.</li>\n<li>Opción C: mantener el modelo actual pero crear un override <code>closed</code> por defecto para todo alumno nuevo del grupo.</li>\n<p>Añadir una prueba: alumno nuevo no ve la unidad hasta que el profesor lo incluya.</p>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-04":{"id":"FUN-04","title":"Reintentos de quiz ilimitados y sin política de intentos","sev":"Medio","prio":"P2","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Funcionalidad / integridad académica</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0022_quiz_retry.sql</code>; <code>app.js</code> (botón “Reintentar”)</li>\n<li><strong>Evidencia:</strong> <code>app_submit_quiz_answer</code> devuelve <code>attempt_no</code>, pero no hay límite, penalización ni bloqueo. La UI permite reintentar indefinidamente.</li>\n<li><strong>Problema:</strong> el alumno puede probar todas las opciones hasta acertar; la precisión final no refleja su conocimiento.</li>\n<li><strong>Escenario:</strong> un quiz de 4 opciones se resuelve por fuerza bruta en 4 intentos; <code>best_accuracy</code> queda en 100 %.</li>\n<li><strong>Impacto:</strong> evaluaciones sin valor, datos engañosos, comparaciones injustas.</li>\n<li><strong>Recomendación:</strong> definir una política por unidad: máximo de intentos, puntaje decreciente, bloqueo tras acierto, o registrar el primer intento como el válido. Mostrar la política al alumno antes de empezar.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-05":{"id":"FUN-05","title":"“Completar unidad” no valida ni advierte","sev":"Medio","prio":"P2","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Funcionalidad / integridad</li>\n<li><strong>Ubicación:</strong> <code>app.js:4610-4635</code>; <code>0004:398-465</code></li>\n<li><strong>Evidencia:</strong> el botón llama <code>app_complete_unit</code> sin comprobar ejercicios, quiz ni precisión. La RPC marca <code>completed</code> sin requisitos.</li>\n<li><strong>Problema:</strong> el alumno puede completar una unidad vacía; el profesor ve avance que no existió.</li>\n<li><strong>Escenario:</strong> el alumno abre la unidad, no responde nada y pulsa “Completar”. La unidad aparece completada.</li>\n<li><strong>Impacto:</strong> métricas de avance falsas, reportes incorrectos.</li>\n<li><strong>Recomendación:</strong> validar en servidor (ver <code>DB-04</code>) y en la UI: mostrar “Te faltan X ejercicios” y deshabilitar el botón hasta cumplir. Distinguir “completado” de “dominado”.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-06":{"id":"FUN-06","title":"No hay recuperación de contraseña para alumnos","sev":"Medio","prio":"P2","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Funcionalidad / autenticación</li>\n<li><strong>Ubicación:</strong> <code>app.js:572</code>; <code>functions/admin-reset-student-password/index.ts</code></li>\n<li><strong>Evidencia:</strong> el login dice “Si olvidaste tu contraseña, pide una temporal a tu profesor”. No hay <code>resetPasswordForEmail</code> ni formulario de recuperación.</li>\n<li><strong>Problema:</strong> el alumno depende del staff para volver a entrar; el profesor comparte contraseñas temporales, lo que agrava <code>SEC-03</code>.</li>\n<li><strong>Escenario:</strong> un alumno olvida su contraseña un domingo; no puede estudiar hasta el lunes.</li>\n<li><strong>Impacto:</strong> fricción, pérdida de uso, contraseñas compartidas.</li>\n<li><strong>Recomendación:</strong> añadir “Olvidé mi contraseña” con <code>resetPasswordForEmail</code>, rate limit, correo sintético o mecanismo alterno (código entregado por el profesor), y forzar cambio al primer ingreso.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-09":{"id":"FUN-09","title":"Listados truncados por `.limit()` sin paginación","sev":"Medio","prio":"P2","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Funcionalidad / datos</li>\n<li><strong>Ubicación:</strong> <code>app.js:855</code> (<code>.limit(600)</code>), <code>1067</code> (<code>.limit(400)</code>), <code>1337</code> (<code>.limit(120)</code>), <code>6044</code> (<code>.limit(12)</code>)</li>\n<li><strong>Evidencia:</strong> las consultas usan límites fijos sin <code>range</code>, sin total y sin “cargar más”.</li>\n<li><strong>Problema:</strong> si hay más filas que el límite, se pierden silenciosamente. Los conteos y reportes quedan incompletos.</li>\n<li><strong>Escenario:</strong> el piloto crece a 700 alumnos; el dashboard muestra 600 y el admin no lo sabe.</li>\n<li><strong>Impacto:</strong> decisiones con datos incompletos, alumnos “desaparecidos”.</li>\n<li><strong>Recomendación:</strong> implementar paginación con <code>range</code> y un contador total; o usar RPCs con <code>limit/offset</code>; mostrar “mostrando X de Y”.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-10":{"id":"FUN-10","title":"No hay auditoría visible de cambios","sev":"Medio","prio":"P2","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Funcionalidad / trazabilidad</li>\n<li><strong>Ubicación:</strong> <code>app.js:813-860</code> (no consulta <code>audit_log</code>); <code>0001_schema.sql</code> (<code>audit_log</code>)</li>\n<li><strong>Evidencia:</strong> la tabla <code>audit_log</code> existe y las Edge Functions escriben en ella, pero el dashboard no la muestra y no hay pantalla de consulta.</li>\n<li><strong>Problema:</strong> no se puede saber quién cambió una calificación, un pago, un permiso o una vinculación.</li>\n<li><strong>Escenario:</strong> un tutor reclama un pago; el admin no puede ver quién lo registró ni cuándo.</li>\n<li><strong>Impacto:</strong> falta de rendición de cuentas, dificultad para investigar incidentes.</li>\n<li><strong>Recomendación:</strong> añadir una pestaña “Auditoría” con filtros por actor, entidad, fecha y acción; registrar también los cambios hechos por RPC (no solo Edge Functions).</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-06":{"id":"OPS-06","title":"Secretos locales sin rotación, con residuos y permisos inconsistentes","sev":"Medio","prio":"P2","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> DevOps / gestión de secretos</li>\n<li><strong>Ubicación:</strong> <code>app/.secrets/database-url</code>, <code>test-users.txt</code>, <code>staging-db-password.txt</code></li>\n<li><strong>Evidencia:</strong> <code>.secrets/</code> contiene tres archivos; <code>staging-db-password.txt</code> tiene permisos <code>644</code> y no corresponde a ningún proyecto existente. No hay procedimiento de rotación ni gestor de secretos.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> los secretos están en claro en el disco, sin rotación ni propietario documentado. Un archivo huérfano sugiere que hubo un staging que ya no existe o que nunca se creó.</li>\n<li><strong>Escenario:</strong> el equipo se comparte; <code>staging-db-password.txt</code> es legible por cualquier usuario; alguien la prueba contra el proyecto real por error.</li>\n<li><strong>Impacto:</strong> acceso no autorizado, confusión operativa, riesgo de filtración.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Eliminar el archivo huérfano.</li>\n<li>Aplicar <code>chmod 600</code> a todos los archivos de <code>.secrets/</code>.</li>\n<li>Rotar <code>database-url</code> y las contraseñas de prueba después del piloto.</li>\n<li>Usar un gestor de secretos o variables de entorno del sistema/CI.</li>\n<li>Documentar el procedimiento de rotación y el responsable.</li>\n<li>Verificar MFA en GitHub y Supabase.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-07":{"id":"OPS-07","title":"Sin monitoreo, alertas ni respaldos automáticos verificados","sev":"Medio","prio":"P2","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> DevOps / observabilidad</li>\n<li><strong>Ubicación:</strong> todo el proyecto; ausencia de configuración de logs, métricas o alertas</li>\n<li><strong>Evidencia:</strong> no hay integración de Sentry, Logflare, health checks, ni alertas de Supabase. El respaldo es manual (<code>node scripts/backup-db.mjs</code>). No se verificó el estado de los respaldos automáticos de Supabase.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> los incidentes se detectan por reporte de usuario. No hay forma de saber si el respaldo se ejecutó, si aumentaron los errores 5xx o si un endpoint dejó de responder.</li>\n<li><strong>Escenario:</strong> una migración rompe una RPC; los alumnos ven un error genérico; el profesor no sabe a quién avisar; pasan días.</li>\n<li><strong>Impacto:</strong> tiempo de inactividad prolongado, pérdida de confianza, recuperación reactiva.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Activar y verificar los respaldos automáticos de Supabase (según plan).</li>\n<li>Configurar alertas de error 5xx, latencia y uso de disco/CPU.</li>\n<li>Añadir un uptime check externo (por ejemplo, una petición a <code>/rest/v1/</code> con la anon key).</li>\n<li>Integrar un recolector de errores del frontend (Sentry o similar) con scrubbing de PII.</li>\n<li>Documentar el runbook de incidentes y el canal de aviso.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-04":{"id":"PRIV-04","title":"El reproductor conserva datos en `localStorage` sin política de limpieza","sev":"Medio","prio":"P2","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Privacidad / almacenamiento local</li>\n<li><strong>Ubicación:</strong> <code>app/frontend/public/curso/js/app.js:62-104,395-400,492-499,1932</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// app.js:62-104\nfunction loadAlumnos() { ... localStorage.getItem(ALUMNOS_KEY) ... }\nfunction saveAlumnos() { ... localStorage.setItem(ALUMNOS_KEY, JSON.stringify(alumnos)) ... }\nfunction loadPagos()   { ... localStorage.getItem(PAGOS_KEY) ... }\nfunction savePagos()   { ... localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos)) ... }\nfunction loadAsistencias() { ... localStorage.getItem(ASISTENCIA_KEY) ... }</code></pre>\n<p>Las claves <code>ALUMNOS_KEY</code>, <code>PAGOS_KEY</code> y <code>ASISTENCIA_KEY</code> provienen de la versión anterior del reproductor, que gestionaba alumnos, pagos y asistencia en el navegador.</p>\n<ul>\n<li><strong>Problema:</strong> el código sigue leyendo y escribiendo datos personales en el almacenamiento del navegador. No hay borrado al cerrar sesión (solo <code>STORE_KEY</code> se elimina en <code>1932</code>), ni expiración, ni aviso. En equipos compartidos (aula, biblioteca, computadora familiar), esos datos quedan disponibles para el siguiente usuario.</li>\n<li><strong>Escenario:</strong> un profesor usó la versión antigua en la computadora del aula; quedaron nombres, montos y asistencias en <code>localStorage</code>. Otro alumno abre el navegador y los lee desde las herramientas de desarrollo.</li>\n<li><strong>Impacto:</strong> fuga local de PII, incumplimiento de minimización y seguridad, confusión con datos obsoletos.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Eliminar el código legacy y las claves <code>ALUMNOS_KEY</code>, <code>PAGOS_KEY</code>, <code>ASISTENCIA_KEY</code>.</li>\n<li>Al cerrar sesión, borrar todas las claves <code>ecoems_*</code> que contengan datos personales (dejar solo preferencias no sensibles, como el tema).</li>\n<li>No almacenar PII en <code>localStorage</code>; si se necesita caché, usar <code>sessionStorage</code> con expiración y sin datos identificables.</li>\n<li>Añadir una nota de privacidad sobre el uso de almacenamiento local.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-05":{"id":"SEC-05","title":"CORS permisivo por defecto en Edge Functions","sev":"Medio","prio":"P2","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Seguridad / configuración</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/functions/_shared/http.ts:1-6</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"ts\"><code>const allowedOrigin = Deno.env.get(&quot;ALLOWED_ORIGIN&quot;) ?? &quot;*&quot;;\n\nexport const corsHeaders = {\n  &quot;Access-Control-Allow-Origin&quot;: allowedOrigin,\n  &quot;Access-Control-Allow-Headers&quot;: &quot;authorization, x-client-info, apikey, content-type&quot;,\n  &quot;Access-Control-Allow-Methods&quot;: &quot;POST, OPTIONS&quot;,\n};</code></pre>\n<ul>\n<li><strong>Problema:</strong> si <code>ALLOWED_ORIGIN</code> no está configurado, cualquier origen puede llamar a las funciones. El navegador de un usuario autenticado podría ser inducido a invocar acciones desde un sitio malicioso, aunque el token no viaja automáticamente (se requiere <code>Authorization</code>), lo que reduce la explotabilidad.</li>\n<li><strong>Escenario:</strong> un sitio de terceros intenta invocar <code>admin-create-student</code> o <code>guardian-consent</code> con el token del usuario; el navegador permite la respuesta por CORS. Sin el token, la llamada falla; con un XSS previo, el token podría estar disponible.</li>\n<li><strong>Impacto:</strong> superficie de ataque mayor, especialmente combinada con XSS o extensiones maliciosas.</li>\n<li><strong>Recomendación:</strong> configurar <code>ALLOWED_ORIGIN</code> con el dominio de producción y el de staging; rechazar orígenes desconocidos; no usar <code>*</code> en funciones que reciben <code>service_role</code>.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-06":{"id":"SEC-06","title":"Magic link de tutor compartido por WhatsApp y reenviable","sev":"Medio","prio":"P2","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Seguridad / identidad / tutores</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/functions/invite-guardian/index.ts:115-134,158-160</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"ts\"><code>const { data: linkData, error: linkGenError } = await admin.auth.admin.generateLink({\n  type: &quot;magiclink&quot;,\n  email,\n});\n// ...\nconst whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;</code></pre>\n<ul>\n<li><strong>Problema:</strong> el enlace de acceso se comparte por WhatsApp y queda en el historial del chat, en la nube del mensajero y en cualquier reenvío. Un magic link es una credencial bearer: quien lo tenga puede iniciar sesión como el tutor hasta que expire o se use.</li>\n<li><strong>Escenario:</strong> el tutor reenvía el mensaje a un familiar; el enlace se filtra; un tercero entra al panel y ve datos del menor y pagos.</li>\n<li><strong>Impacto:</strong> acceso no autorizado a datos de menores y finanzas.</li>\n<li><strong>Recomendación:</strong> enviar el enlace por correo al tutor, no por WhatsApp; usar un enlace de invitación de un solo uso con expiración corta (15–30 min) y confirmación de correo; registrar el canje; permitir revocar invitaciones; no incluir el enlace en un <code>wa.me</code> que invita a reenviar.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-07":{"id":"SEC-07","title":"El baneo de cuentas sin perfil no audita ni revoca sesiones","sev":"Medio","prio":"P2","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> Seguridad / administración</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0017_external_accounts.sql:169-205</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>update auth.users\n   set banned_until = case when p_ban then now() + interval '100 years' else null end\n where id = p_user_id;</code></pre>\n<ul>\n<li><strong>Problema:</strong> el baneo funciona para bloquear nuevos logins, pero no hay registro en <code>audit_log</code>, no se revocan sesiones existentes y no se notifica al administrador. Tampoco hay una lista de “cuentas externas” con motivo.</li>\n<li><strong>Escenario:</strong> un administrador banea una cuenta colada; la cuenta tenía una sesión activa y sigue operando hasta que expire el token. No queda rastro de quién la baneó.</li>\n<li><strong>Impacto:</strong> contención incompleta y falta de trazabilidad.</li>\n<li><strong>Recomendación:</strong> registrar la acción en <code>audit_log</code> con actor, objetivo y motivo; documentar que el baneo no revoca tokens; considerar <code>session_version</code> o rotación de JWT para incidentes graves; añadir una vista de cuentas externas con estado y fecha.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-01":{"id":"UX-01","title":"Accesibilidad limitada: foco, contraste y semántica","sev":"Medio","prio":"P2","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> UX / accesibilidad</li>\n<li><strong>Ubicación:</strong> <code>frontend/src/styles.css:422-425</code> (solo 2 <code>:focus-visible</code>); <code>app.js</code> (diálogos, tarjetas); <code>index.html</code></li>\n<li><strong>Evidencia:</strong> solo <code>.btn</code> y <code>.mode-tab</code> tienen <code>:focus-visible</code>; no hay skip link; no hay <code>aria-live</code>; las tablas se construyen con <code>div</code>; el contraste no se midió.</li>\n<li><strong>Problema:</strong> usuarios de teclado, lectores de pantalla y baja visión pueden no identificar el foco, no entender los cambios dinámicos o no navegar eficientemente.</li>\n<li><strong>Escenario:</strong> un alumno con baja visión usa el teclado; al tabular por las tarjetas de unidad no ve dónde está; al abrir un diálogo, el foco se escapa al fondo.</li>\n<li><strong>Impacto:</strong> exclusión, incumplimiento de buenas prácticas (WCAG 2.1 AA), mala experiencia.</li>\n<li><strong>Recomendación:</strong></li>\n</ul>\n<ol>\n<li>Añadir <code>:focus-visible</code> global para <code>a</code>, <code>button</code>, <code>[tabindex]</code>, <code>input</code>, <code>select</code>, <code>textarea</code>.</li>\n<li>Implementar focus trap y restauración en todos los diálogos.</li>\n<li>Añadir skip link (“Saltar al contenido”).</li>\n<li>Usar <code>aria-live=&quot;polite&quot;</code> en alertas y toasts.</li>\n<li>Revisar contraste con una herramienta (axe, Lighthouse).</li>\n<li>Usar tablas semánticas o roles <code>table</code>/<code>row</code>/<code>cell</code> en grids de datos.</li>\n<li>Añadir <code>aria-label</code> a iconos interactivos.</li>\n</ol>\n<ul>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-02":{"id":"UX-02","title":"Diálogos sin focus trap ni cierre consistente con Escape","sev":"Medio","prio":"P2","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Medio</li>\n<li><strong>Categoría:</strong> UX / accesibilidad</li>\n<li><strong>Ubicación:</strong> <code>app.js:2731</code> (pagos), <code>3601/3625</code> (tests), <code>4703</code> (asignación), <code>5401</code> (ficha)</li>\n<li><strong>Evidencia:</strong> todos usan <code>role=&quot;dialog&quot; aria-modal=&quot;true&quot;</code>, pero no hay <code>inert</code> en el fondo ni un ciclo de foco. El diálogo de pagos registra <code>Escape</code> (<code>app.js:2835-2840</code>); no se verificó en los demás.</li>\n<li><strong>Problema:</strong> el foco puede salir del diálogo y activar elementos del fondo; el usuario de teclado puede quedar atrapado o perdido.</li>\n<li><strong>Escenario:</strong> se abre la ficha; se tabula hasta el fondo; se activa un botón de la página sin querer.</li>\n<li><strong>Impacto:</strong> errores, frustración, accesibilidad.</li>\n<li><strong>Recomendación:</strong> crear un helper <code>openDialog</code> que:</li>\n<li>Guarde el elemento disparador.</li>\n<li>Enfoque el primer control.</li>\n<li>Atrape <code>Tab</code>/<code>Shift+Tab</code>.</li>\n<li>Cierre con <code>Escape</code>.</li>\n<li>Restaure el foco al cerrar.</li>\n<li>Marque el fondo con <code>inert</code> o <code>aria-hidden</code>.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-08":{"id":"DB-08","title":"`notes_internal` vive en la tabla que se expone al alumno y al tutor","sev":"Bajo","prio":"P1","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Bajo como diseño; <strong>Alto</strong> por su efecto (ver <code>PRIV-02</code>)</li>\n<li><strong>Categoría:</strong> Base de datos / diseño de privacidad</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0001_schema.sql:103-115</code>; política en <code>0003_rls.sql:560</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>create table if not exists public.students (\n  ...\n  notes_internal text,\n  ...\n);</code></pre>\n<pre data-lang=\"sql\"><code>create policy students_select\non public.students for select to authenticated\nusing (public.app_can_access_student(id));</code></pre>\n<ul>\n<li><strong>Problema:</strong> una columna de uso interno comparte tabla y política con datos que el alumno y el tutor sí deben ver. RLS filtra filas, no columnas.</li>\n<li><strong>Escenario:</strong> el profesor escribe “crisis familiar, no presionar”; el alumno o el tutor lee la nota desde la API.</li>\n<li><strong>Impacto:</strong> fuga de información sensible, daño a la relación pedagógica.</li>\n<li><strong>Recomendación:</strong> mover <code>notes_internal</code> a <code>student_private_notes</code> con política solo para staff; o crear una vista <code>students_public</code> sin la columna y usarla en el frontend. Ver <code>PRIV-02</code>.</li>\n<li><strong>Prioridad:</strong> P1 (por su efecto)</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-09":{"id":"OPS-09","title":"Sin staging real: todo se prueba contra producción","sev":"Bajo","prio":"P2","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Bajo (por sí mismo; agrava OPS-02 y OPS-03)</li>\n<li><strong>Categoría:</strong> DevOps / ambientes</li>\n<li><strong>Ubicación:</strong> <code>.env</code> local apunta a producción; <code>.secrets/staging-db-password.txt</code> sin proyecto</li>\n<li><strong>Evidencia:</strong> no hay un segundo proyecto de Supabase ni una URL de staging. La documentación de Fase 0 lo propone, pero no se implementó.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> no hay lugar seguro para probar migraciones, restauraciones, cambios de Auth o el smoke test. Cada prueba es un riesgo para los datos reales.</li>\n<li><strong>Escenario:</strong> se quiere validar la migración que cierra <code>SEC-01</code>; no hay dónde probarla sin tocar producción.</li>\n<li><strong>Impacto:</strong> cambios sin ensayo, miedo a corregir, incidentes evitables.</li>\n<li><strong>Recomendación:</strong> crear un proyecto Supabase de staging (plan gratuito es suficiente), aplicar las migraciones desde cero, sembrar datos ficticios, apuntar ahí el <code>.env</code> de desarrollo y ejecutar el smoke con <code>TEST_WRITE=1</code>.</li>\n<li><strong>Prioridad:</strong> P2 (habilitante de P0/P1)</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-06":{"id":"PRIV-06","title":"No hay canal ni procedimiento ARCO en la aplicación","sev":"Bajo","prio":"P2","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Privacidad / derechos del titular</li>\n<li><strong>Ubicación:</strong> <code>Fase-0/05-privacidad-y-consentimiento.md:59,75,185</code>; <code>app/frontend/src/ui/app.js</code> (sin formulario)</li>\n<li><strong>Evidencia:</strong> el borrador promete un correo <code>[CORREO DE PRIVACIDAD]</code> y un procedimiento, pero no hay página, formulario, correo configurado ni pantalla. La única acción disponible es el botón de consentimiento, que no revoca ni solicita nada.</li>\n<li><strong>Problema:</strong> los derechos de acceso, rectificación, cancelación y oposición no tienen cauce operativo. Tampoco hay forma de solicitar la eliminación de la cuenta o de los datos.</li>\n<li><strong>Escenario:</strong> un tutor pide eliminar los datos de su hijo; no encuentra cómo; escribe al profesor, que no sabe qué hacer; los datos siguen ahí.</li>\n<li><strong>Impacto:</strong> incumplimiento, fricción, riesgo de reclamación.</li>\n<li><strong>Recomendación:</strong> publicar una página “Privacidad y derechos” con correo, formulario y plazos; registrar cada solicitud en una tabla <code>data_requests</code> con estado y fechas; definir el procedimiento interno y los responsables; enlazarlo desde el aviso y el panel.</li>\n<li><strong>Prioridad:</strong> P2</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-03":{"id":"COD-03","title":"Interpolaciones sin escape y `catch` silenciosos","sev":"Bajo","prio":"P3","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Código / robustez</li>\n<li><strong>Ubicación:</strong> <code>app.js:6344</code>, <code>6677</code>; <code>catch {}</code> en <code>399</code>, <code>4566</code>, <code>4602</code>, <code>5662</code>, <code>6454</code>, <code>6983</code>, <code>7021</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"js\"><code>// 6344\nsetNotice(`Profesor ${result.profile.full_name} creado...`);\n\n// 6677\nconst subject = `Aviso sobre ${student?.full_name || 'el alumno'}`;</code></pre>\n<p><code>setNotice</code> escapa al renderizar (<code>alertMarkup</code> usa <code>escapeHtml</code>), así que el primer caso es seguro en la práctica. El segundo se guarda en <code>guardian_messages.subject</code>; si alguna vista lo renderiza sin escapar, sería XSS almacenado. No se encontró una vista que lo muestre, pero el dato queda almacenado.</p>\n<ul>\n<li><strong>Problema:</strong> no hay una regla consistente de “escapar en el límite”; se escapa a veces al construir y a veces al renderizar. Los <code>catch</code> vacíos ocultan fallos de <code>localStorage</code>, parseo y red.</li>\n<li><strong>Escenario:</strong> un nombre con <code>&lt;script&gt;</code> se guarda; una vista futura lo interpola sin escapar. Un <code>catch</code> vacío impide detectar que el guardado falló.</li>\n<li><strong>Impacto:</strong> XSS potencial, bugs silenciosos.</li>\n<li><strong>Recomendación:</strong> escapar siempre al renderizar, no al almacenar; usar una función <code>html</code> etiquetada o un sanitizador; revisar cada <code>catch</code> y registrar o propagar el error.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Media</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-04":{"id":"COD-04","title":"Sin lint, tests unitarios ni verificación de tipos","sev":"Bajo","prio":"P3","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Código / calidad</li>\n<li><strong>Ubicación:</strong> <code>frontend/package.json</code> (solo <code>dev</code>, <code>build</code>, <code>preview</code>); no hay <code>.eslintrc</code>, <code>tsconfig</code>, <code>vitest</code>, <code>jest</code></li>\n<li><strong>Evidencia:</strong> no hay scripts de lint/test; no hay configuración de TypeScript.</li>\n<li><strong>Problema:</strong> los errores se detectan en producción o en el smoke E2E; no hay red de seguridad para refactors.</li>\n<li><strong>Escenario:</strong> se renombra una función o se cambia una firma de RPC; el build pasa, el E2E falla tarde.</li>\n<li><strong>Impacto:</strong> regresiones, miedo a cambiar.</li>\n<li><strong>Recomendación:</strong> añadir ESLint + Prettier, Vitest para funciones puras, y un chequeo de tipos con JSDoc o migración gradual a TypeScript. Integrar en CI.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-05":{"id":"COD-05","title":"Monolito de 7,072 líneas sin módulos","sev":"Bajo","prio":"P3","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Código / mantenibilidad</li>\n<li><strong>Ubicación:</strong> <code>frontend/src/ui/app.js</code></li>\n<li><strong>Evidencia:</strong> un solo archivo con login, dashboards, unidades, quizzes, tests, ficha, pagos, activación y consentimiento.</li>\n<li><strong>Problema:</strong> navegación difícil, conflictos de merge, funciones con muchas responsabilidades.</li>\n<li><strong>Escenario:</strong> dos personas trabajan en pagos y en unidades; ambas tocan <code>app.js</code> y el merge es doloroso.</li>\n<li><strong>Impacto:</strong> velocidad de cambio, riesgo de romper algo no relacionado.</li>\n<li><strong>Recomendación:</strong> dividir por dominio (<code>auth.js</code>, <code>dashboard.js</code>, <code>units.js</code>, <code>payments.js</code>, <code>ficha.js</code>, <code>tests.js</code>) y por capa (<code>api.js</code>, <code>render.js</code>, <code>state.js</code>). No requiere framework.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-06":{"id":"COD-06","title":"`catch` vacíos que ocultan fallos","sev":"Bajo","prio":"P3","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Código / observabilidad</li>\n<li><strong>Ubicación:</strong> <code>app.js:399,4566,4602,5662,6454,6983,7021</code></li>\n<li><strong>Evidencia:</strong> bloques <code>catch { /* ignorar */ }</code> o <code>catch {}</code> sin log ni feedback.</li>\n<li><strong>Problema:</strong> si falla el guardado de una preferencia, el parseo de un JSON o una llamada, el usuario no lo sabe y el equipo tampoco.</li>\n<li><strong>Escenario:</strong> <code>localStorage</code> está lleno; el guardado falla silenciosamente; la preferencia no persiste y nadie lo detecta.</li>\n<li><strong>Impacto:</strong> bugs invisibles, soporte reactivo.</li>\n<li><strong>Recomendación:</strong> registrar en consola con contexto en desarrollo; para fallos de datos, mostrar un aviso no bloqueante; nunca ignorar errores de red.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-08":{"id":"COD-08","title":"Sin lockfile versionado ni auditoría de dependencias","sev":"Bajo","prio":"P3","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Código / cadena de suministro</li>\n<li><strong>Ubicación:</strong> <code>frontend/package.json</code>; no hay <code>package-lock.json</code> en el repositorio observado</li>\n<li><strong>Evidencia:</strong> <code>package.json</code> declara rangos <code>^</code>; no se encontró lockfile versionado. <code>npm audit</code> no se pudo completar en el entorno de auditoría.</li>\n<li><strong>Problema:</strong> builds no reproducibles; una actualización menor puede cambiar el comportamiento; no hay revisión de vulnerabilidades.</li>\n<li><strong>Escenario:</strong> <code>npm install</code> en otra máquina trae una versión distinta de <code>@supabase/supabase-js</code> y rompe el login.</li>\n<li><strong>Impacto:</strong> deriva, vulnerabilidades no detectadas.</li>\n<li><strong>Recomendación:</strong> versionar <code>package-lock.json</code>, usar <code>npm ci</code> en CI y ejecutar <code>npm audit</code> con un umbral.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"COD-09":{"id":"COD-09","title":"`dist` es un repositorio anidado sin build reproducible","sev":"Bajo","prio":"P3","report":"06","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Código / despliegue</li>\n<li><strong>Ubicación:</strong> <code>frontend/dist/.git</code> (rama <code>gh-pages</code>); <code>README.md:30-35</code></li>\n<li><strong>Evidencia:</strong> <code>dist</code> tiene su propio <code>.git</code>, remoto y commits; se publica con <code>git push -f</code>.</li>\n<li><strong>Problema:</strong> el artefacto publicado no se puede reconstruir de forma determinista desde <code>main</code>; no hay trazabilidad entre commit de código y commit de <code>dist</code>.</li>\n<li><strong>Escenario:</strong> se publica un cambio y no se sabe qué commit de <code>main</code> le corresponde; un rollback requiere buscar a mano.</li>\n<li><strong>Impacto:</strong> auditoría de cambios difícil, riesgo de publicar algo no revisado.</li>\n<li><strong>Recomendación:</strong> generar <code>dist</code> en CI y publicar con <code>gh-pages</code> o GitHub Actions; etiquetar el commit de código; no versionar <code>dist</code> en el repo principal.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-05":{"id":"DB-05","title":"Migraciones sin rollback y parcialmente no idempotentes","sev":"Bajo","prio":"P3","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Base de datos / operación</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/*.sql</code>; por ejemplo <code>0003_rls.sql:625</code> y <code>0009:8</code></li>\n<li><strong>Evidencia:</strong> <code>create policy units_select ...</code> sin <code>drop policy if exists</code>; no hay archivos <code>down</code> ni un manifiesto de versión.</li>\n<li><strong>Problema:</strong> reaplicar una migración falla; revertir un cambio requiere escribir SQL a mano; no hay historial de qué se aplicó en cada entorno.</li>\n<li><strong>Escenario:</strong> se intenta reconstruir staging desde cero y una migración falla a mitad; el esquema queda inconsistente.</li>\n<li><strong>Impacto:</strong> recuperación lenta, deriva entre entornos.</li>\n<li><strong>Recomendación:</strong> usar <code>drop policy if exists</code> antes de <code>create policy</code>; mantener migraciones <code>up</code>/<code>down</code> o usar el flujo de Supabase CLI con <code>db diff</code>; registrar la versión aplicada; probar el rebuild completo en staging.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"DB-06":{"id":"DB-06","title":"Sin retención ni partición para `audit_log` y `email_outbox`","sev":"Bajo","prio":"P3","report":"04","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Base de datos / operación</li>\n<li><strong>Ubicación:</strong> <code>0001_schema.sql</code> (<code>audit_log</code>, <code>email_outbox</code>); índices en <code>0001:559-561</code></li>\n<li><strong>Evidencia:</strong> ambas tablas crecen sin límite; no hay job de limpieza ni política de retención documentada.</li>\n<li><strong>Problema:</strong> con el tiempo, las consultas se vuelven lentas y los datos personales se acumulan más allá de lo necesario.</li>\n<li><strong>Escenario:</strong> después de un año, <code>audit_log</code> tiene cientos de miles de filas; los reportes tardan; el respaldo crece.</li>\n<li><strong>Impacto:</strong> costo, rendimiento, privacidad.</li>\n<li><strong>Recomendación:</strong> definir retención (por ejemplo, 12 meses para auditoría, 90 días para <code>email_outbox</code>), implementar un job de limpieza y documentarlo; considerar partición por mes si el volumen lo justifica.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-07":{"id":"FUN-07","title":"El login del alumno depende de un dominio sintético fijo","sev":"Bajo","prio":"P3","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Funcionalidad / autenticación</li>\n<li><strong>Ubicación:</strong> <code>frontend/src/lib/supabase.js:5,19-26</code>; <code>app.js:684-687</code></li>\n<li><strong>Evidencia:</strong> <code>toStudentEmail</code> agrega <code>@${studentEmailDomain}</code>. Si el alumno escribe un correo, se respeta; si no, se usa el dominio configurado.</li>\n<li><strong>Problema:</strong> si el dominio cambia, si el alumno fue creado con otro dominio o si escribe mal su usuario, el login falla con un mensaje genérico.</li>\n<li><strong>Escenario:</strong> se migra de <code>alumnos.ecoems.mx</code> a <code>alumnos.ecoems.edu.mx</code>; los alumnos antiguos no pueden entrar hasta que se actualicen sus cuentas.</li>\n<li><strong>Impacto:</strong> soporte, bloqueo de acceso.</li>\n<li><strong>Recomendación:</strong> mostrar el dominio en el formulario (“tu usuario@alumnos.ecoems.mx”), permitir correo completo, validar en el alta y documentar la migración.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-08":{"id":"FUN-08","title":"El dashboard admin carga todo en el navegador","sev":"Bajo","prio":"P3","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Funcionalidad / rendimiento</li>\n<li><strong>Ubicación:</strong> <code>app.js:813-860</code></li>\n<li><strong>Evidencia:</strong> 21 consultas en paralelo, incluyendo <code>student_profiles.select('*')</code>, todos los alumnos, todas las versiones, todas las asignaciones y todos los pagos.</li>\n<li><strong>Problema:</strong> el admin recibe datos que no necesita para la pestaña actual; el tiempo de carga y la memoria crecen con el piloto.</li>\n<li><strong>Escenario:</strong> con 600 alumnos y 400 versiones, el dashboard tarda y el navegador consume memoria; en móvil puede fallar.</li>\n<li><strong>Impacto:</strong> mala experiencia, exposición innecesaria de datos en el cliente.</li>\n<li><strong>Recomendación:</strong> cargar por pestaña, paginar, seleccionar solo columnas necesarias y mover agregados a RPCs.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"FUN-11":{"id":"FUN-11","title":"El modo de login no persiste","sev":"Bajo","prio":"P3","report":"05","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Funcionalidad / UX</li>\n<li><strong>Ubicación:</strong> <code>app.js:7036</code></li>\n<li><strong>Evidencia:</strong> <code>signOut</code> hace <code>state.mode = 'student'</code>; no se guarda en <code>localStorage</code>.</li>\n<li><strong>Problema:</strong> un tutor o profesor que recarga la página vuelve a la pestaña “Alumno” y debe cambiar de modo.</li>\n<li><strong>Escenario:</strong> el profesor cierra sesión y vuelve a entrar; tiene que seleccionar “Profesor” otra vez.</li>\n<li><strong>Impacto:</strong> fricción menor.</li>\n<li><strong>Recomendación:</strong> persistir el último modo o inferirlo del perfil; recordar el usuario (no la contraseña).</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-08":{"id":"OPS-08","title":"Sin rotación de claves ni plan de respuesta a incidentes","sev":"Bajo","prio":"P3","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> DevOps / seguridad operativa</li>\n<li><strong>Ubicación:</strong> <code>.secrets/</code>, <code>frontend/.env</code>, Edge Functions</li>\n<li><strong>Evidencia:</strong> no hay calendario de rotación, ni inventario de claves, ni procedimiento para revocar y reemplazar la anon key, la <code>service_role</code>, la cadena de conexión o las contraseñas de prueba.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> si una clave se filtra, no hay un plan claro. La anon key está duplicada en tres lugares (<code>SEC-08</code>), lo que complica la rotación.</li>\n<li><strong>Escenario:</strong> se descubre que <code>database-url</code> estuvo en un chat; no se sabe qué rotar primero ni cómo verificar que todo sigue funcionando.</li>\n<li><strong>Impacto:</strong> respuesta lenta, ventana de exposición más larga.</li>\n<li><strong>Recomendación:</strong> inventariar claves y su ubicación; definir frecuencia de rotación (90 días o tras incidente); documentar el procedimiento; centralizar la anon key; probar la rotación en staging.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"OPS-10":{"id":"OPS-10","title":"`dist` es un repositorio anidado que deriva de `src`","sev":"Bajo","prio":"P3","report":"09","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> DevOps / artefactos</li>\n<li><strong>Ubicación:</strong> <code>app/frontend/dist/.git</code> (rama <code>gh-pages</code>, commit <code>2114eba</code>); <code>main</code> en <code>40b01a4</code></li>\n<li><strong>Evidencia:</strong> <code>dist</code> tiene su propio <code>.git</code>, remoto y commits. No hay etiqueta ni archivo de correspondencia con el commit de <code>main</code>.</li>\n</ul>\n<ul>\n<li><strong>Problema:</strong> el artefacto publicado no se puede reconstruir ni auditar con certeza. <code>dist</code> puede contener cambios no commiteados en <code>src</code>.</li>\n<li><strong>Escenario:</strong> se publica un hotfix directo en <code>dist</code>; el siguiente build desde <code>src</code> lo borra y el cambio se pierde.</li>\n<li><strong>Impacto:</strong> deriva, pérdida de cambios, auditoría difícil.</li>\n<li><strong>Recomendación:</strong> no versionar <code>dist</code>; generarlo en CI y publicarlo con <code>gh-pages</code>; etiquetar el commit de origen; verificar que el build sea reproducible (<code>npm ci</code> + lockfile).</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-07":{"id":"PRIV-07","title":"`audit_log` guarda PII sin retención ni control de acceso visible","sev":"Bajo","prio":"P3","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Privacidad / logs</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/migrations/0001_schema.sql:508-519</code>; políticas en <code>0003_rls.sql</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"sql\"><code>-- 0001:508-519\ncreate table if not exists public.audit_log (\n  id bigserial primary key,\n  actor_id uuid references public.profiles(id) on delete set null,\n  action text not null,\n  entity_type text not null,\n  entity_id text,\n  before jsonb,\n  after jsonb,\n  ip inet,\n  user_agent text,\n  created_at timestamptz not null default now()\n);</code></pre>\n<p>Las Edge Functions escriben <code>before</code>/<code>after</code> con datos del objetivo (por ejemplo, correo y rol en <code>deactivate-user/index.ts:58-62</code>).</p>\n<ul>\n<li><strong>Problema:</strong> los logs de auditoría contienen PII y pueden contener datos sensibles en <code>before</code>/<code>after</code>. No hay retención definida (el borrador propone 1 año, pero no está implementado), no hay política de acceso explícita para consultarlos y no hay pantalla de auditoría.</li>\n<li><strong>Escenario:</strong> después de dos años, <code>audit_log</code> conserva correos, roles y cambios de datos de alumnos que ya egresaron.</li>\n<li><strong>Impacto:</strong> acumulación innecesaria de PII, riesgo en caso de brecha, dificultad para cumplir cancelación.</li>\n<li><strong>Recomendación:</strong> definir retención (12 meses), implementar limpieza programada, minimizar <code>before</code>/<code>after</code> (guardar solo campos relevantes), restringir lectura a admin y registrar el acceso a los logs.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"PRIV-08":{"id":"PRIV-08","title":"El magic link del tutor viaja por WhatsApp con el nombre del alumno","sev":"Bajo","prio":"P3","report":"08","html":"<ul>\n<li><strong>Severidad:</strong> Bajo (la seguridad se trata en <code>SEC-06</code>)</li>\n<li><strong>Categoría:</strong> Privacidad / comunicación con terceros</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/functions/invite-guardian/index.ts:128-134</code></li>\n<li><strong>Evidencia:</strong></li>\n</ul>\n<pre data-lang=\"ts\"><code>const whatsappMessage = [\n  ...\n  `Soy el Prof. Luis. Te invito a la plataforma ECOEMS para dar seguimiento a ${studentProfile?.full_name ?? student.student_code}.`,\n  ...\n];\nconst whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;</code></pre>\n<ul>\n<li><strong>Problema:</strong> el mensaje incluye el <strong>nombre del menor</strong> y un enlace de acceso, y se comparte mediante WhatsApp. Eso expone datos del alumno a un tercero (Meta/WhatsApp) y deja el enlace en el historial del chat, donde puede reenviarse.</li>\n<li><strong>Escenario:</strong> el profesor comparte el enlace desde su WhatsApp; el mensaje queda en su historial y en el del tutor; el enlace se reenvía a un familiar.</li>\n<li><strong>Impacto:</strong> exposición de datos del menor a un proveedor externo, acceso no autorizado, falta de control sobre la difusión.</li>\n<li><strong>Recomendación:</strong> enviar la invitación por correo electrónico al tutor; si se usa WhatsApp, no incluir el nombre del alumno ni el enlace en el mismo mensaje (enviar un código y pedir que se canjee en la app); documentar a WhatsApp como encargado del tratamiento o evitar su uso para datos de menores.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-08":{"id":"SEC-08","title":"Anon key duplicada y hardcodeada en dos puertas","sev":"Bajo","prio":"P3","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Seguridad / configuración</li>\n<li><strong>Ubicación:</strong> <code>frontend/public/curso/js/login-gate.js:15-17</code>; <code>frontend/public/tool-gate.js:7-9</code>; bundle en <code>frontend/dist/assets/*.js</code></li>\n<li><strong>Evidencia:</strong> la misma clave pública aparece en dos archivos y en el bundle. No es un secreto (es la anon key), pero su duplicación complica la rotación y facilita el error de pegar una clave de otro proyecto.</li>\n<li><strong>Problema:</strong> si se rota la clave, hay que actualizar tres lugares y reconstruir; si se filtra una <code>service_role</code> por error, el patrón de copiar/pegar la haría más probable.</li>\n<li><strong>Escenario:</strong> rotación incompleta; una de las puertas sigue usando la clave vieja y falla.</li>\n<li><strong>Impacto:</strong> operativo, no de confidencialidad.</li>\n<li><strong>Recomendación:</strong> centralizar la configuración en un solo módulo o en variables inyectadas en build; documentar la rotación; añadir una prueba que verifique que las tres copias coinciden.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"SEC-09":{"id":"SEC-09","title":"Sin rate limiting propio en Edge Functions","sev":"Bajo","prio":"P3","report":"03","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> Seguridad / abuso</li>\n<li><strong>Ubicación:</strong> <code>app/supabase/functions/**</code></li>\n<li><strong>Evidencia:</strong> no hay contadores, captcha, límites por IP/usuario ni colas. Supabase aplica límites de plataforma, pero no se verificaron.</li>\n<li><strong>Problema:</strong> un atacante con una cuenta válida puede invocar funciones costosas (altas, invitaciones, consentimientos) en bucle.</li>\n<li><strong>Escenario:</strong> creación masiva de cuentas o invitaciones; spam de magic links; agotamiento de cuota.</li>\n<li><strong>Impacto:</strong> costo, abuso, posible denegación de servicio.</li>\n<li><strong>Recomendación:</strong> añadir límites por usuario/IP en las funciones sensibles; usar <code>settings</code> o una tabla de cuotas; monitorear y alertar; verificar los límites de Supabase.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Media (depende de la plataforma)</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-03":{"id":"UX-03","title":"Mensajes de error genéricos y sin pasos siguientes","sev":"Bajo","prio":"P3","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> UX / feedback</li>\n<li><strong>Ubicación:</strong> <code>app.js</code> (múltiples <code>setError('No se pudo...')</code>)</li>\n<li><strong>Evidencia:</strong> por ejemplo, “No se pudo guardar la activación.”, “No se pudo registrar el consentimiento. Revisa la conexión.”, “No se pudo iniciar sesión. Revisa tus datos o consulta a soporte.”</li>\n<li><strong>Problema:</strong> el usuario no sabe si el problema es de red, permisos, datos o servidor; no hay código para soporte.</li>\n<li><strong>Escenario:</strong> el profesor intenta activar una unidad y recibe “No se pudo guardar”; no sabe que el problema es que no hay versión publicada.</li>\n<li><strong>Impacto:</strong> soporte reactivo, abandono.</li>\n<li><strong>Recomendación:</strong> mapear errores de Supabase a mensajes accionables; incluir un código corto (<code>ERR-ACT-01</code>) y un enlace a ayuda; registrar el error completo en consola.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-04":{"id":"UX-04","title":"Estados de carga inconsistentes","sev":"Bajo","prio":"P3","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> UX / feedback</li>\n<li><strong>Ubicación:</strong> <code>app.js</code> (<code>renderLoading</code>, <code>loadDashboard</code>)</li>\n<li><strong>Evidencia:</strong> hay un estado inicial, pero no skeletons por tarjeta ni indicadores de progreso en consultas largas.</li>\n<li><strong>Problema:</strong> el usuario no sabe si la app está cargando o congelada.</li>\n<li><strong>Escenario:</strong> el dashboard admin tarda varios segundos; el usuario pulsa de nuevo y duplica acciones.</li>\n<li><strong>Impacto:</strong> percepción de lentitud, acciones duplicadas.</li>\n<li><strong>Recomendación:</strong> añadir skeletons o <code>aria-busy</code> por sección; deshabilitar acciones mientras carga; mostrar tiempo estimado si es largo.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-05":{"id":"UX-05","title":"Tablas y grids que se comprimen en móvil","sev":"Bajo","prio":"P3","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> UX / responsive</li>\n<li><strong>Ubicación:</strong> <code>styles.css</code> (media queries), <code>app.js</code> (pagos, calificaciones, asistencia)</li>\n<li><strong>Evidencia:</strong> grids con muchas columnas y listas <code>data-list</code>; no hay scroll horizontal explícito ni vista de tarjetas en móvil.</li>\n<li><strong>Problema:</strong> en pantallas pequeñas, la información se vuelve ilegible o se desborda.</li>\n<li><strong>Escenario:</strong> un tutor revisa pagos en su teléfono y no puede leer la tabla completa.</li>\n<li><strong>Impacto:</strong> mala experiencia móvil, que es el canal probable de los tutores.</li>\n<li><strong>Recomendación:</strong> convertir tablas en tarjetas apiladas en <code>&lt; 640px</code>; usar <code>overflow-x: auto</code> con indicador; acortar etiquetas.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Media</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-06":{"id":"UX-06","title":"Falta un indicador “solo lectura” consistente","sev":"Bajo","prio":"P3","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> UX / claridad</li>\n<li><strong>Ubicación:</strong> <code>app.js:3942</code> (pill “Solo lectura” en tutor); otras vistas no lo tienen</li>\n<li><strong>Evidencia:</strong> el panel del tutor muestra “Solo lectura” en la cabecera, pero las secciones de pagos y ficha no repiten el estado; el alumno no tiene indicador en unidades cerradas.</li>\n<li><strong>Problema:</strong> el usuario no siempre sabe si puede editar.</li>\n<li><strong>Escenario:</strong> un tutor intenta editar un pago y no entiende por qué no hay controles.</li>\n<li><strong>Impacto:</strong> confusión menor.</li>\n<li><strong>Recomendación:</strong> mostrar un badge de modo (Edición / Solo lectura) en cada vista; deshabilitar visualmente los controles no disponibles.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-07":{"id":"UX-07","title":"Acciones destructivas sin confirmación","sev":"Bajo","prio":"P3","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> UX / prevención de errores</li>\n<li><strong>Ubicación:</strong> <code>app.js:4960-4995</code> (cerrar unidad); <code>6389-6390</code> (activar/desactivar usuario sí confirma)</li>\n<li><strong>Evidencia:</strong> cerrar o reabrir una unidad no pide confirmación; desactivar usuario sí.</li>\n<li><strong>Problema:</strong> un clic accidental puede cerrar una unidad y afectar a todo el grupo.</li>\n<li><strong>Escenario:</strong> el profesor pulsa “Cerrar” sin querer; los alumnos pierden acceso hasta que la reabra.</li>\n<li><strong>Impacto:</strong> interrupción del estudio, soporte.</li>\n<li><strong>Recomendación:</strong> confirmar acciones que afecten a varios alumnos; mostrar el alcance (“se cerrará para 20 alumnos”); ofrecer deshacer.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"},"UX-08":{"id":"UX-08","title":"Sin ayuda contextual sobre intentos y completado","sev":"Bajo","prio":"P3","report":"07","html":"<ul>\n<li><strong>Severidad:</strong> Bajo</li>\n<li><strong>Categoría:</strong> UX / aprendizaje</li>\n<li><strong>Ubicación:</strong> <code>app.js</code> (quiz, botón “Completar unidad”)</li>\n<li><strong>Evidencia:</strong> la UI muestra “Reintentar” sin explicar cuántos intentos quedan ni cómo afecta; “Completar unidad” no dice qué falta.</li>\n<li><strong>Problema:</strong> el alumno no entiende las reglas del juego.</li>\n<li><strong>Escenario:</strong> el alumno reintenta un quiz varias veces sin saber que solo cuenta el primer intento (o que no hay límite).</li>\n<li><strong>Impacto:</strong> frustración, sensación de injusticia.</li>\n<li><strong>Recomendación:</strong> mostrar la política antes de empezar (“Tienes 3 intentos; cuenta el mejor”), el progreso (“2 de 5 ejercicios”) y un resumen al completar.</li>\n<li><strong>Prioridad:</strong> P3</li>\n<li><strong>Confianza:</strong> Alta</li>\n<li><strong>Estado:</strong> Abierto</li>\n</ul>\n<hr>"}};
+const rows = Array.from(document.querySelectorAll('#tbody tr'));
+const q = document.getElementById('q');
+const fSev = document.getElementById('f-sev');
+const fCat = document.getElementById('f-cat');
+const fPrio = document.getElementById('f-prio');
+const countEl = document.getElementById('count');
+const emptyEl = document.getElementById('empty');
+const cards = Array.from(document.querySelectorAll('[data-filter-sev]'));
+
+function apply() {
+  const term = q.value.trim().toLowerCase();
+  let visible = 0;
+  for (const tr of rows) {
+    const ok =
+      (!fSev.value || tr.dataset.sev === fSev.value) &&
+      (!fCat.value || tr.dataset.cat === fCat.value) &&
+      (!fPrio.value || tr.dataset.prio === fPrio.value) &&
+      (!term || tr.dataset.search.includes(term));
+    tr.style.display = ok ? '' : 'none';
+    if (ok) visible++;
+  }
+  countEl.textContent = visible + ' de ' + rows.length;
+  emptyEl.style.display = visible ? 'none' : 'block';
+  cards.forEach(c => c.classList.toggle('active', c.dataset.filterSev === fSev.value));
+}
+
+q.addEventListener('input', apply);
+[fSev, fCat, fPrio].forEach(el => el.addEventListener('change', apply));
+cards.forEach(card => card.addEventListener('click', () => {
+  fSev.value = fSev.value === card.dataset.filterSev ? '' : card.dataset.filterSev;
+  apply();
+  document.getElementById('hallazgos').scrollIntoView({ block: 'start' });
+}));
+
+const overlay = document.getElementById('overlay');
+const modalTitle = document.getElementById('modal-title');
+const modalMeta = document.getElementById('modal-meta');
+const modalBody = document.getElementById('modal-body');
+const closeBtn = document.getElementById('close');
+let lastFocus = null;
+
+function openDetail(id) {
+  const f = DATA[id];
+  if (!f) return;
+  lastFocus = document.activeElement;
+  modalTitle.textContent = f.id + ' · ' + f.title;
+  modalMeta.innerHTML =
+    '<span class="sev ' + (f.sev === 'Crítico' ? 'crit' : f.sev === 'Alto' ? 'high' : f.sev === 'Medio' ? 'med' : 'low') + '">' + f.sev + '</span>' +
+    '<span>Prioridad ' + (f.prio || '—') + '</span>' +
+    '<span>Informe ' + f.report + '</span>';
+  modalBody.innerHTML = f.html;
+  overlay.classList.add('open');
+  closeBtn.focus();
+}
+
+function closeDetail() {
+  overlay.classList.remove('open');
+  if (lastFocus) lastFocus.focus();
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button.detail');
+  if (btn) openDetail(btn.dataset.id);
+});
+closeBtn.addEventListener('click', closeDetail);
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) closeDetail();
+});
+
+apply();
+</script>
+</body>
+</html>

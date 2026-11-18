@@ -12,3 +12,8 @@ La especificación completa vive en `../../Fase-0/`.
 - [Ambientes](../../Fase-0/07-ambientes-y-respaldos.md)
 - [Backlog Fase 1](../../Fase-0/08-backlog-fase-1.md)
 - [Wireframes](../../Fase-0/WIREFRAMES.html)
+
+## Operación
+
+- [Staging](staging.md): creación del entorno, seeds ficticios, verificación y
+  suite de RLS negativa.

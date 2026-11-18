@@ -10,6 +10,7 @@ export interface CallerProfile {
   full_name: string;
   username: string | null;
   email: string | null;
+  must_change_password: boolean;
 }
 
 export interface Caller {
@@ -64,7 +65,7 @@ export async function requireCaller(req: Request): Promise<Caller> {
 
   const { data: profile, error: profileError } = await admin
     .from("profiles")
-    .select("id, role, active, full_name, username, email")
+    .select("id, role, active, full_name, username, email, must_change_password")
     .eq("id", data.user.id)
     .maybeSingle();
 
