@@ -79,12 +79,13 @@ async function login(email, password) {
   return data.access_token;
 }
 
-async function callFunction(name, token, body) {
+async function callFunction(name, token, body, extraHeaders = {}) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
     method: "POST",
     headers: {
       ...authHeaders,
       Authorization: `Bearer ${token}`,
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
   });
@@ -130,30 +131,29 @@ async function main() {
   console.log("3) invite-guardian (profesor)…");
   const invite = await callFunction("invite-guardian", teacherToken, {
     student_id: studentId,
-    full_name: "Tutor de Prueba WhatsApp",
+    full_name: "Tutor de Prueba Correo",
     phone: "+5215512345678",
     relationship: "madre",
-    email: "tutor.wa.pil001@tutores.ecoems.mx",
+    email: "tutor.correo.pil001@tutores.ecoems.mx",
   });
 
   if (invite.status !== 201 || !invite.data?.ok) {
     throw new Error(`invite-guardian falló: ${JSON.stringify(invite)}`);
   }
-  if (!invite.data.magic_link || !invite.data.whatsapp_share_url) {
-    throw new Error("invite-guardian no devolvió enlace ni URL de WhatsApp");
+  if (invite.data.magic_link || invite.data.whatsapp_share_url) {
+    throw new Error("invite-guardian devolvió un enlace mágico o de WhatsApp");
   }
-  if (invite.data.delivery !== "whatsapp") {
-    throw new Error(`Se esperaba delivery whatsapp: ${invite.data.delivery}`);
+  if (invite.data.delivery !== "email" || !invite.data.email_id) {
+    throw new Error(`Se esperaba entrega por correo encolada: ${JSON.stringify(invite.data)}`);
   }
-  console.log("   ✓ invitación creada · delivery:", invite.data.delivery);
-  console.log("   ✓ whatsapp_share_url empieza con wa.me:",
-    invite.data.whatsapp_share_url.startsWith("https://wa.me/"));
+  console.log("   ✓ invitación encolada · delivery:", invite.data.delivery);
+  console.log("   ✓ email_id:", invite.data.email_id);
 
   console.log("4) Reinvitación (mismo correo, no debe duplicar)…");
   const reinvite = await callFunction("invite-guardian", teacherToken, {
     student_id: studentId,
-    full_name: "Tutor de Prueba WhatsApp",
-    email: "tutor.wa.pil001@tutores.ecoems.mx",
+    full_name: "Tutor de Prueba Correo",
+    email: "tutor.correo.pil001@tutores.ecoems.mx",
     resend: true,
   });
   if (reinvite.status !== 201 || !reinvite.data?.ok) {
@@ -172,6 +172,25 @@ async function main() {
     throw new Error(`Se esperaba 403 y llegó ${teacherConsent.status}`);
   }
   console.log("   ✓ rechazado correctamente");
+
+  console.log("5b) CORS: origen desconocido (debe ser 403)…");
+  const corsProbe = await callFunction(
+    "guardian-consent",
+    teacherToken,
+    {
+      student_id: studentId,
+      document_version: PRIVACY_VERSION,
+      accepted: true,
+      acknowledged: true,
+    },
+    { Origin: "https://origen-no-autorizado.invalid" },
+  );
+  if (corsProbe.status !== 403) {
+    throw new Error(
+      `Se esperaba 403 por origen no permitido y llegó ${corsProbe.status}: ${JSON.stringify(corsProbe.data)}`,
+    );
+  }
+  console.log("   ✓ origen desconocido rechazado");
 
   console.log("6) Login del tutor existente (tutor1)…");
   const guardianToken = await login(guardian.email, guardian.password);

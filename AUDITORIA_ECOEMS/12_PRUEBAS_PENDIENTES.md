@@ -14,7 +14,7 @@ Este documento define las pruebas que faltan, cómo ejecutarlas en un entorno ai
 
 | Requisito | Detalle |
 |---|---|
-| Proyecto staging | `ecoems-staging`, con las 31 migraciones y el seed |
+| Proyecto staging | `ecoems-staging`, con las 38 migraciones (`0032`–`0038` incluidas) y el seed |
 | Usuarios ficticios | Un admin, un profesor con grupo, dos alumnos (uno con asignación, uno sin), un tutor vinculado sin consentimiento, un tutor no vinculado y un tutor con consentimiento vigente y revocado |
 | Contenido | Al menos una unidad publicada con `correctIndex`, una en borrador |
 | `psql` | Para pruebas SQL directas |
@@ -42,7 +42,7 @@ Todas las contraseñas son ficticias y viven solo en staging. El seed
 
 ### 2.2. Suite automatizada de RLS (COD-07)
 
-La suite `app/supabase/tests/rls/rls-negative.mjs` (113 checks) y su runner
+La suite `app/supabase/tests/rls/rls-negative.mjs` (135 verificaciones) y su runner
 `app/scripts/run-rls-tests.mjs` codifican el comportamiento **seguro esperado**.
 Descubren las identidades por rol, validan que el JWT simulado resuelva al rol
 correcto y hacen `rollback` en cada prueba.
@@ -59,12 +59,15 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 
 Los roles sin identidad se marcan **SKIP**, nunca PASS. Antes de la Fase 1 la
 línea base era de 6 FAIL (`SEC-01`: RLS-01, 02, 10, 11; `PRIV-02`: RLS-16, 50).
-Con las migraciones 0023–0027 y las Edge Functions de contraseña, invitación y
-consentimiento, la expectativa es **0 FAIL**; cualquier FAIL nuevo es una
-regresión. La suite añade RLS-89–91 (`SEC-03`), RLS-92–97 (`SEC-02`),
-RLS-98–107 (`PRIV-01`) y RLS-108–129 para la Fase 2: offboarding (`SEC-04`),
-perfil vocacional curado (`PRIV-03`) y pagos con trazabilidad (`FUN-02`). El
-runbook completo está en [`app/docs/staging.md`](../app/docs/staging.md).
+Con las migraciones 0023–0038 y las Edge Functions de contraseña, invitación,
+consentimiento, CORS y correo, la expectativa es **0 FAIL**; cualquier FAIL
+nuevo es una regresión. La suite añade RLS-89–91 (`SEC-03`), RLS-92–97
+(`SEC-02`), RLS-98–107 (`PRIV-01`), RLS-108–129 para la Fase 2 (offboarding,
+perfil vocacional curado y pagos con trazabilidad) y **RLS-130–148** para la
+Fase 3: integridad de asignaciones (`DB-01`), anonimización (`DB-02`), XP en
+servidor y reglas de completado (`DB-03/04`, `FUN-04/05`) y solicitudes ARCO
+(`PRIV-06`). El runbook completo está en
+[`app/docs/staging.md`](../app/docs/staging.md).
 
 ---
 
@@ -333,14 +336,21 @@ curl -s -X POST "$SB_URL/functions/v1/redeem-student-link-token" \
 
 **Evidencia:** respuestas HTTP, filas de `audit_log`, `profiles.password_changed_at` y ausencia del token en claro en la base y en los logs.
 
-### 5.4. SEC-06 / PRIV-08 · Magic link
+### 5.4. SEC-05 / SEC-06 · CORS e invitación por correo
 
-| # | Paso | Esperado |
+| # | Paso | Esperado corregido |
 |---|---|---|
-| AUTH-30 | Invitar tutor | se genera enlace con expiración corta |
-| AUTH-31 | Abrir el enlace en otro navegador | funciona una vez |
-| AUTH-32 | Reabrir el enlace | falla |
-| AUTH-33 | Inspeccionar el mensaje de WhatsApp | no incluye nombre del alumno (corregido) |
+| AUTH-30 | Invitar tutor desde el panel | `201` con `delivery: "email"` y `email_id`; sin `magic_link` ni `whatsapp_share_url` |
+| AUTH-31 | Consultar `email_outbox` | fila `guardian_invite` en `pending` con el enlace solo en el payload |
+| AUTH-32 | Abrir el enlace del correo en otro navegador | funciona una vez (procesador de correo pendiente) |
+| AUTH-33 | Reabrir el enlace | falla |
+| AUTH-34 | Llamar a una función con `Origin` del entorno | `200/201` y `Access-Control-Allow-Origin` igual al origen |
+| AUTH-35 | Llamar con `Origin: https://origen-no-autorizado.invalid` | **403** (RLS/CORS; `test-functions.mjs` lo verifica) |
+| AUTH-36 | Llamar sin `Origin` (health check) | permitido |
+
+**Evidencia:** respuesta HTTP sin enlaces, fila de `email_outbox`, evento
+`guardian.invited` en `audit_log` con `delivery: "email"` y salida de la prueba
+CORS negativa.
 
 ---
 
@@ -460,8 +470,9 @@ pendiente. Los consentimientos `v2-2026` dejan de ser vigentes al aplicar
 
 ```js
 // En la consola del navegador, tras cerrar sesión
-Object.keys(localStorage).filter(k => k.startsWith('ecoems_'));
-// Esperado corregido: solo preferencias no sensibles (tema, sidebar)
+Object.keys(localStorage).filter(k => k.startsWith('ecoems_') || k.startsWith('curso_'));
+// Esperado corregido: ninguna clave; se limpian también las heredadas
+// (lectura_reto_v1, mate_reto_v1, curso_comipems_v1, …)
 ```
 
 ---
@@ -572,6 +583,36 @@ npx lighthouse https://<staging>/ --only-categories=accessibility --output=json
 
 ---
 
+## 9.1. Pruebas de Fase 3 (P2 · 30 días)
+
+Todas requieren `0032`–`0038` aplicadas en staging. **No ejecutar en
+producción.** Las pruebas marcadas **W** escriben datos ficticios; las demás
+son de solo lectura o transaccionales con `ROLLBACK`.
+
+| # | Prueba | Hallazgo | Esperado |
+|---|---|---|---|
+| P3-01 | Crear dos asignaciones de la misma unidad en un grupo | DB-01 | la segunda falla por `unit_assignments_group_unit_uq` |
+| P3-02 | Crear alumno nuevo en grupo con asignación activa | FUN-03 | hereda la audiencia explícita solo según la política de la asignación |
+| P3-03 | Anonimizar un alumno ficticio con historial | DB-02 | seudónimo, sin `birth_date`, sin notas/consentimientos/vínculos; historial académico y financiero conservado |
+| P3-04 | Verificar `auth.users` tras la anonimización | DB-02 | **sigue existiendo**; el borrado definitivo es una acción separada |
+| P3-05 | Responder un ejercicio dos veces | DB-03 | un solo evento de XP por `source_id` nuevo (índice parcial) |
+| P3-06 | Llamar a `app_sync_player_state` con XP inflado | DB-03 / COD-02 | el XP se calcula desde eventos, no desde el valor del cliente |
+| P3-07 | Completar unidad sin responder nada | DB-04 / FUN-05 | falla; `app_unit_requirements` devuelve `can_complete = false` y el motivo |
+| P3-08 | Responder menos del 60 % de ejercicios o menos del 70 % de precisión | FUN-05 | el botón sigue deshabilitado y explica qué falta |
+| P3-09 | Agotar los intentos de una pregunta | FUN-04 | se respeta `max_attempts = 3`; con `0`, sin límite |
+| P3-10 | Solicitar recuperación de contraseña | FUN-06 | correo enviado; la UI no revela si la cuenta existe; `PASSWORD_RECOVERY` pide nueva contraseña |
+| P3-11 | Ver historial de pagos con más de 20 filas | FUN-09 | “Mostrando X de Y” y controles Anterior/Siguiente accesibles |
+| P3-12 | Abrir la pestaña admin `auditoria` | FUN-10 | eventos y solicitudes sin `before`/`after` |
+| P3-13 | Crear y resolver una solicitud ARCO | PRIV-06 | plazo de 20 días, estado, resolución y evento en `audit_log` |
+| P3-14 | Cerrar sesión y revisar `localStorage` | PRIV-04 / COD-01 | sin claves `ecoems_*` ni heredadas |
+| P3-15 | Navegar con teclado, abrir y cerrar cada diálogo | UX-01 / UX-02 | skip link, foco visible, Tab atrapado, Escape cierra y restaura foco |
+| P3-16 | Correr `staging-check.mjs` y la suite RLS (W) | OPS-07 / OPS-09 | 38/41/93/53 y 0 FAIL en 135 verificaciones |
+
+**Estado:** preparado en código, **sin ejecutar**. Los bloqueos son staging
+(`OPS-09`), el procesador de `email_outbox` y la validación legal del aviso.
+
+---
+
 ## 10. Matriz de cobertura
 
 | Hallazgo | Prueba(s) | Tipo |
@@ -606,7 +647,7 @@ npx lighthouse https://<staging>/ --only-categories=accessibility --output=json
 | FUN-10 | Pantalla de auditoría | E2E |
 | FUN-11 | Recarga tras logout | Manual |
 | COD-01 | Inspección de `localStorage` | Manual |
-| COD-02 | RLS-01…08 | SQL |
+| COD-02 | RLS-01…08, P3-06 | SQL / E2E |
 | COD-03 | Revisión de interpolaciones | Estática |
 | COD-04 | Ejecutar `npm run lint`/`test` | CI |
 | COD-05 | Revisión de estructura | Estática |
@@ -667,7 +708,7 @@ Cada prueba ejecutada debe dejar un registro como este:
 ## 12. Orden recomendado de ejecución
 
 1. **Preparar staging** y usuarios ficticios.
-2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 31 migraciones aplicadas.
+2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 38 migraciones aplicadas.
 3. **RLS-01…08** (contenido): confirma `SEC-01` y sirve de línea base.
 4. **RLS-16/50 y RLS-85…88** (notas internas).
 5. **RLS-30…33** (observaciones).
@@ -686,7 +727,8 @@ Cada prueba ejecutada debe dejar un registro como este:
 18. **OPS-20…23** (smoke).
 19. **OPS-42…45** (CI y despliegue).
 20. **UX-10…17** (accesibilidad).
-21. **Repetir la suite de 113 checks** después de cada corrección de Fase 2.
+21. **P3-01…16** (Fase 3: CORS, correo, DB-01/04, FUN-03/06, ARCO y UX).
+22. **Repetir la suite de 135 verificaciones** después de cada corrección de Fase 3.
 
 ---
 

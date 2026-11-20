@@ -41,6 +41,9 @@ const PRIVACY_DOCUMENT_VERSION = 'v3-2026';
 // navegador cargó el build más reciente (no una versión en caché).
 const APP_BUILD = 'v8-pulido';
 
+// FUN-09: tamaño de página compartido por los listados paginados.
+const PAGE_SIZE = 20;
+
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
   alumnos: '👥 Alumnos',
@@ -52,6 +55,7 @@ const staffTabLabels = {
   tutores: '💬 Tutores',
   usuarios: '🛠️ Usuarios',
   contenido: '🗂️ Contenido',
+  auditoria: '🧾 Auditoría',
   configuracion: '⚙️ Configuración'
 };
 
@@ -369,6 +373,7 @@ const state = {
   error: '',
   notice: '',
   staffTab: 'dashboard',
+  paymentsPage: 1,
   sidebarCollapsed: localStorage.getItem('ecoems_sidebar') === 'collapsed',
   collapsedSubjects: readCollapsedSubjects(),
   fichaStudentId: null,
@@ -380,11 +385,14 @@ const state = {
   activeTest: null,
   loading: true,
   pendingLoginUsername: '',
-  studentInvitation: null
+  studentInvitation: null,
+  passwordRecovery: false
 };
 
 let appRoot = null;
 let lastSessionToken = null;
+let passwordResetCleanup = null;
+let dataRequestCleanup = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -425,6 +433,36 @@ function tabParts(label) {
   return { emoji, text: rest.join(' ') };
 }
 
+// PRIV-04 / COD-01: el navegador no debe conservar preferencias ni borradores
+// de una sesión terminada. Se eliminan las claves actuales y las heredadas.
+const LEGACY_STORAGE_KEYS = [
+  'ecoems_nav_open',
+  'ecoems_sidebar_off',
+  'curso_comipems_v1',
+  'curso_ecoems_alumnos_v1',
+  'curso_ecoems_pagos_v1',
+  'curso_ecoems_asistencia_v1',
+  'curso_ecoems_plan_v1',
+  'curso_ecoems_perfiles_v1',
+  'curso_ecoems_entregas_v1',
+  'lectura_reto_v1',
+  'mate_reto_v1'
+];
+
+function clearLocalSessionData() {
+  const keys = new Set();
+
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key && key.startsWith('ecoems_')) keys.add(key);
+  }
+  for (const key of LEGACY_STORAGE_KEYS) keys.add(key);
+  for (const key of keys) localStorage.removeItem(key);
+
+  state.sidebarCollapsed = false;
+  state.collapsedSubjects = new Set();
+}
+
 function setError(message) {
   state.error = message;
   state.notice = '';
@@ -435,11 +473,65 @@ function setNotice(message) {
   state.error = '';
 }
 
+// UX-02: un solo helper para los diálogos. Mantiene el foco dentro mientras
+// el diálogo está abierto, cierra con Escape y devuelve el foco al disparador.
+// Devuelve la función de limpieza que deben llamar los `close*`.
+function trapDialogFocus(container, close) {
+  if (!container) return () => {};
+
+  const previous = document.activeElement;
+  const selector = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])'
+  ].join(',');
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const items = [...container.querySelectorAll(selector)].filter(
+      (element) => element.offsetParent !== null || element === document.activeElement
+    );
+    if (!items.length) return;
+
+    const first = items[0];
+    const last = items[items.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  document.addEventListener('keydown', onKeyDown);
+  requestAnimationFrame(() => {
+    (container.querySelector('[autofocus]') || container.querySelector(selector))?.focus();
+  });
+
+  return () => {
+    document.removeEventListener('keydown', onKeyDown);
+    if (previous?.isConnected && typeof previous.focus === 'function') previous.focus();
+  };
+}
+
 function alertMarkup() {
   if (!state.error && !state.notice) return '';
-  const type = state.error ? 'error' : 'notice';
+  const isError = Boolean(state.error);
+  const type = isError ? 'error' : 'notice';
   const text = state.error || state.notice;
-  return `<div class="alert ${type}" role="status">${escapeHtml(text)}</div>`;
+  return `<div class="alert ${type}" role="${isError ? 'alert' : 'status'}" aria-live="${isError ? 'assertive' : 'polite'}">${escapeHtml(text)}</div>`;
 }
 
 function headerMarkup() {
@@ -465,6 +557,10 @@ function privacyFooterMarkup() {
   return `
     <footer class="privacy-footer">
       <a href="${escapeHtml(url)}" target="_blank" rel="noopener">Aviso de privacidad</a>
+      ${state.session ? `
+        <span aria-hidden="true">·</span>
+        <button class="link-button" type="button" id="data-request-btn">Solicitar mis datos</button>
+      ` : ''}
       <span aria-hidden="true">·</span>
       <span>Versión ${escapeHtml(version)}</span>
       <span aria-hidden="true">·</span>
@@ -498,7 +594,7 @@ function renderLoading() {
   appRoot.innerHTML = `
     <div class="shell">
       ${headerMarkup()}
-      <main class="center">
+      <main id="main-content" tabindex="-1" class="center">
         <div class="panel loading-panel">
           <div class="spinner" aria-hidden="true"></div>
           <p>Cargando sesión…</p>
@@ -512,7 +608,7 @@ function renderConfig() {
   appRoot.innerHTML = `
     <div class="shell">
       ${headerMarkup()}
-      <main class="center">
+      <main id="main-content" tabindex="-1" class="center">
         <section class="panel config-panel">
           <span class="kicker">Fase 1 · base local</span>
           <h1>Falta conectar Supabase</h1>
@@ -544,7 +640,7 @@ function renderLogin() {
   appRoot.innerHTML = `
     <div class="shell">
       ${headerMarkup()}
-      <main class="center">
+      <main id="main-content" tabindex="-1" class="center">
         <section class="panel login-panel">
           <span class="kicker">Acceso al piloto</span>
           <h1>Entra a tu cuenta</h1>
@@ -573,8 +669,8 @@ function renderLogin() {
               <div class="guardian-login-note">
                 <span class="card-label">Acceso para tutores</span>
                 <h2>Usa tu enlace de acceso</h2>
-                <p>Tu profesor te comparte el enlace de acceso por <strong>WhatsApp</strong>. Tócalo y entrarás directo, sin contraseña.</p>
-                <p class="hint">¿El enlace venció o no lo tienes? Pídele a tu profesor que te lo reenvíe.</p>
+                <p>Tu profesor te envía el enlace de acceso por <strong>correo electrónico</strong>. Ábrelo desde tu bandeja de entrada y entrarás directo, sin contraseña.</p>
+                <p class="hint">¿El enlace venció o no lo tienes? Pídele a tu profesor que te reenvíe la invitación.</p>
               </div>
             ` : `
               <label class="field">
@@ -586,10 +682,15 @@ function renderLogin() {
                 <input name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
               </label>
             `}
-            ${isGuardian ? '' : `<button class="btn primary" type="submit" id="submit-btn">Entrar</button>`}
+            ${isGuardian ? '' : `
+              <div class="row">
+                <button class="btn primary" type="submit" id="submit-btn">Entrar</button>
+                <button class="btn ghost" type="button" id="forgot-password-btn">Olvidé mi contraseña</button>
+              </div>
+            `}
           </form>
 
-          <p class="fine-print">Si olvidaste tu contraseña, pide una temporal a tu profesor. El tutor entra con el enlace que recibe por WhatsApp.</p>
+          <p class="fine-print">Recupera tu contraseña con tu correo registrado. Los tutores entran con el enlace que reciben por correo.</p>
           ${privacyFooterMarkup()}
         </section>
       </main>
@@ -606,20 +707,225 @@ function renderLogin() {
   });
 
   appRoot.querySelector('#login-form').addEventListener('submit', handleLogin);
+  appRoot.querySelector('#forgot-password-btn')?.addEventListener('click', openPasswordReset);
   wireThemeToggle();
+}
+
+// FUN-06: recuperación de contraseña con el correo registrado. Supabase
+// envía el enlace; la interfaz nunca muestra si la cuenta existe o no.
+function passwordResetMarkup(prefill) {
+  return `
+    <div class="unit-assign-overlay" data-password-reset-overlay>
+      <section class="unit-assign-dialog" role="dialog" aria-modal="true" aria-labelledby="password-reset-title">
+        <button type="button" class="ficha-close" data-password-reset-close aria-label="Cerrar">✕</button>
+        <header class="unit-assign-head">
+          <span class="card-label">Recuperar acceso</span>
+          <h2 id="password-reset-title">Restablece tu contraseña</h2>
+          <p class="muted">Te enviaremos un enlace de un solo uso a tu correo registrado.</p>
+        </header>
+        <form id="password-reset-form" class="form">
+          <label class="field">
+            <span>Correo registrado</span>
+            <input name="email" type="email" autocomplete="email" value="${escapeHtml(prefill)}" placeholder="tu@correo.com" required>
+          </label>
+          <p class="hint">Si el correo existe en la plataforma, recibirás las instrucciones en unos minutos.</p>
+          <div class="unit-assign-error" data-password-reset-error hidden></div>
+          <footer class="unit-assign-foot">
+            <button type="button" class="btn ghost" data-password-reset-close>Cancelar</button>
+            <button type="submit" class="btn primary" id="password-reset-submit">Enviar enlace</button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function prefillResetEmail() {
+  const input = appRoot.querySelector('#login-form input[name="username"], #login-form input[name="email"]');
+  const raw = String(input?.value || '').trim();
+  if (!raw) return '';
+  return raw.includes('@') ? raw.toLowerCase() : toStudentEmail(raw);
+}
+
+function openPasswordReset() {
+  closePasswordReset();
+  document.body.insertAdjacentHTML('beforeend', passwordResetMarkup(prefillResetEmail()));
+  document.body.classList.add('unit-assign-open');
+
+  const overlay = document.querySelector('[data-password-reset-overlay]');
+  passwordResetCleanup = trapDialogFocus(overlay, closePasswordReset);
+
+  overlay.querySelectorAll('[data-password-reset-close]').forEach((button) => {
+    button.addEventListener('click', closePasswordReset);
+  });
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closePasswordReset();
+  });
+  overlay.querySelector('#password-reset-form').addEventListener('submit', submitPasswordReset);
+}
+
+function closePasswordReset() {
+  if (passwordResetCleanup) {
+    passwordResetCleanup();
+    passwordResetCleanup = null;
+  }
+  document.querySelectorAll('[data-password-reset-overlay]').forEach((overlay) => overlay.remove());
+  document.body.classList.remove('unit-assign-open');
+}
+
+async function submitPasswordReset(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const email = String(new FormData(form).get('email') || '').trim().toLowerCase();
+  const button = form.querySelector('#password-reset-submit');
+  const errorBox = form.querySelector('[data-password-reset-error]');
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errorBox) {
+      errorBox.textContent = 'Escribe un correo válido.';
+      errorBox.hidden = false;
+    }
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Enviando…';
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.href.split('#')[0]
+    });
+    if (error) throw error;
+  } catch {
+    // FUN-06: mantenemos el diálogo abierto para no perder lo escrito. El
+    // mensaje es neutro: no revela si la cuenta existe.
+    if (errorBox) {
+      errorBox.textContent = 'No se pudo enviar el enlace. Intenta de nuevo en unos minutos.';
+      errorBox.hidden = false;
+    }
+    button.disabled = false;
+    button.textContent = 'Enviar enlace';
+    return;
+  }
+
+  closePasswordReset();
+  setNotice('Si el correo está registrado, ya recibiste las instrucciones para crear tu contraseña.');
+  renderLogin();
+}
+
+// PRIV-06: canal interno para ejercer los derechos ARCO. La dirección de
+// contacto se configura en `settings`; mientras esté vacía no se inventa.
+function dataRequestMarkup() {
+  return `
+    <div class="unit-assign-overlay" data-data-request-overlay>
+      <section class="unit-assign-dialog" role="dialog" aria-modal="true" aria-labelledby="data-request-title">
+        <button type="button" class="ficha-close" data-data-request-close aria-label="Cerrar">✕</button>
+        <header class="unit-assign-head">
+          <span class="card-label">Privacidad</span>
+          <h2 id="data-request-title">Solicitar mis datos</h2>
+          <p class="muted">Registramos tu solicitud con fecha y plazo de respuesta en el portal.</p>
+        </header>
+        <form id="data-request-form" class="form">
+          <label class="field">
+            <span>Tipo de solicitud</span>
+            <select name="kind" required>
+              <option value="access">Acceso a mis datos</option>
+              <option value="rectification">Rectificación</option>
+              <option value="cancellation">Cancelación</option>
+              <option value="opposition">Oposición</option>
+              <option value="portability">Portabilidad</option>
+              <option value="revocation">Revocación de consentimiento</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Detalles (opcional)</span>
+            <textarea name="details" rows="4" maxlength="2000" placeholder="Explica qué necesitas"></textarea>
+          </label>
+          <div class="unit-assign-error" data-data-request-error hidden></div>
+          <footer class="unit-assign-foot">
+            <button type="button" class="btn ghost" data-data-request-close>Cancelar</button>
+            <button type="submit" class="btn primary">Enviar solicitud</button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function openDataRequest() {
+  closeDataRequest();
+  document.body.insertAdjacentHTML('beforeend', dataRequestMarkup());
+  document.body.classList.add('unit-assign-open');
+
+  const overlay = document.querySelector('[data-data-request-overlay]');
+  dataRequestCleanup = trapDialogFocus(overlay, closeDataRequest);
+
+  overlay.querySelectorAll('[data-data-request-close]').forEach((button) => {
+    button.addEventListener('click', closeDataRequest);
+  });
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeDataRequest();
+  });
+  overlay.querySelector('#data-request-form').addEventListener('submit', submitDataRequest);
+}
+
+function closeDataRequest() {
+  if (dataRequestCleanup) {
+    dataRequestCleanup();
+    dataRequestCleanup = null;
+  }
+  document.querySelectorAll('[data-data-request-overlay]').forEach((overlay) => overlay.remove());
+  document.body.classList.remove('unit-assign-open');
+}
+
+async function submitDataRequest(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const errorBox = form.querySelector('[data-data-request-error]');
+  const button = form.querySelector('button[type="submit"]');
+
+  button.disabled = true;
+  button.textContent = 'Enviando…';
+
+  let result;
+  try {
+    const response = await supabase.rpc('app_create_data_request', {
+      p_kind: String(data.get('kind') || ''),
+      p_details: String(data.get('details') || '').trim() || null
+    });
+    if (response.error) throw response.error;
+    result = response.data;
+  } catch (error) {
+    if (errorBox) {
+      errorBox.textContent = error?.message || 'No se pudo registrar la solicitud. Intenta de nuevo.';
+      errorBox.hidden = false;
+    }
+    button.disabled = false;
+    button.textContent = 'Enviar solicitud';
+    return;
+  }
+
+  closeDataRequest();
+
+  setNotice(`Solicitud registrada. Plazo de respuesta: ${formatDate(String(result?.due_at || '').slice(0, 10))}.`);
+  renderDashboard();
 }
 
 function renderChangePassword() {
   const name = state.profile?.full_name || '';
+  const recovery = Boolean(state.passwordRecovery);
 
   appRoot.innerHTML = `
     <div class="shell">
       ${headerMarkup()}
-      <main class="center">
+      <main id="main-content" tabindex="-1" class="center">
         <section class="panel login-panel">
-          <span class="kicker">Primer ingreso</span>
-          <h1>Hola, ${escapeHtml(name.split(' ')[0] || 'alumno')} 👋</h1>
-          <p class="muted">Tu contraseña actual es temporal. Crea una nueva que solo tú conozcas para continuar.</p>
+          <span class="kicker">${recovery ? 'Recuperación de acceso' : 'Primer ingreso'}</span>
+          <h1>${recovery ? 'Elige una nueva contraseña' : `Hola, ${escapeHtml(name.split(' ')[0] || 'alumno')} 👋`}</h1>
+          <p class="muted">${recovery
+            ? 'Usamos el enlace de recuperación que enviamos a tu correo. Crea una contraseña nueva para entrar.'
+            : 'Tu contraseña actual es temporal. Crea una nueva que solo tú conozcas para continuar.'}</p>
 
           ${alertMarkup()}
 
@@ -690,6 +996,7 @@ async function changePassword(event) {
     if (!result?.ok) throw new Error(result?.error || 'No se pudo actualizar la contraseña');
 
     state.profile = { ...(state.profile || {}), must_change_password: false };
+    state.passwordRecovery = false;
     setNotice('Contraseña actualizada. ¡Bienvenido!');
     state.view = 'dashboard';
     renderDashboard();
@@ -711,7 +1018,7 @@ function renderLinkRedemption(token) {
   appRoot.innerHTML = `
     <div class="shell">
       ${headerMarkup()}
-      <main class="center">
+      <main id="main-content" tabindex="-1" class="center">
         <section class="panel login-panel">
           <span class="kicker">Invitación de alumno</span>
           <h1>Crea tu contraseña</h1>
@@ -962,7 +1269,8 @@ async function fetchAdminDashboard() {
   const [
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
-    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes, billingStatusRes
+    unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes, billingStatusRes,
+    auditRes, dataRequestsRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -1002,7 +1310,17 @@ async function fetchAdminDashboard() {
       .select('id,student_id,amount,paid_at,method,period,notes,period_start,period_end,status,receipt_no,voided_at,void_reason')
       .order('paid_at', { ascending: false })
       .limit(600),
-    supabase.from('student_billing_status').select('*')
+    supabase.from('student_billing_status').select('*'),
+    supabase
+      .from('audit_log')
+      .select('id,actor_id,action,entity_type,entity_id,created_at')
+      .order('created_at', { ascending: false })
+      .limit(200),
+    supabase
+      .from('data_requests')
+      .select('id,profile_id,student_id,kind,details,status,received_at,due_at,resolved_at,resolution')
+      .order('received_at', { ascending: false })
+      .limit(200)
   ]);
 
   assertNoError(yearRes.error);
@@ -1027,6 +1345,8 @@ async function fetchAdminDashboard() {
   assertNoError(billingRes.error);
   assertNoError(paymentsRes.error);
   assertNoError(billingStatusRes.error);
+  assertNoError(auditRes.error);
+  assertNoError(dataRequestsRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -1113,6 +1433,8 @@ async function fetchAdminDashboard() {
     billingStatusByStudent: new Map(
       (billingStatusRes.data || []).map((row) => [row.student_id, row])
     ),
+    auditLog: auditRes.data || [],
+    dataRequests: dataRequestsRes.data || [],
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1780,7 +2102,7 @@ function renderFatal(title, message) {
   appRoot.innerHTML = `
     <div class="shell">
       ${headerMarkup()}
-      <main class="center">
+      <main id="main-content" tabindex="-1" class="center">
         <section class="panel config-panel">
           <span class="kicker">Error de acceso</span>
           <h1>${escapeHtml(title)}</h1>
@@ -2064,6 +2386,131 @@ function adminContentMarkup(data) {
       ` : '<p class="empty-state">Sin estadísticas de contenido.</p>'}
     </article>
   `;
+}
+
+const dataRequestKindLabels = {
+  access: 'Acceso',
+  rectification: 'Rectificación',
+  cancellation: 'Cancelación',
+  opposition: 'Oposición',
+  portability: 'Portabilidad',
+  revocation: 'Revocación'
+};
+
+const dataRequestStatusLabels = {
+  received: 'Recibida',
+  in_progress: 'En proceso',
+  resolved: 'Resuelta',
+  rejected: 'Rechazada'
+};
+
+// FUN-10 / PRIV-06: solo el administrador ve esta vista. No se renderizan
+// los campos `before`/`after` del audit_log para no duplicar datos personales.
+function adminAuditMarkup(data) {
+  const logs = data.auditLog || [];
+  const requests = data.dataRequests || [];
+  const actorNames = new Map((data.profiles || []).map((item) => [item.id, item.full_name || item.email || item.id]));
+
+  return `
+    <div class="section-title">
+      <div>
+        <span class="card-label">Gobierno</span>
+        <h2>Auditoría y solicitudes ARCO</h2>
+      </div>
+      <span class="pill">${logs.length} eventos · ${requests.length} solicitudes</span>
+    </div>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">PRIV-06</span>
+          <h2>Solicitudes de datos</h2>
+        </div>
+      </div>
+      ${requests.length ? `
+        <ul class="data-list audit-list">
+          ${requests.map((request) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(dataRequestKindLabels[request.kind] || request.kind)} · ${escapeHtml(dataRequestStatusLabels[request.status] || request.status)}</strong>
+                <small>Recibida: ${escapeHtml(formatDate(String(request.received_at).slice(0, 10)))} · Plazo: ${escapeHtml(formatDate(String(request.due_at).slice(0, 10)))}${request.resolved_at ? ` · Resuelta: ${escapeHtml(formatDate(String(request.resolved_at).slice(0, 10)))}` : ''}</small>
+                ${request.details ? `<p>${escapeHtml(request.details)}</p>` : ''}
+                ${request.resolution ? `<p class="muted"><strong>Resolución:</strong> ${escapeHtml(request.resolution)}</p>` : ''}
+              </div>
+              ${request.status === 'received' || request.status === 'in_progress' ? `
+                <div class="row">
+                  <select data-request-status="${escapeHtml(request.id)}" aria-label="Nuevo estado">
+                    <option value="in_progress">En proceso</option>
+                    <option value="resolved">Resuelta</option>
+                    <option value="rejected">Rechazada</option>
+                  </select>
+                  <input data-request-resolution="${escapeHtml(request.id)}" placeholder="Motivo de la resolución" minlength="10" aria-label="Motivo de la resolución">
+                  <button class="btn primary" data-resolve-request="${escapeHtml(request.id)}">Resolver</button>
+                </div>
+              ` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">No hay solicitudes registradas.</p>'}
+    </article>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">SEC-07</span>
+          <h2>Registro de acciones</h2>
+        </div>
+      </div>
+      ${logs.length ? `
+        <ul class="data-list audit-list">
+          ${logs.map((entry) => `
+            <li>
+              <div>
+                <strong>${escapeHtml(entry.action)}</strong>
+                <small>${escapeHtml(actorNames.get(entry.actor_id) || 'Sistema')} · ${escapeHtml(entry.entity_type)}${entry.entity_id ? ` · ${escapeHtml(entry.entity_id)}` : ''}</small>
+              </div>
+              <span class="pill">${escapeHtml(formatDate(String(entry.created_at).slice(0, 10)))}</span>
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="empty-state">Todavía no hay eventos auditados.</p>'}
+    </article>
+  `;
+}
+
+async function resolveDataRequest(button) {
+  const requestId = button.dataset.resolveRequest;
+  const status = appRoot.querySelector(`[data-request-status="${requestId}"]`)?.value;
+  const resolution = String(appRoot.querySelector(`[data-request-resolution="${requestId}"]`)?.value || '').trim();
+
+  if (status !== 'in_progress' && status !== 'resolved' && status !== 'rejected') {
+    setError('Selecciona un estado válido.');
+    renderDashboard();
+    return;
+  }
+
+  if (status !== 'in_progress' && resolution.length < 10) {
+    setError('Escribe una resolución de al menos 10 caracteres.');
+    renderDashboard();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+
+  const { error } = await supabase.rpc('app_resolve_data_request', {
+    p_request_id: requestId,
+    p_status: status,
+    p_resolution: resolution || 'Solicitud tomada en atención.'
+  });
+
+  if (error) {
+    setError(error.message || 'No se pudo actualizar la solicitud.');
+  } else {
+    setNotice('Solicitud actualizada y registrada en auditoría.');
+  }
+  renderDashboard();
+  await loadDashboard(state.profile);
 }
 
 function adminSettingsMarkup(data) {
@@ -2458,7 +2905,7 @@ function staffShellMarkup(data) {
   const collapsed = Boolean(state.sidebarCollapsed);
 
   const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
-  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'configuracion'];
+  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
   return `
@@ -2496,7 +2943,7 @@ function staffShellMarkup(data) {
       </aside>
 
       <div class="staff-main">
-        <main class="staff-content">
+        <main id="main-content" tabindex="-1" class="staff-content">
           ${alertMarkup()}
           ${staffTabContentMarkup(data, tab)}
           ${privacyFooterMarkup()}
@@ -2535,6 +2982,7 @@ function staffTabContentMarkup(data, tab) {
   if (tab === 'tutores') return staffTutoresTabMarkup(data);
   if (tab === 'usuarios') return adminUsersMarkup(data);
   if (tab === 'contenido') return adminContentMarkup(data);
+  if (tab === 'auditoria') return adminAuditMarkup(data);
   if (tab === 'configuracion') return adminSettingsMarkup(data);
   return staffDashboardTabMarkup(data);
 }
@@ -2765,7 +3213,7 @@ function staffCreateStudentMarkup(data) {
 
       <details class="admin-details" ${state.studentInvitation ? 'open' : ''}>
         <summary>Invitar alumno (elige su propia contraseña)</summary>
-        <p class="hint">Crea la cuenta y genera un enlace de un solo uso para que el alumno establezca su contraseña. Compártelo por WhatsApp: vence en 72 h y no se puede reutilizar.</p>
+        <p class="hint">Crea la cuenta y genera un enlace de un solo uso para que el alumno establezca su contraseña. Entrégalo por un canal seguro: vence en 72 h y no se puede reutilizar.</p>
         <form class="form" data-invite-student-form data-invite-group-default="${escapeHtml(groups[0]?.id || '')}">
           ${isAdmin ? `
             <label class="field">
@@ -2815,7 +3263,6 @@ function invitationMarkup(invitation) {
       </label>
       <div class="row">
         <button class="btn ghost" type="button" data-copy-invitation>Copiar enlace</button>
-        <a class="btn ghost" href="${escapeHtml(invitation.whatsappUrl)}" target="_blank" rel="noopener">Compartir por WhatsApp</a>
         <button class="btn ghost" type="button" data-dismiss-invitation>Ocultar</button>
       </div>
       <p><small>Usuario: ${escapeHtml(invitation.username)} · Matrícula: ${escapeHtml(invitation.studentCode)} · Vence: ${escapeHtml(invitation.expiresAtLabel)}</small></p>
@@ -3119,6 +3566,12 @@ function staffPaymentsTabMarkup(data) {
   const billing = data.billingByStudent || new Map();
   const billingStatus = data.billingStatusByStudent || new Map();
   const payments = data.payments || [];
+  const pageCount = Math.max(1, Math.ceil(payments.length / PAGE_SIZE));
+  const paymentsPage = Math.min(Math.max(1, state.paymentsPage), pageCount);
+  const visiblePayments = payments.slice(
+    (paymentsPage - 1) * PAGE_SIZE,
+    paymentsPage * PAGE_SIZE
+  );
 
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -3230,8 +3683,9 @@ function staffPaymentsTabMarkup(data) {
         </div>
       </div>
       ${payments.length ? `
+        ${paginationMarkup({ total: payments.length, page: paymentsPage, target: 'payments' })}
         <ul class="data-list pay-list">
-          ${payments.slice(0, 20).map((payment) => {
+          ${visiblePayments.map((payment) => {
             const student = students.find((item) => item.id === payment.student_id);
             return `
               <li>
@@ -3349,7 +3803,7 @@ function renderPayDialog() {
   document.querySelectorAll('[data-pay-overlay]').forEach((overlay) => overlay.remove());
 
   if (state.payDialog?.escHandler) {
-    document.removeEventListener('keydown', state.payDialog.escHandler);
+    state.payDialog.escHandler();
     state.payDialog.escHandler = null;
   }
 
@@ -3371,11 +3825,7 @@ function renderPayDialog() {
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) close();
   });
-  const onKeyDown = (event) => {
-    if (event.key === 'Escape') close();
-  };
-  document.addEventListener('keydown', onKeyDown);
-  state.payDialog.escHandler = onKeyDown;
+  state.payDialog.escHandler = trapDialogFocus(overlay, close);
 
   const form = overlay.querySelector('[data-pay-form]');
   if (form) form.addEventListener('submit', (event) => savePayDialog(event, form));
@@ -3405,7 +3855,7 @@ function renderPayDialog() {
 
 function closePayDialog() {
   if (state.payDialog?.escHandler) {
-    document.removeEventListener('keydown', state.payDialog.escHandler);
+    state.payDialog.escHandler();
   }
   state.payDialog = null;
   document.querySelectorAll('[data-pay-overlay]').forEach((overlay) => overlay.remove());
@@ -3665,7 +4115,7 @@ function staffTutoresTabMarkup(data) {
     <div class="section-title">
       <div>
         <span class="card-label">Tutores</span>
-        <h2>Invitaciones y avisos por WhatsApp</h2>
+        <h2>Invitaciones por correo y avisos a tutores</h2>
       </div>
     </div>
     <article class="card wide">
@@ -4253,11 +4703,7 @@ function bindTestModalEvents() {
     if (event.target === overlay) close();
   });
 
-  const onKeyDown = (event) => {
-    if (event.key === 'Escape') close();
-  };
-  document.addEventListener('keydown', onKeyDown);
-  state.activeTest.escHandler = onKeyDown;
+  state.activeTest.escHandler = trapDialogFocus(overlay, close);
 
   if (active.saved) {
     overlay.querySelectorAll('[data-test-retry]').forEach((button) => {
@@ -4401,7 +4847,7 @@ function renderTestModal() {
   document.querySelectorAll('[data-test-overlay]').forEach((overlay) => overlay.remove());
 
   if (state.activeTest?.escHandler) {
-    document.removeEventListener('keydown', state.activeTest.escHandler);
+    state.activeTest.escHandler();
     state.activeTest.escHandler = null;
   }
 
@@ -4434,7 +4880,7 @@ function startStudentTest(kind) {
 
 function closeTestModal({ silent = false, refresh = false } = {}) {
   if (state.activeTest?.escHandler) {
-    document.removeEventListener('keydown', state.activeTest.escHandler);
+    state.activeTest.escHandler();
   }
   state.activeTest = null;
   document.querySelectorAll('[data-test-overlay]').forEach((overlay) => overlay.remove());
@@ -4890,7 +5336,7 @@ function dashboardMarkup(profile) {
   return `
     <div class="shell">
       ${headerMarkup()}
-      <main class="dashboard">
+      <main id="main-content" tabindex="-1" class="dashboard">
         <section class="welcome">
           <div>
             <span class="kicker">Sesión activa</span>
@@ -4931,6 +5377,26 @@ function dashboardMarkup(profile) {
         </div>
       </main>
       ${privacyFooterMarkup()}
+    </div>
+  `;
+}
+
+// FUN-09: la misma interfaz para todos los listados: total, ventana visible
+// y controles con aria-label para lectores de pantalla.
+function paginationMarkup({ total, page, target, pageSize = PAGE_SIZE }) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, page), pages);
+  const from = total ? (current - 1) * pageSize + 1 : 0;
+  const to = Math.min(current * pageSize, total);
+
+  return `
+    <div class="pagination" aria-label="Paginación">
+      <span>Mostrando ${to - from + 1} de ${total} · filas ${from}–${to}</span>
+      <div class="row">
+        <button class="btn-mini" data-pagination="${escapeHtml(target)}" data-page="${current - 1}" ${current <= 1 ? 'disabled' : ''} aria-label="Página anterior">← Anterior</button>
+        <span aria-live="polite">Página ${current} de ${pages}</span>
+        <button class="btn-mini" data-pagination="${escapeHtml(target)}" data-page="${current + 1}" ${current >= pages ? 'disabled' : ''} aria-label="Página siguiente">Siguiente →</button>
+      </div>
     </div>
   `;
 }
@@ -5168,7 +5634,7 @@ function unitMarkup(unitView) {
     return `
       <div class="shell">
         ${headerMarkup()}
-        <main class="dashboard">
+        <main id="main-content" tabindex="-1" class="dashboard">
           <section class="welcome">
             <div>
               <span class="kicker">Unidad activa</span>
@@ -5205,11 +5671,18 @@ function unitMarkup(unitView) {
     || (Array.isArray(content.exercises) && content.exercises.length > 0)
     || (Array.isArray(content.quiz) && content.quiz.length > 0)
     || Boolean(content.reto);
+  const canComplete = unitView.requirements ? unitView.requirements.can_complete : true;
+  const maxAttempts = unitView.quizPolicy?.max_attempts;
+  const attemptCopy = maxAttempts === 0
+    ? 'sin límite de intentos'
+    : (Number.isInteger(maxAttempts) && maxAttempts > 0
+      ? `${maxAttempts} intentos por pregunta`
+      : '');
 
   return `
     <div class="shell">
       ${headerMarkup()}
-      <main class="dashboard">
+      <main id="main-content" tabindex="-1" class="dashboard">
         <section class="welcome">
           <div>
             <span class="kicker">Unidad activa</span>
@@ -5244,14 +5717,23 @@ function unitMarkup(unitView) {
             ? content.sections.map((section) => sectionMarkup(section, state.unitResults)).join('')
             : realContentMarkup(content)}
           ${quizBlockMarkup(content, state.unitResults)}
+          ${attemptCopy ? `<p class="hint">Política de intentos: ${escapeHtml(attemptCopy)}.</p>` : ''}
 
           ${hasQuestions ? '' : '<article class="card wide"><p class="empty-state">Esta versión todavía no tiene ejercicios.</p></article>'}
+
+          ${unitView.requirements ? `
+            <article class="card wide requirement-card" role="status" aria-live="polite">
+              <span class="card-label">Requisitos de completado</span>
+              <p>${escapeHtml(unitView.requirements.message)}</p>
+              <small class="muted">Mínimo ${escapeHtml(String(unitView.requirements.rules?.min_exercises_pct ?? 60))} % de ejercicios y ${escapeHtml(String(unitView.requirements.rules?.min_quiz_accuracy ?? 70))} % de precisión en el quiz.</small>
+            </article>
+          ` : ''}
         </div>
 
         <div class="row end">
           <button class="btn ghost" id="back-btn">Volver al panel</button>
-          <button class="btn primary" id="complete-unit-btn" ${isDone ? 'disabled' : ''}>
-            ${isDone ? 'Unidad completada' : 'Marcar como completada'}
+          <button class="btn primary" id="complete-unit-btn" ${isDone || !canComplete ? 'disabled' : ''}>
+            ${isDone ? 'Unidad completada' : (canComplete ? 'Marcar como completada' : 'Faltan requisitos')}
           </button>
         </div>
       </main>
@@ -5320,22 +5802,28 @@ async function openUnit(assignmentId) {
     unit: item.unit,
     version: null,
     progress: item.progress,
+    requirements: null,
+    quizPolicy: null,
     loading: true
   };
   renderUnit();
 
   try {
-    const [versionRes, startRes] = await Promise.all([
+    const [versionRes, startRes, requirementsRes, policyRes] = await Promise.all([
       supabase
         .from('unit_versions')
         .select('content,version')
         .eq('id', item.unit_version_id)
         .maybeSingle(),
-      supabase.rpc('app_start_unit', { p_assignment_id: item.id })
+      supabase.rpc('app_start_unit', { p_assignment_id: item.id }),
+      supabase.rpc('app_unit_requirements', { p_assignment_id: item.id }),
+      supabase.rpc('app_quiz_policy')
     ]);
 
     assertNoError(versionRes.error);
     assertNoError(startRes.error);
+    assertNoError(requirementsRes.error);
+    assertNoError(policyRes.error);
     if (state.view !== 'unit' || state.unitView?.assignment.id !== item.id) return;
 
     state.unitView = {
@@ -5343,6 +5831,8 @@ async function openUnit(assignmentId) {
       unit: item.unit,
       version: versionRes.data,
       progress: startRes.data || item.progress,
+      requirements: requirementsRes.data,
+      quizPolicy: policyRes.data,
       loading: false
     };
   } catch (error) {
@@ -5352,6 +5842,21 @@ async function openUnit(assignmentId) {
     state.unitView = { ...state.unitView, loading: false };
   }
 
+  renderUnit();
+}
+
+async function refreshUnitRequirements() {
+  const unitView = state.unitView;
+  if (!unitView || unitView.loading) return;
+
+  const { data, error } = await supabase.rpc('app_unit_requirements', {
+    p_assignment_id: unitView.assignment.id
+  });
+
+  if (error) return;
+  if (state.view !== 'unit' || state.unitView?.assignment.id !== unitView.assignment.id) return;
+
+  state.unitView = { ...state.unitView, requirements: data };
   renderUnit();
 }
 
@@ -5429,6 +5934,7 @@ async function answerQuestion(event) {
   }
 
   renderUnit();
+  void refreshUnitRequirements();
 }
 
 async function completeUnit() {
@@ -5449,7 +5955,8 @@ async function completeUnit() {
   });
 
   if (error) {
-    setError('No se pudo completar la unidad. Revisa la conexión e intenta de nuevo.');
+    // DB-04/FUN-05: el servidor devuelve qué falta; no ocultamos el motivo.
+    setError(error.message || 'No se pudo completar la unidad. Revisa la conexión e intenta de nuevo.');
     renderUnit();
     return;
   }
@@ -5591,11 +6098,7 @@ function bindUnitAssignDialog() {
     if (event.target === overlay) close();
   });
 
-  const onKeyDown = (event) => {
-    if (event.key === 'Escape') close();
-  };
-  document.addEventListener('keydown', onKeyDown);
-  active.escHandler = onKeyDown;
+  active.escHandler = trapDialogFocus(overlay, close);
 
   overlay.querySelectorAll('[data-unit-assign-student]').forEach((input) => {
     input.addEventListener('change', () => {
@@ -5631,7 +6134,7 @@ function renderUnitAssignDialog() {
   document.querySelectorAll('[data-unit-assign-overlay]').forEach((overlay) => overlay.remove());
 
   if (state.unitAssign?.escHandler) {
-    document.removeEventListener('keydown', state.unitAssign.escHandler);
+    state.unitAssign.escHandler();
     state.unitAssign.escHandler = null;
   }
 
@@ -5652,7 +6155,7 @@ function renderUnitAssignDialog() {
 
 function closeUnitAssignDialog() {
   if (state.unitAssign?.escHandler) {
-    document.removeEventListener('keydown', state.unitAssign.escHandler);
+    state.unitAssign.escHandler();
   }
   state.unitAssign = null;
   document.querySelectorAll('[data-unit-assign-overlay]').forEach((overlay) => overlay.remove());
@@ -6359,11 +6862,7 @@ function bindFichaEvents(studentId) {
   const observationForm = overlay.querySelector(`[data-add-observation="${studentId}"]`);
   if (observationForm) observationForm.addEventListener('submit', (event) => addObservation(event, studentId));
 
-  const onKeyDown = (event) => {
-    if (event.key === 'Escape') close();
-  };
-  document.addEventListener('keydown', onKeyDown);
-  state.fichaEscHandler = onKeyDown;
+  state.fichaEscHandler = trapDialogFocus(overlay, close);
 
   loadObservations(studentId);
 }
@@ -6376,7 +6875,8 @@ function closeStudentFicha({ silent = false } = {}) {
   document.body.classList.remove('ficha-open');
 
   if (state.fichaEscHandler) {
-    document.removeEventListener('keydown', state.fichaEscHandler);
+    // El helper ya devuelve el foco al disparador; no lo duplicamos aquí.
+    state.fichaEscHandler();
     state.fichaEscHandler = null;
   }
 
@@ -6976,6 +7476,16 @@ function renderDashboard() {
     });
   });
 
+  appRoot.querySelectorAll('[data-pagination]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const page = Number(button.dataset.page);
+      if (!Number.isFinite(page) || page < 1) return;
+      if (button.dataset.pagination === 'payments') state.paymentsPage = page;
+      renderDashboard();
+      appRoot.querySelector('[data-pagination]')?.scrollIntoView({ block: 'nearest' });
+    });
+  });
+
   appRoot.querySelectorAll('[data-ficha-toggle]').forEach((button) => {
     button.addEventListener('click', () => openStudentFicha(button.dataset.fichaToggle, button));
   });
@@ -7053,6 +7563,10 @@ function renderDashboard() {
 
   appRoot.querySelectorAll('[data-save-setting]').forEach((button) => {
     button.addEventListener('click', () => saveSetting(button.dataset.saveSetting, button));
+  });
+
+  appRoot.querySelectorAll('[data-resolve-request]').forEach((button) => {
+    button.addEventListener('click', () => resolveDataRequest(button));
   });
 
   appRoot.querySelectorAll('[data-create-student-group]').forEach((form) => {
@@ -7497,20 +8011,12 @@ async function issueStudentLinkToken(event, groupId) {
     if (!token) throw new Error('La invitación llegó sin token.');
 
     const redeemUrl = buildRedeemUrl(token);
-    const whatsappMessage = [
-      `Hola ${fullName} 👋`,
-      'Soy el Prof. Luis. Te invito a la plataforma ECOEMS.',
-      `Tu usuario será: ${result.access?.username || ''}`,
-      'Crea tu contraseña con este enlace. Vence en 72 h y funciona una sola vez:',
-      redeemUrl
-    ].join('\n');
 
     state.studentInvitation = {
       fullName,
       username: result.access?.username || '',
       studentCode: result.student?.student_code || studentCode || '',
       redeemUrl,
-      whatsappUrl: `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`,
       expiresAtLabel: invitationExpiryLabel(result.invitation?.expires_at)
     };
 
@@ -7544,20 +8050,12 @@ async function reissueStudentInvitation(studentId, button) {
     const redeemUrl = buildRedeemUrl(token);
     const fullName = result.access?.full_name || button.dataset.studentName || 'el alumno';
     const username = result.access?.username || '';
-    const whatsappMessage = [
-      `Hola ${fullName} 👋`,
-      'Soy el Prof. Luis. Este es tu nuevo enlace de acceso a ECOEMS.',
-      `Tu usuario es: ${username}`,
-      'Crea tu contraseña con este enlace. Vence en 72 h y funciona una sola vez:',
-      redeemUrl
-    ].join('\n');
 
     state.studentInvitation = {
       fullName,
       username,
       studentCode: result.student?.student_code || '',
       redeemUrl,
-      whatsappUrl: `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`,
       expiresAtLabel: invitationExpiryLabel(result.invitation?.expires_at)
     };
 
@@ -7924,24 +8422,10 @@ async function inviteGuardian(event) {
     if (box) {
       box.classList.remove('hidden');
       box.innerHTML = `
-        <span class="card-label">Invitación lista · ${escapeHtml(fullName)}</span>
-        <p>Comparte el enlace de acceso por WhatsApp. El tutor entra sin contraseña; si el enlace caduca, vuelve a generar otro con el mismo botón.</p>
-        <div class="row">
-          <a class="btn primary" href="${escapeHtml(result.whatsapp_share_url)}" target="_blank" rel="noopener">Compartir por WhatsApp</a>
-          <button class="btn ghost" data-copy-link="${escapeHtml(result.magic_link)}">Copiar enlace</button>
-        </div>
-        <p class="invite-link" title="${escapeHtml(result.magic_link)}">${escapeHtml(result.magic_link)}</p>
+        <span class="card-label">Invitación enviada · ${escapeHtml(fullName)}</span>
+        <p>${escapeHtml(result.message || `Correo encolado para ${result.email || 'el tutor'}.`)}</p>
+        <p class="hint">El enlace de acceso viaja en el correo, no en esta pantalla ni en un chat. Si caduca, vuelve a generarlo con el mismo botón.</p>
       `;
-
-      const copyButton = box.querySelector('[data-copy-link]');
-      copyButton.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(copyButton.dataset.copyLink);
-          copyButton.textContent = '¡Copiado!';
-        } catch {
-          copyButton.textContent = 'No se pudo copiar';
-        }
-      });
     }
   } catch (error) {
     setError(error?.message || 'No se pudo crear la invitación. Revisa la conexión.');
@@ -8032,6 +8516,8 @@ async function revokeConsent(studentId, name, button) {
 
 async function signOut() {
   await supabase.auth.signOut();
+  clearLocalSessionData();
+  applyTheme();
   state.session = null;
   state.profile = null;
   state.dashboard = null;
@@ -8065,6 +8551,12 @@ export function initApp(root) {
 
   renderLoading();
 
+  // PRIV-06: delegación global porque el pie de privacidad aparece en varias
+  // vistas (login, panel, auditoría y cambio de contraseña).
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#data-request-btn')) openDataRequest();
+  });
+
   supabase.auth.getSession().then(({ data }) => {
     if (data.session) handleSession(data.session);
     else renderLogin();
@@ -8072,10 +8564,30 @@ export function initApp(root) {
 
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT') {
+      clearLocalSessionData();
+      applyTheme();
       state.session = null;
       state.profile = null;
+      state.dashboard = null;
+      state.dashboardError = '';
+      state.view = 'dashboard';
+      state.unitView = null;
+      state.unitResults = {};
       lastSessionToken = null;
       renderLogin();
+      return;
+    }
+
+    if (event === 'PASSWORD_RECOVERY' && session) {
+      // FUN-06: el enlace de Supabase ya trae una sesión válida; pedimos la
+      // contraseña nueva antes de mostrar el panel.
+      void (async () => {
+        await handleSession(session);
+        if (!state.profile) return;
+        state.passwordRecovery = true;
+        state.view = 'change-password';
+        renderChangePassword();
+      })();
       return;
     }
 

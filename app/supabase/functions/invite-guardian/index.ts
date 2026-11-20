@@ -5,6 +5,7 @@ import {
   getStudent,
   requireCaller,
 } from "../_shared/auth.ts";
+import { queueGuardianInvite } from "../_shared/email.ts";
 import { handleError, handleOptions, HttpError, jsonResponse, readJson } from "../_shared/http.ts";
 import { asBoolean, asEmail, asString, asUuid, optionalString } from "../_shared/validation.ts";
 
@@ -123,15 +124,17 @@ Deno.serve(async (req) => {
 
     const link = linkData.properties.action_link;
 
-    // Entrega por WhatsApp: no se envía correo. El profesor comparte el
-    // enlace con el tutor por el medio que prefiera (WhatsApp, impreso, etc.).
-    const whatsappMessage = [
-      `Hola ${fullName} 👋`,
-      `Soy el Prof. Luis. Te invito a la plataforma ECOEMS para dar seguimiento a ${studentProfile?.full_name ?? student.student_code}.`,
-      `Entra con este enlace: ${link}`,
-    ].join("\n");
-
-    const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+    // SEC-06: el enlace viaja por correo, nunca por WhatsApp ni en la
+    // respuesta de la función. El procesador de email_outbox es el único que
+    // lee el payload y registra el envío.
+    const emailId = await queueGuardianInvite(admin, {
+      toEmail: email,
+      guardianName: fullName,
+      studentName: studentProfile?.full_name ?? student.student_code,
+      studentCode: student.student_code,
+      magicLink: link,
+      resend,
+    });
 
     await audit(
       admin,
@@ -143,7 +146,8 @@ Deno.serve(async (req) => {
         guardian_email: email,
         student_id: studentId,
         student_code: student.student_code,
-        delivery: "whatsapp",
+        delivery: "email",
+        email_id: emailId,
         resend,
       },
       req,
@@ -155,9 +159,9 @@ Deno.serve(async (req) => {
         guardian_id: guardianRow.id,
         email,
         resend,
-        delivery: "whatsapp",
-        magic_link: link,
-        whatsapp_share_url: whatsappShareUrl,
+        delivery: "email",
+        email_id: emailId,
+        message: "Invitación enviada por correo. Pide al tutor que revise su bandeja de entrada.",
       },
       201,
     );

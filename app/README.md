@@ -62,7 +62,7 @@ app/
 - [x] Estructura del repositorio.
 - [x] Vite + módulos JS.
 - [x] Cliente Supabase con variables de entorno.
-- [x] Login de alumno, profesor y tutor (tutor: enlace por WhatsApp, sin correo).
+- [x] Login de alumno, profesor y tutor (tutor: invitación por correo, sin enlace en la UI).
 - [x] Carga de perfil y redirección por rol.
 - [x] Migración inicial con 34 tablas.
 - [x] RLS activo en todas las tablas.
@@ -79,8 +79,10 @@ app/
       ejemplos, errores comunes, capítulo, flashcards y quiz).
 - [x] Edge Functions desplegadas: `admin-create-student`,
       `admin-reset-student-password`, `invite-guardian` y `guardian-consent`.
-- [x] Invitación de tutores **por WhatsApp** (botón en el panel del profesor;
-      sin envío de correos) y consentimiento del tutor funcional E2E.
+- [x] Invitación de tutores **por correo** (`SEC-06`): `invite-guardian`
+      encola `guardian_invite` en `email_outbox`; la respuesta y la UI no
+      devuelven el enlace mágico ni una URL de WhatsApp. El procesador de la
+      cola queda como trabajo operativo posterior.
 - [x] Frontend publicado en GitHub Pages y verificado contra la URL pública
       (flujos de alumno, curso, profesor y admin).
 - [x] Altas de alumnos desde el panel del profesor y del admin (contraseña
@@ -162,7 +164,23 @@ app/
 - [x] Registro de actividades (`0015`): línea de tiempo de ejercicios,
       unidades completadas, entregas, calificaciones y observaciones, con
       filtros por tipo.
-- [ ] Aviso de privacidad validado por un abogado antes del piloto real.
+- [x] Fase 3 preparada (sin aplicar): CORS por entorno (`SEC-05`), invitación
+      por correo (`SEC-06`), auditoría y runbooks (`SEC-07`, `OPS-06/07`),
+      migraciones `0032`–`0038` (integridad de asignaciones, anonimización,
+      XP en servidor, reglas de completado, intentos, ARCO y baneo), reglas e
+      intentos desde RPC (`COD-02`), recuperación de contraseña (`FUN-06`),
+      paginación con totales (`FUN-09`), pestaña de auditoría (`FUN-10`),
+      limpieza de `localStorage` (`PRIV-04`), diálogo ARCO (`PRIV-06`) y
+      accesibilidad (`UX-01/02`). La suite RLS tiene 135 verificaciones y
+      `staging-check.mjs` verifica 38 migraciones, 41 tablas, 93 políticas y
+      53 funciones `SECURITY DEFINER`. **Nada de esto está aplicado ni
+      desplegado.**
+- [ ] Aplicar `0032`–`0038` en staging, desplegar las Edge Functions con
+      `ALLOWED_ORIGIN`, correr la suite RLS y `staging-check.mjs` sin avisos.
+- [ ] Implementar el procesador de `email_outbox` para entregar las
+      invitaciones encoladas.
+- [ ] Aviso de privacidad validado por un abogado antes del piloto real y
+      correo institucional de contacto para solicitudes ARCO.
 - [ ] Mover el progreso histórico de localStorage a Supabase (opcional: el
       reproductor ya sincroniza en tiempo real; localStorage queda de respaldo).
 
@@ -215,8 +233,20 @@ MODE=curso node scripts/ui-smoke.mjs    # reproductor protegido
 TEST_WRITE=1 APP_URL=https://monetarytexas42.github.io/CursosProfeLuis/ MODE=student node scripts/ui-smoke.mjs
 TEST_WRITE=1 APP_URL=https://monetarytexas42.github.io/CursosProfeLuis/ MODE=teacher node scripts/ui-smoke.mjs
 
-# Prueba E2E de las Edge Functions desplegadas
-node scripts/test-functions.mjs
+# Prueba E2E de las Edge Functions desplegadas (solo staging)
+APP_ENV=staging node scripts/test-functions.mjs
+
+# Verificación de staging (solo lectura)
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+VITE_SUPABASE_URL="https://<REF_STAGING>.supabase.co" \
+  node scripts/staging-check.mjs
+
+# Suite de RLS negativa (solo lectura, 135 verificaciones)
+DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/run-rls-tests.mjs
+
+# Validar el aviso de privacidad versionado
+node scripts/privacy-doc.mjs --check
 ```
 
 ## Reglas
@@ -230,5 +260,8 @@ node scripts/test-functions.mjs
 ## Siguiente paso
 
 Crear el proyecto staging desde el dashboard ([supabase.com/dashboard/new](https://supabase.com/dashboard/new))
-y aplicar las migraciones con `db push`. Validar el aviso de privacidad con un
+y aplicar las migraciones con `db push`. El procedimiento completo, incluida la
+configuración de `ALLOWED_ORIGIN`, está en [docs/staging.md](docs/staging.md);
+los controles de la Fase 3 en [docs/seguridad.md](docs/seguridad.md) y
+[docs/monitoreo.md](docs/monitoreo.md). Validar el aviso de privacidad con un
 abogado antes de cargar datos reales y de ampliar el piloto.

@@ -262,19 +262,24 @@ Para evitar confusiones en la revisión:
 
 ## 8. Criterio de salida del piloto
 
-> **Estado a 17 nov 2026:** la Fase 0 (`OPS-05`, `COD-07`), la Fase 1
-> (`SEC-01`, `SEC-02`, `SEC-03`, `PRIV-01`, `PRIV-02`/`DB-08`, `OPS-03`) y la
+> **Estado a 20 nov 2026:** la Fase 0 (`OPS-05`, `COD-07`), la Fase 1
+> (`SEC-01`, `SEC-02`, `SEC-03`, `PRIV-01`, `PRIV-02`/`DB-08`, `OPS-03`), la
 > Fase 2 (`SEC-04`, `FUN-01`, `FUN-02`, `PRIV-03`, `PRIV-05`/`OPS-01`,
-> `OPS-02`, `OPS-04`, `DB-07`) están **implementadas en código y versionadas,
-> pero no aplicadas ni verificadas en staging**. Por eso las casillas siguen
-> abiertas: la corrección no se declara terminada hasta ejecutar las
-> migraciones (`0028`–`0031`), desplegar `deactivate-user` y correr la suite de
-> **113 checks** en un entorno aislado. `OPS-09` (staging real) continúa
-> bloqueado por falta de credenciales.
+> `OPS-02`, `OPS-04`) y la Fase 3 (`SEC-05`, `SEC-06`, `SEC-07`, `DB-01`–`04`,
+> `FUN-03`–`06`, `FUN-09`, `FUN-10`, `COD-01`, `COD-02`, `UX-01`, `UX-02`,
+> `PRIV-04`, `PRIV-06`, `OPS-06`, `OPS-07`, documentación de `OPS-09`) están
+> **implementadas en código y versionadas, pero no aplicadas ni verificadas en
+> staging**. Por eso las casillas siguen abiertas: la corrección no se declara
+> terminada hasta ejecutar las migraciones (`0023`–`0038`), desplegar las Edge
+> Functions con `ALLOWED_ORIGIN` y correr la suite de **135 verificaciones** en un
+> entorno aislado. `OPS-09` (staging real) continúa bloqueado por falta de
+> credenciales.
 >
-> Queda un pendiente funcional dentro de `FUN-02`: el recibo descargable en
-> PDF. El folio, el periodo, el saldo, la detección de duplicados y la
-> anulación auditada ya están implementados.
+> Quedan pendientes funcionales: el recibo descargable en PDF de `FUN-02`, el
+> procesador de `email_outbox` de `SEC-06` y la validación legal del aviso
+> `v3-2026` con el correo de contacto de `PRIV-06`. `DB-07` requiere acceso de
+> solo lectura a producción; el borrado definitivo de `auth.users` queda como
+> acción coordinada separada.
 
 Para declarar que la plataforma puede operar con datos reales de menores, deben cumplirse **todos** estos:
 
@@ -310,3 +315,4 @@ Los demás hallazgos (Medio/Bajo) pueden planificarse después, siempre que no s
 | ¿Cuál es el más peligroso para los datos? | `OPS-02`: truncate sin confirmación |
 | ¿Qué falta para poder corregir con seguridad? | Staging (`OPS-09`) y pruebas negativas (`COD-07`) |
 | ¿Se puede operar hoy con datos reales? | No, sin aceptar riesgos altos documentados |
+| ¿Qué cambios tiene la Fase 3? | Migraciones `0032`–`0038`, CORS por entorno, correo de invitación, reglas de progreso en servidor, ARCO y accesibilidad; nada aplicado ni desplegado |

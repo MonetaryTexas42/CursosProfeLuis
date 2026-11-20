@@ -35,17 +35,25 @@ migrations/
   0029_payments_traceability.sql periodo, saldo, folio, duplicados y anulación (FUN-02)
   0030_vocational_visibility.sql perfil vocacional curado para la familia (PRIV-03)
   0031_privacy_notice_v3.sql    aviso v3-2026 con finalidad educativa (PRIV-03)
+  0032_unit_assignment_integrity.sql  unicidad y audiencia explícita (DB-01/FUN-03)
+  0033_student_anonymization.sql anonimización con seudónimo (DB-02)
+  0034_server_side_xp.sql       XP calculado en servidor desde eventos (DB-03)
+  0035_unit_completion_rules.sql requisitos para completar unidad (DB-04/FUN-05)
+  0036_quiz_attempt_policy.sql  límite de intentos por pregunta (FUN-04)
+  0037_data_requests.sql        canal ARCO y registro de solicitudes (PRIV-06)
+  0038_ban_audit.sql            auditoría de baneo de cuentas (SEC-07)
 tests/
   0004_progress_rpcs.sql       prueba SQL transaccional de las RPC de progreso
   0006_game_reading_rpcs.sql   prueba SQL transaccional de juegos y lectura
   0007_content_smoke.sql       flujo completo con contenido real (asignación → completar)
-  rls/rls-negative.mjs         suite de RLS negativa (113 checks, ver COD-07)
+  rls/rls-negative.mjs         suite de RLS negativa (135 verificaciones, ver COD-07)
 ```
 
-El repositorio contiene **31 migraciones**. Un entorno creado desde cero
-(staging) tiene 40 tablas, RLS en todas y 90 políticas. El estado real de
-producción **no está verificado** (`DB-07`): no se debe asumir que las 31
-migraciones estén aplicadas ni que producción coincida con el repositorio.
+El repositorio contiene **38 migraciones**. Un entorno creado desde cero
+(staging) tiene 41 tablas, RLS en todas, 93 políticas y 53 funciones
+`SECURITY DEFINER`. El estado real de producción **no está verificado**
+(`DB-07`): no se debe asumir que las 38 migraciones estén aplicadas ni que
+producción coincida con el repositorio.
 `scripts/verify-migrations.mjs` compara lo aplicado con los archivos locales.
 
 ## Configuración versionada
@@ -75,7 +83,7 @@ cambia el comportamiento de Auth para todos los usuarios del proyecto.
 
 ## Suite de RLS negativa (COD-07)
 
-`tests/rls/rls-negative.mjs` contiene 113 verificaciones que expresan el
+`tests/rls/rls-negative.mjs` contiene 135 verificaciones que expresan el
 comportamiento **seguro esperado** para `anon`, alumno con y sin asignación,
 tutor con y sin vínculos, tutor con consentimiento vigente, profesor, otro
 profesor y admin. Se ejecuta con un runner que descubre identidades reales,
@@ -93,10 +101,12 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 - `2`: error de configuración o conexión.
 
 Los roles sin identidad se marcan **SKIP**, nunca PASS. Antes de la Fase 1 la
-línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0031` aplicadas y
+línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0038` aplicadas y
 los fixtures de consentimiento, la expectativa es **0 FAIL**; cualquier FAIL
 nuevo es una regresión. La Fase 2 añade RLS-108–129 (offboarding, perfil
-vocacional curado y pagos con trazabilidad).
+vocacional curado y pagos con trazabilidad) y la Fase 3, RLS-130–148
+(integridad de asignaciones, anonimización, XP y reglas de completado, y
+solicitudes ARCO).
 
 ## Verificación de staging (OPS-09)
 
@@ -139,7 +149,7 @@ está en [`../docs/staging.md`](../docs/staging.md).
 
 ## Pruebas ejecutadas
 
-- **113 verificaciones de RLS** en `tests/rls/rls-negative.mjs` (ver COD-07 más
+- **135 verificaciones de RLS** en `tests/rls/rls-negative.mjs` (ver COD-07 más
   arriba). La suite está validada con `node --check`; **aún no se ha ejecutado
   contra una base** porque staging sigue bloqueado.
 - `tests/0004_progress_rpcs.sql`: inicio, intentos, quiz/reto, precisión, completado,
@@ -159,7 +169,7 @@ functions/
   admin-reset-student-password/ contraseña temporal con auditoría            [listo]
   admin-create-teacher/        alta de profesor                              [listo]
   deactivate-user/             desactivación con ban en Auth (SEC-04)        [nuevo, por desplegar]
-  invite-guardian/             invitación de tutor con enlace mágico         [nuevo, por desplegar]
+  invite-guardian/             invitación por correo, sin enlace en la respuesta (SEC-06) [por desplegar]
   guardian-consent/            aceptación/revocación del aviso de privacidad [nuevo, por desplegar]
   complete-password-change/    cambio de contraseña verificado (SEC-03)      [nuevo, por desplegar]
   issue-student-link-token/    invitación de alumno con token de un uso (SEC-02) [nuevo, por desplegar]
@@ -236,12 +246,20 @@ sin `search_path` fijo. Avisa si el destino es producción.
 ## Despliegue de Edge Functions
 
 Requiere `SUPABASE_ACCESS_TOKEN`. No despliegues a producción hasta que el
-cambio esté verificado en staging y exista aprobación explícita; el comando de
-abajo usa el proyecto real como ejemplo.
+cambio esté verificado en staging y exista aprobación explícita. Antes de
+desplegar, configura `ALLOWED_ORIGIN` con el origen exacto del entorno; las
+nueve funciones lo leen desde `_shared/http.ts` y rechazan con 403 cualquier
+`Origin` desconocido (`SEC-05`). El comando de abajo usa el proyecto real como
+ejemplo.
 
 ```bash
 cd app
 npx supabase link --project-ref ioikcrdxneuydylyhvwi --workdir "$(pwd)"
+
+# Un solo origen por entorno; nunca '*' en staging ni producción.
+npx supabase secrets set ALLOWED_ORIGIN="https://monetarytexas42.github.io" \
+  --project-ref ioikcrdxneuydylyhvwi
+
 npx supabase functions deploy invite-guardian guardian-consent \
   admin-create-student admin-reset-student-password \
   complete-password-change issue-student-link-token \

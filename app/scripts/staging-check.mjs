@@ -71,6 +71,10 @@ async function scalar(sql) {
   return res.rows[0] ? Object.values(res.rows[0])[0] : null;
 }
 
+async function hasObject(sql) {
+  return Number(await scalar(sql)) > 0;
+}
+
 async function main() {
   await client.connect();
 
@@ -181,6 +185,71 @@ async function main() {
          and coalesce(qual, '') like '%app_can_access_student%'`),
   );
 
+  // Fase 3 · DB-01..04, FUN-03/04, PRIV-06 y SEC-07.
+  const phase3Functions = [
+    "app_activate_unit",
+    "app_backfill_unit_audience",
+    "app_anonymize_student",
+    "app_award_server_xp",
+    "app_unit_requirements",
+    "app_enforce_quiz_attempt_policy",
+    "app_quiz_policy",
+    "app_create_data_request",
+    "app_resolve_data_request",
+    "app_ban_account",
+  ];
+  const missingPhase3Functions = [];
+  for (const name of phase3Functions) {
+    const ok = await hasObject(`
+      select 1
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname = '${name}'`);
+    if (!ok) missingPhase3Functions.push(name);
+  }
+
+  const assignmentUnique = await hasObject(`
+    select 1 from pg_indexes
+     where schemaname = 'public' and indexname = 'unit_assignments_group_unit_uq'`);
+  const xpUnique = await hasObject(`
+    select 1 from pg_indexes
+     where schemaname = 'public' and indexname = 'xp_events_source_uq'`);
+  const dataRequestsTable = await hasObject(`
+    select 1 from pg_tables
+     where schemaname = 'public' and tablename = 'data_requests'`);
+
+  const phase3Triggers = [
+    "students_new_audience",
+    "exercise_attempts_award_xp",
+    "unit_progress_award_xp",
+    "quiz_attempts_policy",
+  ];
+  const missingPhase3Triggers = [];
+  for (const name of phase3Triggers) {
+    const ok = await hasObject(
+      `select 1 from pg_trigger where tgname = '${name}' and not tgisinternal`,
+    );
+    if (!ok) missingPhase3Triggers.push(name);
+  }
+
+  const phase3Settings = [
+    "unit_completion_rules",
+    "quiz_attempt_policy",
+    "data_request_sla_days",
+    "data_request_email",
+  ];
+  const missingPhase3Settings = [];
+  for (const key of phase3Settings) {
+    const ok = await hasObject(`select 1 from public.settings where key = '${key}'`);
+    if (!ok) missingPhase3Settings.push(key);
+  }
+
+  const dataRequestPolicies = Number(
+    await scalar(`
+      select count(*) from pg_policies
+       where schemaname = 'public' and tablename = 'data_requests'`),
+  );
+
   let privacyRow = null;
   try {
     const res = await client.query("select version, url, sha256 from public.privacy_document");
@@ -228,6 +297,13 @@ async function main() {
   console.log("  duplicados:    " + (paymentDuplicatesView ? "sí (0029)" : "NO"));
   console.log("  guía curada:   " + (guidanceView ? "sí (0030)" : "NO"));
   console.log("  offboarding:   " + (offboardingColumns === 3 ? "sí (0028)" : "NO"));
+  console.log("  índice u/u:    " + (assignmentUnique ? "sí (0032)" : "NO"));
+  console.log("  índice xp:     " + (xpUnique ? "sí (0034)" : "NO"));
+  console.log("  anonimización: " + (missingPhase3Functions.includes("app_anonymize_student") ? "NO" : "sí (0033)"));
+  console.log("  requisitos:    " + (missingPhase3Functions.includes("app_unit_requirements") ? "NO" : "sí (0035)"));
+  console.log("  intentos quiz: " + (missingPhase3Functions.includes("app_quiz_policy") ? "NO" : "sí (0036)"));
+  console.log("  solicitudes:   " + (dataRequestsTable ? "sí (0037)" : "NO") + ` · ${dataRequestPolicies} políticas`);
+  console.log("  auditoría ban: " + (missingPhase3Functions.includes("app_ban_account") ? "NO" : "sí (0038)"));
   if (privacyRow) {
     console.log(
       "  aviso vigente: " +
@@ -249,10 +325,10 @@ async function main() {
   console.log("  perfiles:      " + (roles.map((r) => `${r.role}=${r.n}`).join(", ") || "ninguno"));
 
   const warnings = [];
-  if (migrations !== null && migrations < 31) warnings.push(`faltan migraciones (${migrations} < 31)`);
-  if (tables < 40) warnings.push(`faltan tablas (${tables} < 40)`);
-  if (policies < 90) warnings.push(`faltan políticas (${policies} < 90)`);
-  if (definer < 48) warnings.push(`faltan funciones SECURITY DEFINER (${definer} < 48)`);
+  if (migrations !== null && migrations < 38) warnings.push(`faltan migraciones (${migrations} < 38)`);
+  if (tables < 41) warnings.push(`faltan tablas (${tables} < 41)`);
+  if (policies < 93) warnings.push(`faltan políticas (${policies} < 93)`);
+  if (definer < 53) warnings.push(`faltan funciones SECURITY DEFINER (${definer} < 53)`);
   if (billingGuard === 0) warnings.push("falta app_can_view_billing (0021 no aplicada)");
   if (consentGuard === 0) warnings.push("falta app_guardian_has_consent (0027 no aplicada)");
   if (privacyView === 0) warnings.push("falta la vista privacy_document (0027 no aplicada)");
@@ -269,6 +345,19 @@ async function main() {
   if (rawProfilePolicyLeak > 0) {
     warnings.push("student_profiles_select sigue exponiendo la tabla cruda al tutor (PRIV-03)");
   }
+  if (!assignmentUnique) warnings.push("falta el índice único de grupo/unidad (DB-01, 0032)");
+  if (!xpUnique) warnings.push("falta el índice único de premios de XP (DB-03, 0034)");
+  if (missingPhase3Functions.length) {
+    warnings.push("faltan funciones de Fase 3: " + missingPhase3Functions.join(", "));
+  }
+  if (missingPhase3Triggers.length) {
+    warnings.push("faltan triggers de Fase 3: " + missingPhase3Triggers.join(", "));
+  }
+  if (missingPhase3Settings.length) {
+    warnings.push("faltan ajustes de Fase 3: " + missingPhase3Settings.join(", "));
+  }
+  if (!dataRequestsTable) warnings.push("falta public.data_requests (PRIV-06, 0037)");
+  if (dataRequestPolicies < 3) warnings.push(`faltan políticas de data_requests (${dataRequestPolicies}/3)`);
   if (!privacyRow) {
     warnings.push("no se pudo leer la vista privacy_document");
   } else {

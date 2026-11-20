@@ -81,6 +81,37 @@
   box-sizing: border-box;
 }
 
+/* UX-01: el enlace de salto solo aparece al enfocarlo con teclado. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 9999;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* UX-01: foco visible de forma consistente en todos los controles. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--focus-ring);
+}
+
+main:focus {
+  outline: none;
+}
+
 html,
 body {
   min-height: 100%;
@@ -4148,8 +4179,50 @@ body.unit-assign-open {
   gap: 8px;
 }
 
+/* PRIV-06 / FUN-10: controles del pie de privacidad y la vista de auditoría. */
+.link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.audit-list pre,
+.audit-list code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* FUN-09: paginación accesible con total visible. */
+.pagination,
+.requirement-card {
+  margin: 12px 0;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.requirement-card p {
+  margin: 6px 0;
+}
+
 @media (max-width: 720px) {
   .guardian-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pagination {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

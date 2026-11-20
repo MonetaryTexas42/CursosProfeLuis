@@ -17,3 +17,9 @@ La especificación completa vive en `../../Fase-0/`.
 
 - [Staging](staging.md): creación del entorno, seeds ficticios, verificación y
   suite de RLS negativa.
+- [Seguridad operativa](seguridad.md): CORS por entorno, invitaciones por
+  correo, auditoría, anonimización y solicitudes ARCO (Fase 3).
+- [Monitoreo](monitoreo.md): verificación de migraciones, trazabilidad y
+  respuesta ante incidentes (Fase 3).
+- [Despliegue](despliegue.md): publicación del frontend y precauciones de
+  entorno.

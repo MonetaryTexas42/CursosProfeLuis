@@ -653,6 +653,38 @@ todo, la línea base no debe superar los 6 FAIL históricos de `SEC-01` y
 | OPS-07 | Monitoreo y alertas | Alerta de error 5xx y de respaldo fallido | 1 día |
 | OPS-09 | Consolidar staging | Staging estable y documentado | — (Fase 0) |
 
+### 6.1. Estado de implementación de Fase 3 (20 nov 2026)
+
+Preparada como cambio versionado en `main`, **sin migraciones aplicadas ni
+despliegue**. Sigue a los commits `8f87f97` (Fase 0/1) y `58a85c8` (Fase 2).
+
+| Bloque | Entregado | Pendiente de entorno |
+|---|---|---|
+| `SEC-05` | `ALLOWED_ORIGIN` por entorno, validación antes de `OPTIONS`/`POST`, `Vary: Origin` y rechazo 403 en `_shared/http.ts`; prueba negativa en `test-functions.mjs` | Configurar el secreto en las nueve funciones al desplegar |
+| `SEC-06` | Helper `_shared/email.ts`; `invite-guardian` encola `guardian_invite` y devuelve `delivery`/`email_id`; UI sin enlaces ni WhatsApp | Implementar el procesador de `email_outbox` |
+| `SEC-07` | Auditoría de anonimización, ARCO y baneo; vista admin sin `before`/`after` | Definir retención con Legal (PRIV-07) |
+| `DB-01` | `0032`: índice único por grupo/unidad, RPC de activación y backfill de audiencia | Limpiar duplicados heredados si existen antes de aplicar |
+| `DB-02` | `0033`: `app_anonymize_student` con seudónimo, borrado de PII y auditoría | Coordinar el borrado definitivo de `auth.users` |
+| `DB-03` | `0034`: `xp_events`, trigger de premios y `app_award_server_xp`; índice único parcial para fuentes nuevas | No reconciliar XP heredado automáticamente |
+| `DB-04` / `FUN-05` | `0035`: reglas por defecto (60 % ejercicios, 70 % precisión), `app_unit_requirements` y `app_complete_unit` con validación | Ajustar reglas con el equipo académico |
+| `FUN-03` | `0032`: audiencia explícita por alumno en nuevas asignaciones; trigger para alumnos nuevos | Verificar el backfill de asignaciones heredadas |
+| `FUN-04` | `0036`: `max_attempts=3` (`0` = sin límite), trigger y `app_quiz_policy` | Confirmar política con el profesor |
+| `FUN-06` | Recuperación de contraseña con `resetPasswordForEmail` y manejo de `PASSWORD_RECOVERY` | Configurar redirect URLs por entorno |
+| `FUN-09` | Paginación de pagos con “Mostrando X de Y” y controles accesibles | — |
+| `FUN-10` | Pestaña admin `auditoria` con solicitudes y eventos; resolución auditada | Filtros por actor/entidad/fecha (diferidos a Fase 4) |
+| `COD-01` / `PRIV-04` | Limpieza de claves `ecoems_*` y legacy al cerrar sesión; textos de invitación por correo | — |
+| `COD-02` | Reglas, intentos y estado se leen de RPC; la UI solo renderiza | — |
+| `UX-01` | Skip link, `<main>` enfocable, foco visible y `aria-live` | Ejecutar axe en staging |
+| `UX-02` | `trapDialogFocus` centralizado en seis diálogos | — |
+| `PRIV-06` | `0037`: `data_requests`, SLA de 20 días, RPCs y diálogo “Solicitar mis datos” | Validar aviso `v3-2026` y `data_request_email` con Legal |
+| `OPS-06` / `OPS-07` | Runbooks `docs/seguridad.md` y `docs/monitoreo.md` | Acceso de solo lectura a producción para `DB-07`; alertas automáticas (Fase 4) |
+| `OPS-09` | `staging-check.mjs` con umbrales 38/41/93/53 y objetos Fase 3; suite RLS ampliada a 135 verificaciones | Crear staging cloud o levantar Docker |
+
+**Criterio de salida:** 0 FAIL en la suite RLS, `staging-check.mjs` sin
+advertencias, CORS positivo y negativo verificado, correo encolado sin enlaces
+en la respuesta y firma de Legal sobre el aviso y el correo de contacto. Hasta
+entonces la Fase 3 queda como código preparado, no como remediación cerrada.
+
 ---
 
 ## 7. Fase 4 · P3 (90 días)

@@ -25,7 +25,7 @@ Reglas no negociables:
 | Pieza | Estado |
 |---|---|
 | `supabase/config.toml` versionado | Listo |
-| Suite RLS negativa (`113` checks) | Lista, pendiente de ejecutar |
+| Suite RLS negativa (`146` checks) | Lista, pendiente de ejecutar |
 | Runner `scripts/run-rls-tests.mjs` | Listo |
 | Verificador `scripts/staging-check.mjs` | Listo |
 | Seed `scripts/seed-staging-users.mjs` | Listo |
@@ -156,6 +156,29 @@ hash del aviso, exige la casilla de acuse y revoca todas las versiones activas
 del vínculo. La política de inserción directa del tutor se elimina en `0027`;
 el consentimiento solo se registra por esta función con `service_role`.
 
+#### Fase 3 · CORS y correo de invitación
+
+Las nueve funciones leen `ALLOWED_ORIGIN` desde `_shared/http.ts`. **Configura
+la variable en cada función desplegada**; si falta, se rechazan las peticiones
+de navegador con un `Origin` presente (health checks y scripts sin `Origin`
+siguen funcionando):
+
+```bash
+export ALLOWED_ORIGIN="https://<REF_STAGING>.github.io"   # un solo origen por entorno
+npx --yes supabase@latest secrets set ALLOWED_ORIGIN="$ALLOWED_ORIGIN" \
+  --project-ref <REF_STAGING>
+```
+
+Para producción se usa el origen real (`https://monetarytexas42.github.io`),
+nunca `*`. Tras desplegar, `test-functions.mjs` comprueba el rechazo con
+`Origin: https://origen-no-autorizado.invalid`.
+
+`invite-guardian` depende de `email_outbox` (0023): encola la plantilla
+`guardian_invite` y devuelve `delivery: "email"` y `email_id`. Ni la respuesta
+HTTP ni la interfaz entregan `magic_link` ni `whatsapp_share_url` (`SEC-06`).
+El procesador que envía la cola es trabajo operativo posterior: en staging
+puede verificarse la fila, pero todavía no hay entrega real.
+
 ### 3.6. Sembrar datos (orden importante)
 
 El contenido necesita un perfil admin, y la asignación de prueba necesita
@@ -191,9 +214,13 @@ VITE_SUPABASE_URL="https://<REF_STAGING>.supabase.co" \
   node scripts/staging-check.mjs
 ```
 
-Debe reportar el ref de staging, 40 tablas, 90 políticas, 31 migraciones y
-perfiles de los cuatro roles. Si aparece una advertencia, corrígela antes de
-probar RLS.
+Debe reportar el ref de staging, **41 tablas, 93 políticas, 38 migraciones y
+53 funciones `SECURITY DEFINER`**, además de los objetos de Fase 3: índices
+`unit_assignments_group_unit_uq` y `xp_events_source_uq`, triggers de XP y
+política de quiz, `data_requests` con tres políticas, y los ajustes
+`unit_completion_rules`, `quiz_attempt_policy`, `data_request_sla_days` y
+`data_request_email`. Si aparece una advertencia, corrígela antes de probar
+RLS.
 
 ### 3.8. Ejecutar la suite de RLS negativa
 
@@ -205,9 +232,11 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 ```
 
 La suite expresa el comportamiento **seguro esperado**. Antes de la Fase 1 la
-línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0031` aplicadas y
-los fixtures de consentimiento, la expectativa es **0 FAIL** (113 checks;
-RLS-108–129 cubren la Fase 2). Códigos de salida:
+línea base era **6 FAIL** (`SEC-01` y `PRIV-02`). Con `0023`–`0038` aplicadas y
+los fixtures de consentimiento, la expectativa es **0 FAIL**. El runner reporta
+**135 verificaciones**: 131 pruebas (`checks`) más 4 comprobaciones de identidad
+(`roleSanity`). RLS-108–129 cubren la Fase 2 y RLS-130–148 la Fase 3 (el ID
+RLS-135 se retiró al fusionar dos pruebas de anonimización). Códigos de salida:
 
 - `0`: todo PASS o SKIP justificado.
 - `1`: hay FAIL (comportamiento inseguro).
@@ -348,18 +377,22 @@ Si falta una identidad, los checks dependientes se marcan **SKIP**, nunca PASS.
 
 - [ ] El proyecto de staging tiene un ref distinto de producción.
 - [ ] `staging-check.mjs` no aborta y no muestra advertencias.
-- [ ] Las 31 migraciones están aplicadas.
+- [ ] Las 38 migraciones están aplicadas (`0032`–`0038` incluidas).
 - [ ] `config.toml` está aplicado en staging (`config diff` sin cambios).
 - [ ] El seed de usuarios corre dos veces sin errores (idempotente).
 - [ ] La suite RLS no produce PASS falsos: los roles sin identidad salen SKIP.
-- [ ] La suite RLS termina con **0 FAIL** tras `0023`–`0031` (la línea base previa era 6: `SEC-01` y `PRIV-02`).
+- [ ] La suite RLS termina con **0 FAIL** tras `0023`–`0038` (la línea base previa era 6: `SEC-01` y `PRIV-02`).
 - [ ] `guardian-consent` está desplegada y la vista `privacy_document` devuelve `v3-2026` y su hash.
 - [ ] Un tutor sin consentimiento no ve datos del alumno y puede aceptar desde el panel.
 - [ ] `complete-password-change` está desplegada y `app_complete_password_change` ya no existe.
 - [ ] `deactivate-user` banea en Auth, registra actor/motivo y compensa si falla el update (`SEC-04`).
 - [ ] `student_guidance` no expone `weaknesses`, `vocational_notes` ni `extras` (`PRIV-03`).
 - [ ] `student_billing_status`, `payment_duplicates` y `app_void_payment` responden con los fixtures (`FUN-02`).
-- [ ] `verify-migrations.mjs` confirma 31 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
+- [ ] `ALLOWED_ORIGIN` está configurado en las nueve funciones y un origen ajeno recibe 403 (`SEC-05`).
+- [ ] `invite-guardian` encola `guardian_invite` y la respuesta no contiene enlaces (`SEC-06`).
+- [ ] La anonimización de alumnos se prueba solo con un fixture; `auth.users` no se borra en esta fase (`DB-02`).
+- [ ] `app_quiz_policy` devuelve `max_attempts` y `app_unit_requirements` bloquea el completado hasta cumplir las reglas (`FUN-03/05`).
+- [ ] `verify-migrations.mjs` confirma 38 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
 - [ ] El frontend compila en modo `staging` y no contiene secretos.
 - [ ] No hay datos reales ni PII en staging.
 

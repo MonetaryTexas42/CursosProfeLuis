@@ -821,6 +821,217 @@ export const checks = [
     { requires: ["teacher_other", "student1_id"], params: (f) => [f.student1_id] },
   ),
 
+  // ---------------------------------------- integridad de asignaciones (DB-01)
+  yes(
+    "RLS-130",
+    "admin",
+    "Una unidad solo puede asignarse una vez por grupo (DB-01)",
+    `select (count(*) = 1) as ok
+       from pg_indexes
+      where schemaname = 'public' and tablename = 'unit_assignments'
+        and indexname = 'unit_assignments_group_unit_uq'`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-131",
+    "admin",
+    "app_activate_unit es SECURITY DEFINER con search_path fijo (DB-01)",
+    `select (count(*) = 1) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_activate_unit'
+        and p.prosecdef
+        and exists (
+          select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) as c
+           where c like 'search_path=%'
+        )`,
+    { requires: ["admin"] },
+  ),
+  zero(
+    "RLS-132",
+    "student1",
+    "El alumno no puede crear asignaciones por REST",
+    `with attempted as (
+       insert into public.unit_assignments (group_id, unit_id, unit_version_id, status, visible)
+       select g.id, u.id, uv.id, 'active'::public.assignment_status, true
+         from public.groups g
+         join public.units u on true
+         join public.unit_versions uv on uv.unit_id = u.id
+        limit 1
+       returning 1
+     )
+     select count(*)::int as n from attempted`,
+    { requires: ["student1"] },
+  ),
+
+  // ------------------------------------------------ anonimización (DB-02)
+  yes(
+    "RLS-133",
+    "admin",
+    "app_anonymize_student existe como SECURITY DEFINER (DB-02)",
+    `select (count(*) = 1) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_anonymize_student'
+        and p.prosecdef
+        and exists (
+          select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) as c
+           where c like 'search_path=%'
+        )`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-134",
+    "admin",
+    "La anonimización conserva el historial bajo seudónimo (DB-02)",
+    `select (count(*) = 3) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_anonymize_student'
+        and pg_get_functiondef(p.oid) like '%student_code%'
+        and pg_get_functiondef(p.oid) like '%birth_date = null%'
+        and pg_get_functiondef(p.oid) like '%student_staff_notes%'`,
+    { requires: ["admin"] },
+  ),
+
+  // -------------------------------------- XP en servidor y reglas (DB-03/04)
+  yes(
+    "RLS-136",
+    "admin",
+    "Los premios de XP tienen índice único parcial (DB-03)",
+    `select (count(*) = 1 and bool_and(coalesce(indexdef, '') like '%exercise%')) as ok
+       from pg_indexes
+      where schemaname = 'public' and tablename = 'xp_events'
+        and indexname = 'xp_events_source_uq'`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-137",
+    "admin",
+    "Los triggers de XP y política de quiz están activos (DB-03/04)",
+    `select (count(*) = 4) as ok
+       from pg_trigger t
+       join pg_class c on c.oid = t.tgrelid
+       join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and not t.tgisinternal
+        and t.tgname in (
+          'students_new_audience',
+          'exercise_attempts_award_xp',
+          'unit_progress_award_xp',
+          'quiz_attempts_policy'
+        )`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-138",
+    "student1",
+    "app_unit_requirements devuelve un objeto con motivo, reglas y estado (FUN-05)",
+    `select (
+       public.app_unit_requirements(a.id) ?& array['can_complete', 'rules', 'message']
+     ) as ok
+       from public.unit_assignments a
+      where exists (
+        select 1 from public.students s
+         where s.profile_id = auth.uid() and s.group_id = a.group_id
+      )
+      limit 1`,
+    { requires: ["student1"] },
+  ),
+  yes(
+    "RLS-139",
+    "student1",
+    "app_quiz_policy expone el máximo de intentos (FUN-03)",
+    `select (coalesce((policy ->> 'max_attempts')::int, -1) >= 0) as ok
+       from (select public.app_quiz_policy() as policy) p`,
+    { requires: ["student1"] },
+  ),
+  zero(
+    "RLS-140",
+    "student1",
+    "El alumno no puede saltarse el límite de intentos por REST",
+    "select count(*)::int as n from pg_policies where schemaname = 'public' and tablename = 'quiz_attempts' and cmd = 'DELETE'",
+    { requires: ["student1"] },
+  ),
+  yes(
+    "RLS-141",
+    "admin",
+    "Las reglas y la política de intentos están en settings (FUN-04/05)",
+    `select (count(*) = 2) as ok
+       from public.settings
+      where key in ('unit_completion_rules', 'quiz_attempt_policy')`,
+    { requires: ["admin"] },
+  ),
+
+  // ----------------------------------- solicitudes ARCO y auditoría (PRIV-06)
+  zero(
+    "RLS-142",
+    "anon",
+    "Anónimo no ve solicitudes ARCO",
+    "select count(*)::int as n from public.data_requests",
+  ),
+  zero(
+    "RLS-143",
+    "student2",
+    "Un alumno no ve solicitudes de otros (PRIV-06)",
+    "select count(*)::int as n from public.data_requests d where d.profile_id <> auth.uid() and d.student_id <> public.app_student_id()",
+    { requires: ["student2"] },
+  ),
+  zero(
+    "RLS-144",
+    "guardian2",
+    "Un tutor sin vínculos no ve solicitudes (PRIV-06)",
+    "select count(*)::int as n from public.data_requests",
+    { requires: ["guardian2"] },
+  ),
+  zero(
+    "RLS-145",
+    "teacher",
+    "El profesor no ve solicitudes ARCO (PRIV-06)",
+    "select count(*)::int as n from public.data_requests",
+    { requires: ["teacher"] },
+  ),
+  yes(
+    "RLS-146",
+    "admin",
+    "data_requests tiene RLS y tres políticas sin borrado (PRIV-06)",
+    `select (
+       (select relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname = 'data_requests')
+       and (select count(*) = 3 from pg_policies
+             where schemaname = 'public' and tablename = 'data_requests')
+       and (select count(*) = 0 from pg_policies
+             where schemaname = 'public' and tablename = 'data_requests' and cmd = 'DELETE')
+     ) as ok`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-147",
+    "admin",
+    "El plazo ARCO se configura en settings (PRIV-06)",
+    `select (
+       (select coalesce(value #>> '{}', '')::int from public.settings where key = 'data_request_sla_days') between 1 and 90
+     ) as ok`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-148",
+    "admin",
+    "app_resolve_data_request valida rol y registra la resolución (PRIV-06)",
+    `select (
+       pg_get_functiondef(p.oid) like '%app_is_admin()%'
+       and pg_get_functiondef(p.oid) like '%insert into public.audit_log%'
+       and p.prosecdef
+       and exists (
+         select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) as c
+          where c like 'search_path=%'
+       )
+     ) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_resolve_data_request'`,
+    { requires: ["admin"] },
+  ),
+
   // ----------------------------------------------------------- administrador
   yes("RLS-75", "admin", "El admin ve alumnos", "select (count(*) > 0) as ok from public.students", { requires: ["admin"] }),
   yes("RLS-76", "admin", "El admin ve unidades", "select (count(*) > 0) as ok from public.units", { requires: ["admin"] }),

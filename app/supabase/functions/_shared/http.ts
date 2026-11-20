@@ -1,7 +1,17 @@
-const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
+// SEC-05: cada entorno declara su origen exacto en ALLOWED_ORIGIN.
+// Ejemplo: ALLOWED_ORIGIN=https://monetarytexas42.github.io
+// Se admite una lista separada por comas, pero la respuesta CORS usa el
+// primero: configura un solo origen por entorno. `*` queda reservado para
+// pruebas locales explícitas y no debe usarse en staging ni producción.
+const allowedOrigins = (Deno.env.get("ALLOWED_ORIGIN") ?? "")
+  .split(",")
+  .map((value) => value.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const responseOrigin = allowedOrigins[0] ?? "*";
 
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
+  "Access-Control-Allow-Origin": responseOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
@@ -59,7 +69,36 @@ export async function readJson(req: Request): Promise<Record<string, unknown>> {
   return value as Record<string, unknown>;
 }
 
+function isAllowedOrigin(origin: string): boolean {
+  const candidate = origin.replace(/\/+$/, "");
+  return allowedOrigins.some((allowed) => allowed === "*" || allowed === candidate);
+}
+
+/**
+ * SEC-05: rechaza cualquier petición de navegador cuyo Origin no esté en la
+ * lista del entorno. Las peticiones sin `Origin` (health checks, scripts de
+ * prueba servidor a servidor) siguen funcionando: CORS solo protege a los
+ * navegadores, y esos clientes no pueden suplantar el origen de uno.
+ */
+export function assertAllowedOrigin(req: Request): Response | null {
+  const origin = req.headers.get("origin");
+
+  if (!origin) return null;
+
+  if (allowedOrigins.length === 0 || !isAllowedOrigin(origin)) {
+    console.warn("cors_origin_rejected", origin.slice(0, 200));
+    return errorResponse(403, "Origen no permitido");
+  }
+
+  return null;
+}
+
 export function handleOptions(req: Request): Response | null {
+  // Se valida antes del preflight y antes del POST: las nueve funciones llaman
+  // a este helper como primera instrucción.
+  const denied = assertAllowedOrigin(req);
+  if (denied) return denied;
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
