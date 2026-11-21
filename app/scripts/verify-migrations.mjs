@@ -13,6 +13,8 @@
 //   4. Sale con código 1 si falta una migración o hay una versión desconocida.
 //
 // No escribe en la base. El `--out` es un archivo local para comparar entornos.
+// Nota: en proyectos recientes `schema_migrations` tiene (version, statements,
+// name), sin `inserted_at`. No se consulta para no depender de la versión.
 import pg from "pg";
 import { readdirSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -53,7 +55,7 @@ await client.connect();
 
 try {
   const appliedRes = await client.query(`
-    select version, name, inserted_at
+    select version, name
       from supabase_migrations.schema_migrations
      order by version
   `);
@@ -61,7 +63,6 @@ try {
   const applied = appliedRes.rows.map((row) => ({
     version: String(row.version),
     name: row.name,
-    inserted_at: row.inserted_at,
   }));
   const appliedVersions = new Set(applied.map((row) => row.version));
 
