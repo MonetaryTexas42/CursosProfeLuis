@@ -69,7 +69,7 @@ Fase 4 (P3 · 90 días)
 | Paso | Acción |
 |---|---|
 | 1 | Crear un proyecto Supabase nuevo (`ecoems-staging`) |
-| 2 | Aplicar las 31 migraciones desde cero |
+| 2 | Aplicar las 38 migraciones desde cero |
 | 3 | Cargar `seed/content-v1.json` |
 | 4 | Crear usuarios ficticios por rol (admin, profesor, alumno, tutor) |
 | 5 | Crear `.env.staging` con la URL y anon key de staging |
@@ -547,23 +547,31 @@ salvo `--include-auth` con `ALLOW_AUTH_BACKUP=1`, permisos 600/700, retención d
 
 ### 5.8. DB-07 · Verificación de migraciones
 
-- Ejecutar en staging y en una réplica de producción:
+- Ejecutar en staging y, en modo lectura, en producción:
 
 ```sql
-select version, name, inserted_at
+select version, name, statements
 from supabase_migrations.schema_migrations
 order by version;
 ```
 
-- Comparar con los 31 archivos.
+- Comparar con los 38 archivos.
 - Revisar `pg_policies` y `pg_proc` para detectar objetos no versionados.
 
 **Implementado:** `scripts/verify-migrations.mjs` compara
 `supabase_migrations.schema_migrations` con los archivos locales, lista
 políticas/funciones, detecta `SECURITY DEFINER` sin `search_path` y puede
 escribir una instantánea JSON con `--out=`. Es de solo lectura y avisa si el
-destino es producción. **Pendiente:** ejecutarlo contra staging y contra una
-réplica/diagnóstico de producción para cerrar `DB-07`.
+destino es producción. La columna `inserted_at` no existe en
+`schema_migrations`; se corrigió el verificador para usar `version`, `name` y
+`statements` (commit `888a2ce`).
+
+**Ejecutado en producción (20 nov 2026, solo `SELECT`):** ref
+`ioikcrdxneuydylyhvwi`; 38 migraciones locales, 22 aplicadas, 16 faltantes
+(`0023`–`0038`), 0 desconocidas, 87 políticas, 94 funciones y 0
+`SECURITY DEFINER` sin `search_path`. `exit code 1`, esperado. No se aplicaron
+migraciones ni se desplegó. **Pendiente:** repetir en staging tras aplicar
+`0023`–`0038` y esperar 38/38.
 
 **Aceptación:** existe un documento que confirma qué migraciones están aplicadas y si hay diferencias.
 
@@ -580,7 +588,7 @@ réplica/diagnóstico de producción para cerrar `DB-07`.
 | PRIV-05 / OPS-01 | Implementado | `scripts/backup-db.mjs` | Respaldo cifrado y restauración de prueba |
 | OPS-02 | Implementado | `scripts/restore-db.mjs` | Sin `--confirm` no escribe; producción exige `--i-know` |
 | OPS-04 | Implementado | `.github/workflows/ci.yml`; `docs/despliegue.md` | Primer push a `main` con secretos configurados |
-| DB-07 | Implementado el verificador | `scripts/verify-migrations.mjs` | Ejecutarlo contra staging y producción (solo lectura) |
+| DB-07 | Verificado en producción (solo lectura) | `scripts/verify-migrations.mjs` | Repetir en staging: 38/38 aplicadas |
 
 La suite de RLS creció de **91 a 113 checks** (RLS-108…129) para cubrir
 offboarding, pagos, estado de cuenta y perfil vocacional curado. Nada de esto

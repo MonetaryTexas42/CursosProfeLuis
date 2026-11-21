@@ -33,16 +33,28 @@ ajustes de la Fase 3 y las RPCs `app_activate_unit`, `app_anonymize_student`,
 `app_award_server_xp`, `app_unit_requirements`, `app_quiz_policy`,
 `app_create_data_request`, `app_resolve_data_request` y `app_ban_account`.
 
-Para producción hace falta acceso de **solo lectura** y ejecutar:
+Para producción, usa el verificador de solo lectura:
 
 ```bash
 cd app
-DATABASE_URL="<URL_SOLO_LECTURA_PRODUCCION>" \
+DATABASE_URL="$(cat .secrets/database-url)" \
   node scripts/verify-migrations.mjs
 ```
 
-**DB-07 sigue abierto** hasta que ese acceso exista. No uses credenciales de
-escritura "por costumbre": la verificación no modifica la base.
+Esa verificación ya se ejecutó el 20 nov 2026 contra el proyecto enlazado
+`ioikcrdxneuydylyhvwi`. El script solo emite `SELECT`: **38 migraciones
+locales, 22 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, 87
+políticas, 94 funciones y 0 `SECURITY DEFINER` sin `search_path`**. El código
+de salida fue `1`, esperado mientras falten migraciones. No se aplicó ningún
+cambio, no se desplegó y no se imprimió la URL.
+
+El verificador usa las columnas reales `version`, `name` y `statements` de
+`schema_migrations`; la referencia anterior a `inserted_at` era incorrecta y
+ya está corregida (commit `888a2ce`).
+
+**DB-07 sigue abierto** hasta repetir la verificación en staging con 38/38.
+No uses credenciales de escritura "por costumbre": la verificación no modifica
+la base, y producción no debe recibir migraciones sin aprobación explícita.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

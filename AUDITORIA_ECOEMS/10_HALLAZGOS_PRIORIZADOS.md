@@ -71,7 +71,7 @@ Este documento consolida los **63 hallazgos** de los informes 03–09 en una sol
 | DB-04 | M | P2 | A | `app_complete_unit` permite completar sin actividades | `0004:398-465` | 04 |
 | DB-05 | B | P3 | A | Migraciones sin rollback y no idempotentes | `0003:625`; `0009:8` | 04 |
 | DB-06 | B | P3 | A | Sin retención para `audit_log` y `email_outbox` | `0001:508-519` | 04 |
-| DB-07 | M | P1 | A | Estado real de migraciones en producción no verificado | `supabase/.temp/` | 04 |
+| DB-07 | M | P1 | A | Estado real de migraciones verificado en producción (solo lectura); staging pendiente | `supabase/.temp/`; `scripts/verify-migrations.mjs` | 04 |
 | DB-08 | B | P1 | A | `notes_internal` en tabla visible a la familia | `0001:111`; `0003:560` | 04 |
 
 ### 3.3. Funcionalidad
@@ -277,9 +277,11 @@ Para evitar confusiones en la revisión:
 >
 > Quedan pendientes funcionales: el recibo descargable en PDF de `FUN-02`, el
 > procesador de `email_outbox` de `SEC-06` y la validación legal del aviso
-> `v3-2026` con el correo de contacto de `PRIV-06`. `DB-07` requiere acceso de
-> solo lectura a producción; el borrado definitivo de `auth.users` queda como
-> acción coordinada separada.
+> `v3-2026` con el correo de contacto de `PRIV-06`. `DB-07` ya tiene evidencia
+> de producción en solo lectura: 22 de 38 migraciones aplicadas, 16 faltantes
+> (`0023`–`0038`) y 0 `SECURITY DEFINER` sin `search_path`; falta repetirlo en
+> staging. El borrado definitivo de `auth.users` queda como acción coordinada
+> separada.
 
 Para declarar que la plataforma puede operar con datos reales de menores, deben cumplirse **todos** estos:
 
@@ -294,7 +296,7 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [ ] `OPS-03` y `OPS-09` resueltos: staging real y pruebas bloqueadas en producción.
 - [ ] `OPS-04` verificado: CI publica sin `push -f`, etiqueta el commit y el rollback tarda menos de 15 minutos.
 - [ ] `COD-07` implementado: suite de RLS negativa en CI.
-- [ ] `DB-07` cerrado: `verify-migrations.mjs` confirma qué migraciones están aplicadas en staging y producción (solo lectura).
+- [ ] `DB-07` cerrado: `verify-migrations.mjs` confirma 38/38 en staging y deja registrado el resultado de producción en solo lectura (22/38, sin escrituras).
 - [ ] Aviso de privacidad `v3-2026` validado por abogado y sin placeholders.
 - [ ] Respaldos automáticos de Supabase verificados y restauración probada.
 - [ ] Runbook de incidentes documentado.

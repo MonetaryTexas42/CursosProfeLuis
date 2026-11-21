@@ -553,8 +553,9 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 31 migraciones aplicadas, sin faltantes ni sobrantes |
-| OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada |
+| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 38 migraciones aplicadas, sin faltantes ni sobrantes |
+| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** 22/38 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, `exit 1` esperado; sin escrituras |
+| OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
 | OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` |
 | OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica |
 | OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check |

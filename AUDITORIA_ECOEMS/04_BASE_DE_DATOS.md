@@ -371,27 +371,27 @@ on conflict (student_id) do update
 
 ---
 
-### DB-07 · El estado real de las migraciones en producción no se pudo verificar
+### DB-07 · El estado real de las migraciones en producción se verificó solo en modo lectura
 
-- **Severidad:** Medio (riesgo de verificación, no defecto confirmado)
+- **Severidad:** Medio (riesgo de desfase, no defecto confirmado)
 - **Categoría:** Base de datos / gobernanza
-- **Ubicación:** `app/supabase/.temp/linked-project.json`; no hay `supabase/config.toml`
-- **Evidencia:** el proyecto está enlazado a `ioikcrdxneuydylyhvwi`, pero no se autorizó conexión de solo lectura ni acceso al dashboard. No se puede afirmar que las 22 migraciones estén aplicadas, ni en qué orden, ni si hay cambios manuales fuera de las migraciones.
-- **Problema:** la auditoría se basa en el código; si producción difiere, los hallazgos pueden cambiar.
-- **Escenario:** una política se aplicó a mano en el dashboard y no está en el repositorio; el `drop policy` propuesto no la elimina.
-- **Impacto:** correcciones incompletas, falsa sensación de seguridad.
-- **Recomendación:** ejecutar en una réplica/staging:
+- **Ubicación:** `app/supabase/.temp/linked-project.json`; `app/scripts/verify-migrations.mjs`
+- **Evidencia:** el 20 nov 2026 se ejecutó el verificador contra el proyecto enlazado `ioikcrdxneuydylyhvwi` usando la URL configurada en `app/.secrets/database-url`; el script solo emite `SELECT`. Resultado: **38 migraciones locales, 22 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, 87 políticas, 94 funciones y 0 funciones `SECURITY DEFINER` sin `search_path`**; `exit code 1`, esperado por las migraciones pendientes. No hubo `INSERT`, `UPDATE`, `DELETE` ni DDL. El verificador se corrigió porque `schema_migrations` no tiene `inserted_at`: las columnas reales son `version`, `statements` y `name` (commit `888a2ce`).
+- **Problema:** producción está 16 migraciones por detrás del repositorio; Fases 1, 2 y 3 no están operativas allí. La auditoría sigue basada en código, aunque ahora existe evidencia directa y de solo lectura del desfase.
+- **Escenario:** una política se aplicó a mano en el dashboard y no está en el repositorio; el `drop policy` propuesto no la elimina. El conteo de objetos no sustituye la comparación completa en staging.
+- **Impacto:** correcciones incompletas, falsa sensación de seguridad y riesgo si se intenta aplicar el conjunto completo sin un entorno de prueba ni rollback validado.
+- **Recomendación:** ejecutar el mismo verificador en staging tras aplicar `0023`–`0038` y esperar 38/38, 0 faltantes, 0 desconocidas y 0 `SECURITY DEFINER` sin `search_path`. No aplicar migraciones ni desplegar en producción hasta que staging pase y exista autorización explícita. La consulta base, corregida, es:
 
 ```sql
-select version, name, inserted_at
+select version, name, statements
 from supabase_migrations.schema_migrations
 order by version;
 ```
 
-y comparar con los 22 archivos. Revisar también `pg_policies` y `pg_proc` para detectar objetos no versionados. Ver `12_PRUEBAS_PENDIENTES.md`.
+Revisar también `pg_policies` y `pg_proc`. Ver `app/docs/monitoreo.md` y `12_PRUEBAS_PENDIENTES.md`.
 - **Prioridad:** P1 (verificación)
-- **Confianza:** Alta en la limitación
-- **Estado:** Abierto
+- **Confianza:** Alta (evidencia directa de solo lectura)
+- **Estado:** Abierto — producción verificada en lectura; verificación de staging pendiente
 
 ---
 
@@ -434,7 +434,7 @@ Ejecutar en réplica o staging.
 ### 7.1. Migraciones aplicadas
 
 ```sql
-select version, name, inserted_at
+select version, name, statements
 from supabase_migrations.schema_migrations
 order by version;
 ```
