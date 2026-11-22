@@ -171,7 +171,8 @@ export async function findAuthUserByEmail(
 
 export async function audit(
   admin: SupabaseClient,
-  actorId: string,
+  // null = acción del sistema (por ejemplo, el procesador de email_outbox).
+  actorId: string | null,
   action: string,
   entityType: string,
   entityId: string | null,

@@ -139,6 +139,11 @@ npx --yes supabase@latest functions deploy \
   issue-student-link-token redeem-student-link-token \
   deactivate-user \
   --project-ref <REF_STAGING>
+
+# Décima función: la llama un cron, no un usuario con sesión.
+npx --yes supabase@latest functions deploy process-email-outbox \
+  --no-verify-jwt \
+  --project-ref <REF_STAGING>
 ```
 
 `complete-password-change` depende de la migración `0025` (columna
@@ -176,8 +181,17 @@ nunca `*`. Tras desplegar, `test-functions.mjs` comprueba el rechazo con
 `invite-guardian` depende de `email_outbox` (0023): encola la plantilla
 `guardian_invite` y devuelve `delivery: "email"` y `email_id`. Ni la respuesta
 HTTP ni la interfaz entregan `magic_link` ni `whatsapp_share_url` (`SEC-06`).
-El procesador que envía la cola es trabajo operativo posterior: en staging
-puede verificarse la fila, pero todavía no hay entrega real.
+El procesador ya existe: `process-email-outbox` (ver `docs/seguridad.md`). En
+staging se despliega con `EMAIL_PROVIDER=log`, por lo que **no hay entrega
+real**: las filas terminan en `captured`, no en `sent`. Verifica el flujo con:
+
+```bash
+APP_ENV=staging DATABASE_URL="$(cat .secrets/staging-database-url)" \
+  node scripts/test-email-outbox.mjs
+```
+
+El cron en `.github/workflows/email-outbox.yml` queda inactivo hasta configurar
+los secretos del repositorio.
 
 ### 3.6. Sembrar datos (orden importante)
 
@@ -214,8 +228,8 @@ VITE_SUPABASE_URL="https://<REF_STAGING>.supabase.co" \
   node scripts/staging-check.mjs
 ```
 
-Debe reportar el ref de staging, **41 tablas, 93 políticas, 39 migraciones y
-al menos 53 funciones `SECURITY DEFINER`** (en staging se observan 58), además de los objetos de Fase 3: índices
+Debe reportar el ref de staging, **41 tablas, 93 políticas, 40 migraciones y
+al menos 53 funciones `SECURITY DEFINER`** (en staging se observan 61), además de los objetos de Fase 3: índices
 `unit_assignments_group_unit_uq` y `xp_events_source_uq`, triggers de XP y
 política de quiz, `data_requests` con tres políticas, y los ajustes
 `unit_completion_rules`, `quiz_attempt_policy`, `data_request_sla_days` y
@@ -377,7 +391,7 @@ Si falta una identidad, los checks dependientes se marcan **SKIP**, nunca PASS.
 
 - [ ] El proyecto de staging tiene un ref distinto de producción.
 - [ ] `staging-check.mjs` no aborta y no muestra advertencias.
-- [ ] Las 39 migraciones están aplicadas (`0032`–`0039` incluidas; `0039` corrige los fallos detectados en la primera ejecución de la suite).
+- [ ] Las 40 migraciones están aplicadas (`0032`–`0040` incluidas; `0039` corrige los fallos detectados en la primera ejecución de la suite y `0040` añade el procesador de correo).
 - [ ] `config.toml` está aplicado en staging (`config diff` sin cambios).
 - [ ] El seed de usuarios corre dos veces sin errores (idempotente).
 - [ ] La suite RLS no produce PASS falsos: los roles sin identidad salen SKIP.
@@ -388,11 +402,11 @@ Si falta una identidad, los checks dependientes se marcan **SKIP**, nunca PASS.
 - [ ] `deactivate-user` banea en Auth, registra actor/motivo y compensa si falla el update (`SEC-04`).
 - [ ] `student_guidance` no expone `weaknesses`, `vocational_notes` ni `extras` (`PRIV-03`).
 - [ ] `student_billing_status`, `payment_duplicates` y `app_void_payment` responden con los fixtures (`FUN-02`).
-- [ ] `ALLOWED_ORIGIN` está configurado en las nueve funciones y un origen ajeno recibe 403 (`SEC-05`).
+- [ ] `ALLOWED_ORIGIN` está configurado en las nueve funciones de usuario y un origen ajeno recibe 403 (`SEC-05`); `process-email-outbox` rechaza cualquier `Origin` y exige `X-Outbox-Token`.
 - [ ] `invite-guardian` encola `guardian_invite` y la respuesta no contiene enlaces (`SEC-06`).
 - [ ] La anonimización de alumnos se prueba solo con un fixture; `auth.users` no se borra en esta fase (`DB-02`).
 - [ ] `app_quiz_policy` devuelve `max_attempts` y `app_unit_requirements` bloquea el completado hasta cumplir las reglas (`FUN-03/05`).
-- [ ] `verify-migrations.mjs` confirma 39 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
+- [ ] `verify-migrations.mjs` confirma 40 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
 - [ ] El frontend compila en modo `staging` y no contiene secretos.
 - [ ] No hay datos reales ni PII en staging.
 

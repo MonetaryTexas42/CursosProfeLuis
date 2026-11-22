@@ -8,8 +8,9 @@ seguimiento a **OPS-09** (staging).
 
 La Fase 3 añade `0032`–`0038`. La ejecución real en staging añadió `0039` con
 tres correcciones detectadas por la suite (grants a `authenticated` y visibilidad
-de perfiles). Ninguna migración se ha aplicado a producción desde este
-repositorio: están preparadas como cambios versionados y reversibles.
+de perfiles) y `0040` con las RPCs del procesador de `email_outbox`. Ninguna
+migración se ha aplicado a producción desde este repositorio: están preparadas
+como cambios versionados y reversibles.
 
 En staging, después de `db push`:
 
@@ -24,16 +25,18 @@ El verificador es de solo lectura y comprueba:
 
 | Recurso | Umbral esperado | Observado en staging |
 |---|---|---|
-| Migraciones | 39 | 39 |
+| Migraciones | 40 | 40 |
 | Tablas | 41 | 41 |
 | Políticas RLS | 93 | 93 |
-| Funciones `SECURITY DEFINER` | ≥ 53 | 58 |
+| Funciones `SECURITY DEFINER` | ≥ 53 | 61 |
 
 Además verifica los objetos nuevos: índices únicos de asignación y XP,
 triggers de XP/política de quiz, `data_requests` con tres políticas, los cuatro
 ajustes de la Fase 3 y las RPCs `app_activate_unit`, `app_anonymize_student`,
 `app_award_server_xp`, `app_unit_requirements`, `app_quiz_policy`,
-`app_create_data_request`, `app_resolve_data_request` y `app_ban_account`.
+`app_create_data_request`, `app_resolve_data_request`, `app_ban_account`,
+`app_claim_email_outbox`, `app_complete_email_outbox` y
+`app_requeue_stale_email_outbox`.
 
 Para producción, usa el verificador de solo lectura:
 
@@ -54,10 +57,11 @@ El verificador usa las columnas reales `version`, `name` y `statements` de
 `schema_migrations`; la referencia anterior a `inserted_at` era incorrecta y
 ya está corregida (commit `888a2ce`).
 
-**Resultado en staging (21 nov 2026):** `hsfhlhrkmhajmpethzqn`, 39/39
-migraciones, 41 tablas, 93 políticas, 58 `SECURITY DEFINER`, 0 sin
-`search_path`, suite RLS **135/135** y `test-functions.mjs` en PASS. El build
-de staging también terminó correctamente.
+**Resultado en staging (21 nov 2026):** `hsfhlhrkmhajmpethzqn`, 40/40
+migraciones, 41 tablas, 93 políticas, 61 `SECURITY DEFINER`, 0 sin
+`search_path`, suite RLS **135/135**, `test-functions.mjs` y
+`test-email-outbox.mjs` en PASS. El build de staging también terminó
+correctamente.
 
 **DB-07 queda verificado en staging**, sin cambios en producción. No uses
 credenciales de escritura "por costumbre": la verificación no modifica la base,
@@ -100,8 +104,10 @@ investigación autorizada y registrada.
 | Subida repentina de `guardian.invited` | Revisar si hay automatización o abuso. |
 | Muchos `ban.*` o `deactivate-user` seguidos | Verificar actor en `audit_log`. |
 | `data_requests` vencidas | Escalar a la persona responsable de privacidad. |
-| `email_outbox` en `pending` más de 24 h | Revisar el procesador de correo. |
-| `email_outbox` en `failed` | No reenviar a mano el enlace; revisar el procesador. |
+| `email_outbox` en `pending` más de 24 h | Revisar el cron y el procesador de correo. |
+| `email_outbox` en `sending` más de 30 min | El worker murió; `app_requeue_stale_email_outbox` lo recupera en la próxima ejecución. |
+| `email_outbox` en `failed` | No reenviar a mano el enlace; revisar `last_error`. |
+| `email.outbox.failed` en `audit_log` | Revisar la plantilla y los reintentos antes de reprocesar. |
 | `cors_origin_rejected` en logs | Confirmar si es configuración o un origen real no autorizado. |
 
 Los logs de Edge Functions se revisan desde el dashboard del proyecto o con el
@@ -113,7 +119,8 @@ Comprobación rápida sin `Origin` (no dispara el bloqueo CORS):
 
 ```bash
 cd app
-node scripts/test-functions.mjs   # exige APP_ENV=staging
+node scripts/test-functions.mjs      # exige APP_ENV=staging
+node scripts/test-email-outbox.mjs   # exige APP_ENV=staging y el token del cron
 ```
 
 La suite valida, entre otros puntos:

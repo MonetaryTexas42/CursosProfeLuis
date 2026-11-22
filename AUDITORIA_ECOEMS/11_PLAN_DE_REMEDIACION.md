@@ -69,7 +69,7 @@ Fase 4 (P3 · 90 días)
 | Paso | Acción |
 |---|---|
 | 1 | Crear un proyecto Supabase nuevo (`ecoems-staging`) |
-| 2 | Aplicar las 39 migraciones desde cero |
+| 2 | Aplicar las 40 migraciones desde cero |
 | 3 | Cargar `seed/content-v1.json` |
 | 4 | Crear usuarios ficticios por rol (admin, profesor, alumno, tutor) |
 | 5 | Crear `.env.staging` con la URL y anon key de staging |
@@ -555,7 +555,7 @@ from supabase_migrations.schema_migrations
 order by version;
 ```
 
-- Comparar con los 39 archivos.
+- Comparar con los 40 archivos.
 - Revisar `pg_policies` y `pg_proc` para detectar objetos no versionados.
 
 **Implementado:** `scripts/verify-migrations.mjs` compara
@@ -572,10 +572,11 @@ destino es producción. La columna `inserted_at` no existe en
 `SECURITY DEFINER` sin `search_path`. `exit code 1`, esperado. No se aplicaron
 migraciones ni se desplegó.
 
-**Ejecutado en staging (21 nov 2026):** ref `hsfhlhrkmhajmpethzqn`; 39/39
-migraciones (incluye `0039_staging_rls_fixes.sql`), 41 tablas, 93 políticas,
-58 `SECURITY DEFINER`, 0 sin `search_path`, suite RLS 135/135 y
-`test-functions.mjs` en PASS. Producción sigue intacta.
+**Ejecutado en staging (21 nov 2026):** ref `hsfhlhrkmhajmpethzqn`; 40/40
+migraciones (incluye `0039_staging_rls_fixes.sql` y `0040_email_outbox_processor.sql`),
+41 tablas, 93 políticas, 61 `SECURITY DEFINER`, 0 sin `search_path`, suite RLS
+135/135, `test-functions.mjs` y `test-email-outbox.mjs` en PASS. Producción
+sigue intacta.
 
 **Aceptación:** existe un documento que confirma qué migraciones están aplicadas y si hay diferencias.
 
@@ -592,7 +593,7 @@ migraciones (incluye `0039_staging_rls_fixes.sql`), 41 tablas, 93 políticas,
 | PRIV-05 / OPS-01 | Implementado | `scripts/backup-db.mjs` | Respaldo cifrado y restauración de prueba |
 | OPS-02 | Implementado | `scripts/restore-db.mjs` | Sin `--confirm` no escribe; producción exige `--i-know` |
 | OPS-04 | Implementado | `.github/workflows/ci.yml`; `docs/despliegue.md` | Primer push a `main` con secretos configurados |
-| DB-07 | Verificado en staging y en producción (solo lectura) | `scripts/verify-migrations.mjs` | Cerrado: 39/39 en staging |
+| DB-07 | Verificado en staging y en producción (solo lectura) | `scripts/verify-migrations.mjs` | Cerrado: 40/40 en staging |
 
 La suite de RLS creció de **91 a 113 checks** (RLS-108…129) para cubrir
 offboarding, pagos, estado de cuenta y perfil vocacional curado. Nada de esto
@@ -673,7 +674,7 @@ despliegue**. Sigue a los commits `8f87f97` (Fase 0/1) y `58a85c8` (Fase 2).
 | Bloque | Entregado | Pendiente de entorno |
 |---|---|---|
 | `SEC-05` | `ALLOWED_ORIGIN` por entorno, validación antes de `OPTIONS`/`POST`, `Vary: Origin` y rechazo 403 en `_shared/http.ts`; prueba negativa en `test-functions.mjs` | Configurar el secreto en las nueve funciones al desplegar |
-| `SEC-06` | Helper `_shared/email.ts`; `invite-guardian` encola `guardian_invite` y devuelve `delivery`/`email_id`; UI sin enlaces ni WhatsApp | Implementar el procesador de `email_outbox` |
+| `SEC-06` | Helper `_shared/email.ts`; `invite-guardian` encola y `process-email-outbox` drena con token, reintentos y auditoría sin enlaces | Verificado en staging con proveedor `log`; falta activar el cron con secretos del repo |
 | `SEC-07` | Auditoría de anonimización, ARCO y baneo; vista admin sin `before`/`after` | Definir retención con Legal (PRIV-07) |
 | `DB-01` | `0032`: índice único por grupo/unidad, RPC de activación y backfill de audiencia | Limpiar duplicados heredados si existen antes de aplicar |
 | `DB-02` | `0033`: `app_anonymize_student` con seudónimo, borrado de PII y auditoría | Coordinar el borrado definitivo de `auth.users` |
@@ -690,7 +691,7 @@ despliegue**. Sigue a los commits `8f87f97` (Fase 0/1) y `58a85c8` (Fase 2).
 | `UX-02` | `trapDialogFocus` centralizado en seis diálogos | — |
 | `PRIV-06` | `0037`: `data_requests`, SLA de 20 días, RPCs y diálogo “Solicitar mis datos” | Validar aviso `v3-2026` y `data_request_email` con Legal |
 | `OPS-06` / `OPS-07` | Runbooks `docs/seguridad.md` y `docs/monitoreo.md` | Acceso de solo lectura a producción para `DB-07`; alertas automáticas (Fase 4) |
-| `OPS-09` | `staging-check.mjs` con umbrales 39/41/93/≥53 y objetos Fase 3; suite RLS ampliada a 135 verificaciones | Ejecutado en staging el 21 nov 2026: 135/135 y functions PASS |
+| `OPS-09` | `staging-check.mjs` con umbrales 40/41/93/≥53 y objetos Fase 3; suite RLS ampliada a 135 verificaciones | Ejecutado en staging el 21 nov 2026: 135/135 y functions PASS |
 
 **Criterio de salida:** 0 FAIL en la suite RLS, `staging-check.mjs` sin
 advertencias, CORS positivo y negativo verificado, correo encolado sin enlaces

@@ -11,12 +11,14 @@
 
 > **Actualización 21 nov 2026 (addenda).** Las fases 0–3 se implementaron y se
 > ejecutaron en un staging real (`hsfhlhrkmhajmpethzqn`), distinto de producción:
-> 39/39 migraciones, 9 Edge Functions con `ALLOWED_ORIGIN`, seed ficticio,
-> suite RLS **135/135**, `test-functions.mjs` en PASS y build de staging
+> 40/40 migraciones, 10 Edge Functions (9 con `ALLOWED_ORIGIN` y el procesador
+> de correo con token), seed ficticio, suite RLS **135/135**,
+> `test-functions.mjs` y `test-email-outbox.mjs` en PASS y build de staging
 > correcto. La primera ejecución en staging detectó 19 fallos; se corrigieron
-> con `0039_staging_rls_fixes.sql` y dos ajustes a la suite. Producción no fue
-> modificada y solo se verificó en modo lectura. La auditoría original queda
-> como línea base; esta addenda documenta la validación posterior.
+> con `0039_staging_rls_fixes.sql` y dos ajustes a la suite. `0040` añadió el
+> procesador de `email_outbox` con proveedor `log` (sin envío real). Producción
+> no fue modificada y solo se verificó en modo lectura. La auditoría original
+> queda como línea base; esta addenda documenta la validación posterior.
 
 ---
 

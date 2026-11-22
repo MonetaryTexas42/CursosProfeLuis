@@ -80,9 +80,9 @@ app/
 - [x] Edge Functions desplegadas: `admin-create-student`,
       `admin-reset-student-password`, `invite-guardian` y `guardian-consent`.
 - [x] Invitación de tutores **por correo** (`SEC-06`): `invite-guardian`
-      encola `guardian_invite` en `email_outbox`; la respuesta y la UI no
-      devuelven el enlace mágico ni una URL de WhatsApp. El procesador de la
-      cola queda como trabajo operativo posterior.
+      encola `guardian_invite` en `email_outbox` y `process-email-outbox`
+      drena la cola con token, reintentos y auditoría sin enlaces. En staging
+      el proveedor es `log`, por lo que no se envía correo real.
 - [x] Frontend publicado en GitHub Pages y verificado contra la URL pública
       (flujos de alumno, curso, profesor y admin).
 - [x] Altas de alumnos desde el panel del profesor y del admin (contraseña
@@ -172,13 +172,13 @@ app/
       paginación con totales (`FUN-09`), pestaña de auditoría (`FUN-10`),
       limpieza de `localStorage` (`PRIV-04`), diálogo ARCO (`PRIV-06`) y
       accesibilidad (`UX-01/02`). La suite RLS tiene 135 verificaciones y
-      `staging-check.mjs` verifica 38 migraciones, 41 tablas, 93 políticas y
-      53 funciones `SECURITY DEFINER`. **Nada de esto está aplicado ni
-      desplegado.**
-- [ ] Aplicar `0032`–`0038` en staging, desplegar las Edge Functions con
+      `staging-check.mjs` verifica 40 migraciones, 41 tablas, 93 políticas y
+      al menos 53 funciones `SECURITY DEFINER`.
+- [x] Aplicar `0032`–`0040` en staging, desplegar las Edge Functions con
       `ALLOWED_ORIGIN`, correr la suite RLS y `staging-check.mjs` sin avisos.
-- [ ] Implementar el procesador de `email_outbox` para entregar las
-      invitaciones encoladas.
+      Producción sigue intacta y solo se verificó en lectura.
+- [x] Implementar y verificar en staging el procesador de `email_outbox`
+      (`scripts/test-email-outbox.mjs`). El cron requiere secretos del repo.
 - [ ] Aviso de privacidad validado por un abogado antes del piloto real y
       correo institucional de contacto para solicitudes ARCO.
 - [ ] Mover el progreso histórico de localStorage a Supabase (opcional: el

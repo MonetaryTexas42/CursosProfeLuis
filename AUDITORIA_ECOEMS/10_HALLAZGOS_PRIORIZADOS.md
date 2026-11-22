@@ -71,7 +71,7 @@ Este documento consolida los **63 hallazgos** de los informes 03–09 en una sol
 | DB-04 | M | P2 | A | `app_complete_unit` permite completar sin actividades | `0004:398-465` | 04 |
 | DB-05 | B | P3 | A | Migraciones sin rollback y no idempotentes | `0003:625`; `0009:8` | 04 |
 | DB-06 | B | P3 | A | Sin retención para `audit_log` y `email_outbox` | `0001:508-519` | 04 |
-| DB-07 | M | P1 | A | Estado real de migraciones verificado: 39/39 en staging y 22/38 en producción (solo lectura) | `supabase/.temp/`; `scripts/verify-migrations.mjs` | 04 |
+| DB-07 | M | P1 | A | Estado real de migraciones verificado: 40/40 en staging y 22/38 en producción (solo lectura) | `supabase/.temp/`; `scripts/verify-migrations.mjs` | 04 |
 | DB-08 | B | P1 | A | `notes_internal` en tabla visible a la familia | `0001:111`; `0003:560` | 04 |
 
 ### 3.3. Funcionalidad
@@ -269,18 +269,19 @@ Para evitar confusiones en la revisión:
 > `FUN-03`–`06`, `FUN-09`, `FUN-10`, `COD-01`, `COD-02`, `UX-01`, `UX-02`,
 > `PRIV-04`, `PRIV-06`, `OPS-06`, `OPS-07`, documentación de `OPS-09`) están
 > **implementadas en código y versionadas**. El 21 nov 2026 se ejecutaron en el
-> staging real (`hsfhlhrkmhajmpethzqn`): migraciones `0023`–`0039` (donde
-> `0039` corrige tres fallos detectados por la propia suite), 9 Edge Functions
-> con `ALLOWED_ORIGIN`, seed ficticio, **135/135 verificaciones de RLS**,
-> `test-functions.mjs` en PASS y build de staging correcto. Producción no fue
-> tocada: el 20 nov solo se verificó en lectura y seguía con 22 migraciones
-> aplicadas.
+> staging real (`hsfhlhrkmhajmpethzqn`): migraciones `0023`–`0040` (donde
+> `0039` corrige tres fallos detectados por la propia suite y `0040` añade el
+> procesador de correo), 10 Edge Functions, seed ficticio, **135/135
+> verificaciones de RLS**, `test-functions.mjs` y `test-email-outbox.mjs` en
+> PASS y build de staging correcto. Producción no fue tocada: el 20 nov solo se
+> verificó en lectura y seguía con 22 migraciones aplicadas.
 >
-> Siguen pendientes funcionales: el recibo descargable en PDF de `FUN-02`, el
-> procesador de `email_outbox` de `SEC-06`, la validación legal del aviso
-> `v3-2026` con el correo de contacto de `PRIV-06`, la restauración de prueba de
-> respaldos y el despliegue en CI. `DB-07` quedó cerrado en staging; el borrado
-> definitivo de `auth.users` queda como acción coordinada separada.
+> Siguen pendientes funcionales: el recibo descargable en PDF de `FUN-02`, la
+> validación legal del aviso `v3-2026` con el correo de contacto de `PRIV-06`,
+> la restauración de prueba de respaldos y el despliegue en CI. `SEC-06` quedó
+> verificado en staging con el proveedor `log` (sin envío real); el cron
+> requiere secretos del repositorio. `DB-07` quedó cerrado en staging; el
+> borrado definitivo de `auth.users` queda como acción coordinada separada.
 
 Para declarar que la plataforma puede operar con datos reales de menores, deben cumplirse **todos** estos:
 
@@ -295,7 +296,8 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [x] `OPS-03` y `OPS-09` resueltos: staging real creado, suites ejecutadas allí y producción intacta.
 - [ ] `OPS-04` verificado: CI publica sin `push -f`, etiqueta el commit y el rollback tarda menos de 15 minutos.
 - [ ] `COD-07` implementado: suite de RLS negativa en CI.
-- [x] `DB-07` cerrado: `verify-migrations.mjs` confirma 39/39 en staging y deja registrado el resultado de producción en solo lectura (22/38 en ese momento, sin escrituras).
+- [x] `SEC-06` verificado en staging: cola drenada con token, reintentos y auditoría sin enlaces; sin correo real (proveedor `log`).
+- [x] `DB-07` cerrado: `verify-migrations.mjs` confirma 40/40 en staging y deja registrado el resultado de producción en solo lectura (22/38 en ese momento, sin escrituras).
 - [ ] Aviso de privacidad `v3-2026` validado por abogado y sin placeholders.
 - [ ] Respaldos automáticos de Supabase verificados y restauración probada.
 - [ ] Runbook de incidentes documentado.

@@ -14,7 +14,7 @@ Este documento define las pruebas que faltan, cómo ejecutarlas en un entorno ai
 
 | Requisito | Detalle |
 |---|---|
-| Proyecto staging | `hsfhlhrkmhajmpethzqn` («Plataforma de Prueba ECOEMS»), con las 39 migraciones (`0032`–`0039` incluidas) y el seed |
+| Proyecto staging | `hsfhlhrkmhajmpethzqn` («Plataforma de Prueba ECOEMS»), con las 40 migraciones (`0032`–`0040` incluidas) y el seed |
 | Usuarios ficticios | Un admin, un profesor con grupo, dos alumnos (uno con asignación, uno sin), un tutor vinculado sin consentimiento, un tutor no vinculado y un tutor con consentimiento vigente y revocado |
 | Contenido | Al menos una unidad publicada con `correctIndex`, una en borrador |
 | `psql` | Para pruebas SQL directas |
@@ -553,7 +553,7 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 39 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**) |
+| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 40 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**) |
 | OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** 22/38 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, `exit 1` esperado; sin escrituras |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
 | OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` |
@@ -569,7 +569,10 @@ pruebas estaban mal formuladas (`RLS-132` rechazaba un insert con RLS y
 `0039_staging_rls_fixes.sql`, `denyIsPass` en el runner y `count(*) = 1`.
 La segunda ejecución quedó en **131 PASS · 0 FAIL · 0 SKIP · 131 total**, más
 4 comprobaciones de identidad: **135/135**. `test-functions.mjs` terminó en
-PASS y `npm run build:staging` compiló correctamente.
+PASS y `npm run build:staging` compiló correctamente. Tras `0040`,
+`test-email-outbox.mjs` verificó el drenado con proveedor `log`: 3 correos
+capturados, ninguno marcado como `sent`, token y `Origin` rechazados y sin
+enlaces en la respuesta ni en `audit_log`.
 
 ---
 
@@ -617,10 +620,12 @@ son de solo lectura o transaccionales con `ROLLBACK`.
 | P3-13 | Crear y resolver una solicitud ARCO | PRIV-06 | plazo de 20 días, estado, resolución y evento en `audit_log` |
 | P3-14 | Cerrar sesión y revisar `localStorage` | PRIV-04 / COD-01 | sin claves `ecoems_*` ni heredadas |
 | P3-15 | Navegar con teclado, abrir y cerrar cada diálogo | UX-01 / UX-02 | skip link, foco visible, Tab atrapado, Escape cierra y restaura foco |
-| P3-16 | Correr `staging-check.mjs` y la suite RLS (W) | OPS-07 / OPS-09 | 39/41/93/≥53 y 0 FAIL en 135 verificaciones (**obtenido**) |
+| P3-16 | Correr `staging-check.mjs` y la suite RLS (W) | OPS-07 / OPS-09 | 40/41/93/≥53 y 0 FAIL en 135 verificaciones (**obtenido**) |
+| P3-17 | Correr `test-email-outbox.mjs` (W) | SEC-06 | sin token/Origen ajeno → 403, GET → 405, fila `captured`, auditoría sin enlace (**obtenido**) |
 
-**Estado:** preparado en código, **sin ejecutar**. Los bloqueos son staging
-(`OPS-09`), el procesador de `email_outbox` y la validación legal del aviso.
+**Estado:** ejecutado en staging el 21 nov 2026. Quedan la validación legal del
+aviso, la restauración de prueba y el despliegue en CI. El proveedor `log` evitó
+cualquier envío real durante P3-17.
 
 ---
 
@@ -719,7 +724,7 @@ Cada prueba ejecutada debe dejar un registro como este:
 ## 12. Orden recomendado de ejecución
 
 1. **Preparar staging** y usuarios ficticios.
-2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 39 migraciones aplicadas.
+2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 40 migraciones aplicadas.
 3. **RLS-01…08** (contenido): confirma `SEC-01` y sirve de línea base.
 4. **RLS-16/50 y RLS-85…88** (notas internas).
 5. **RLS-30…33** (observaciones).
@@ -774,7 +779,8 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [ ] FUN-40…45 demuestran el panel del tutor de solo lectura con avance, calificaciones, asistencia, tareas y observaciones `family`.
 - [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
 - [ ] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log.
-- [x] OPS-40/41 demuestran qué migraciones están aplicadas (39/39 en staging) y que no hay `SECURITY DEFINER` sin `search_path`.
+- [x] OPS-40/41 demuestran qué migraciones están aplicadas (40/40 en staging) y que no hay `SECURITY DEFINER` sin `search_path`.
+- [x] P3-17 demuestra que el procesador de correo no entrega enlaces ni correo real en staging.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
 - [ ] OPS-42…45 demuestran que el despliegue es reproducible, etiquetado y reversible sin `push -f`.
 - [ ] La suite corre en CI y bloquea el despliegue si falla.

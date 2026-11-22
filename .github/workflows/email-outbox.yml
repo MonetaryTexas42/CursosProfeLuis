@@ -1,0 +1,40 @@
+name: Drenar email_outbox
+
+# SEC-06: invoca al procesador desplegado. Permanece inactivo hasta que el
+# repositorio tenga los secretos STAGING_OUTBOX_FUNCTION_URL y
+# STAGING_OUTBOX_PROCESSOR_TOKEN. Nunca uses la URL de producción aquí sin
+# antes revisar el proveedor de correo y la autorización correspondiente.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: email-outbox
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    env:
+      OUTBOX_URL: ${{ secrets.STAGING_OUTBOX_FUNCTION_URL }}
+      OUTBOX_TOKEN: ${{ secrets.STAGING_OUTBOX_PROCESSOR_TOKEN }}
+    steps:
+      - name: Procesar cola
+        if: env.OUTBOX_URL != '' && env.OUTBOX_TOKEN != ''
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "X-Outbox-Token: ${OUTBOX_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data '{"limit":10}' \
+            "$OUTBOX_URL"
+
+      - name: Aviso de configuración pendiente
+        if: env.OUTBOX_URL == '' || env.OUTBOX_TOKEN == ''
+        run: |
+          echo "::warning::Sin secretos de outbox; no se procesó ningún correo."

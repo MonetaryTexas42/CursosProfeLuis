@@ -55,10 +55,37 @@ Reglas:
   muestra el enlace mágico.
 - La fila de `audit_log` registra `delivery: "email"` y `email_id`, sin el
   enlace.
-- **El procesador de `email_outbox` no está implementado en esta fase.** Hasta
-  que exista, las invitaciones quedan en `pending`: este es un trabajo
-  operativo posterior, no un fallo silencioso. No reenvíes el enlace desde el
-  chat ni por correo manual con la `service_role` fuera del procesador.
+El procesador `process-email-outbox` cierra el ciclo. Está desplegado en
+staging y verificado con `scripts/test-email-outbox.mjs`:
+
+```text
+invite-guardian → email_outbox (pending) → process-email-outbox → proveedor
+```
+
+- Las RPCs `app_claim_email_outbox`, `app_complete_email_outbox` y
+  `app_requeue_stale_email_outbox` (`0040`) reclaman con
+  `FOR UPDATE SKIP LOCKED`, registran el resultado y recuperan envíos
+  abandonados. Solo las puede ejecutar `service_role`.
+- La función exige la cabecera `X-Outbox-Token` con el valor del secreto
+  `OUTBOX_PROCESSOR_TOKEN`; rechaza peticiones con `Origin` y solo acepta
+  `POST`. Se despliega con `--no-verify-jwt` porque la llama un cron, no un
+  usuario. Sin el token la función falla cerrada.
+- `EMAIL_PROVIDER=log` es el valor usado en staging: **no envía correo**. Marca
+  la fila como `captured` (un estado distinto de `sent`), con un id de
+  proveedor `log:…`. Para envío real se requiere `EMAIL_PROVIDER=resend`,
+  `RESEND_API_KEY` y `EMAIL_FROM`, y autorización explícita.
+- El enlace mágico se lee del payload para armar el mensaje, pero nunca se
+  escribe en logs, `audit_log` ni en la respuesta. La auditoría registra
+  `email.outbox.<resultado>` con plantilla, proveedor e intentos, sin correo
+  ni enlace.
+- Reintentos: `EMAIL_MAX_ATTEMPTS` (5 por defecto) con backoff de 5 min a 6 h.
+  Un payload inválido o una plantilla desconocida se marca `failed` sin
+  reintento: hay que corregir al productor.
+- El cron está en `.github/workflows/email-outbox.yml` y permanece **inactivo**
+  hasta configurar `STAGING_OUTBOX_FUNCTION_URL` y
+  `STAGING_OUTBOX_PROCESSOR_TOKEN` en el repositorio. No reenvíes el enlace
+  desde el chat ni por correo manual con la `service_role` fuera del
+  procesador.
 
 ## 3. Registro de auditoría (SEC-07)
 
@@ -103,10 +130,11 @@ antes de programar cualquier limpieza.
 
 ## 6. Antes de desplegar
 
-1. Aplicar `0032`–`0038` en staging y correr `staging-check.mjs` sin
+1. Aplicar `0032`–`0040` en staging y correr `staging-check.mjs` sin
    advertencias.
 2. Correr la suite RLS con 0 FAIL.
-3. Verificar CORS positivo y negativo y el encolado de correo.
+3. Verificar CORS positivo y negativo, el encolado de correo y
+   `test-email-outbox.mjs`.
 4. Revisar que no haya secretos, PII real ni enlaces mágicos en logs o
    respuestas.
 5. Confirmar con Legal el aviso `v3-2026` y el correo de contacto.
