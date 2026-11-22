@@ -1,0 +1,3 @@
+window.ECOEMS_SUPABASE_URL = "https://ioikcrdxneuydylyhvwi.supabase.co";
+window.ECOEMS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvaWtjcmR4bmV1eWR5bHlodndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzc4NTIsImV4cCI6MjEwODk1Mzg1Mn0.dQTvZ6YjjD3SthqvgZjoj7NmHNI1bNk-pSILYmS1N4M";
+window.ECOEMS_APP_ENV = "production";

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="privacy-version" content="v3-2026">
+<meta name="privacy-url" content="/privacidad.html">
+<meta name="robots" content="noindex">
+<title>Aviso de privacidad · ECOEMS</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f172a;
+    --panel: #111c33;
+    --text: #e8eefc;
+    --muted: #a8b6d4;
+    --line: #2a3b5f;
+    --accent: #7dd3fc;
+    --accent-soft: #0b2a44;
+    --warn-bg: #3a2a12;
+    --warn-line: #a16207;
+    --warn-text: #fde68a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #152238;
+      --muted: #52627f;
+      --line: #dbe3f0;
+      --accent: #0369a1;
+      --accent-soft: #e0f2fe;
+      --warn-bg: #fff7e6;
+      --warn-line: #d97706;
+      --warn-text: #7c4a03;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+  }
+  .page {
+    width: min(900px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 32px 0 64px;
+  }
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .top a.back { color: var(--accent); font-size: 14px; text-decoration: none; }
+  .top a.back:hover, .top a.back:focus { text-decoration: underline; }
+  main {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: clamp(20px, 4vw, 44px);
+    margin-top: 24px;
+  }
+  h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.03em; }
+  h2 { margin: 34px 0 10px; font-size: 20px; line-height: 1.25; }
+  h3 { margin: 22px 0 8px; font-size: 16px; }
+  p, li { color: var(--text); }
+  .meta { color: var(--muted); font-size: 14px; margin: 0; }
+  .draft {
+    margin: 22px 0 0;
+    padding: 14px 16px;
+    border: 1px solid var(--warn-line);
+    border-radius: 12px;
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    font-size: 14px;
+  }
+  .draft strong { display: block; margin-bottom: 4px; }
+  .summary {
+    margin: 22px 0 0;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--accent-soft);
+  }
+  .summary strong { color: var(--accent); }
+  ul, ol { padding-left: 22px; }
+  li { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  a { color: var(--accent); }
+  .placeholder { font-weight: 700; color: var(--warn-text); }
+  .footer {
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  @media print {
+    body { background: #fff; color: #000; }
+    .page { width: 100%; padding: 0; }
+    main { border: 0; padding: 0; }
+    .draft { border-color: #999; background: #fff; color: #000; }
+    .top a.back { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <a class="brand" href="/" aria-label="Volver a ECOEMS">
+      <span class="brand-mark" aria-hidden="true">E</span>
+      <span>ECOEMS <small>Plataforma</small></span>
+    </a>
+    <a class="back" href="/">Volver a la plataforma</a>
+  </header>
+
+  <main>
+    <h1>Aviso de privacidad</h1>
+    <p class="meta">Versión <strong>v3-2026</strong> · Última actualización: 17 de noviembre de 2026</p>
+
+    <div class="draft" role="note">
+      <strong>Documento en revisión legal.</strong>
+      Esta versión se publica para pruebas con datos ficticios. Antes de usarla con datos reales, la institución debe validar el texto con un abogado, completar los datos entre corchetes y aprobar la versión definitiva. Si el texto cambia, se publicará una versión nueva y se pedirá una nueva aceptación.
+    </div>
+
+    <div class="summary">
+      <strong>En resumen:</strong> la plataforma ECOEMS trata datos del alumno para fines educativos y de seguimiento. No usa los datos para publicidad ni los vende. El padre, madre o tutor debe aceptar este aviso antes de que la plataforma muestre información del alumno. El consentimiento puede revocarse en cualquier momento desde el panel del tutor.
+    </div>
+
+    <h2>1. Identidad y domicilio del responsable</h2>
+    <p>
+      <span class="placeholder">[NOMBRE DE LA INSTITUCIÓN]</span>, con domicilio en
+      <span class="placeholder">[DOMICILIO]</span>, es responsable del tratamiento de los datos personales
+      que recaba a través de la plataforma ECOEMS.
+    </p>
+    <p>
+      Contacto para asuntos de privacidad: <span class="placeholder">[CORREO DE PRIVACIDAD]</span>.
+      Responsable de privacidad: <span class="placeholder">[NOMBRE DEL RESPONSABLE]</span>.
+    </p>
+
+    <h2>2. Datos personales que se recaban</h2>
+    <h3>Del alumno</h3>
+    <ul>
+      <li>Nombre completo, fecha de nacimiento, grupo, matrícula y estatus escolar.</li>
+      <li>Usuario, contraseña (gestionada y cifrada por el proveedor de autenticación) y correo sintético de acceso.</li>
+      <li>Progreso, respuestas, intentos, puntajes, tiempo de uso y resultados de lectura o juegos.</li>
+      <li>Asistencia, calificaciones, tareas, observaciones del profesor y notas de orientación vocacional.</li>
+      <li>Intereses, aptitudes y resultados de los test de orientación.</li>
+    </ul>
+    <h3>Del tutor</h3>
+    <ul>
+      <li>Nombre, correo, teléfono, parentesco y vínculo con el alumno.</li>
+      <li>Mensajes leídos, consentimiento aceptado o revocado y datos de contacto.</li>
+    </ul>
+    <h3>Datos técnicos</h3>
+    <ul>
+      <li>Fecha y hora de acceso, dirección IP, navegador y registros de auditoría.</li>
+      <li>No se usan cookies publicitarias ni rastreadores de terceros.</li>
+    </ul>
+
+    <h2>3. Datos personales sensibles</h2>
+    <p>
+      La plataforma no solicita datos personales sensibles. Si en el futuro se incorporan datos de esa
+      naturaleza, se recabará el consentimiento expreso que exija la ley y se actualizará este aviso.
+    </p>
+
+    <h2>4. Finalidades del tratamiento</h2>
+    <h3>Finalidades primarias</h3>
+    <ol>
+      <li>Operar la plataforma educativa y administrar las cuentas de acceso.</li>
+      <li>Registrar el avance, las respuestas, los puntajes y las evaluaciones del alumno.</li>
+      <li>Informar al tutor sobre asistencia, calificaciones, observaciones y avance.</li>
+      <li>Generar reportes y métricas del grupo para el profesor y la institución.</li>
+      <li>Mantener la seguridad, los respaldos, la auditoría y la continuidad del servicio.</li>
+      <li>Cumplir obligaciones escolares y legales aplicables.</li>
+    </ol>
+    <h3>Finalidades secundarias</h3>
+    <p>
+      No se realizan finalidades secundarias. Los datos no se usan para publicidad, prospección comercial
+      ni se venden a terceros.
+    </p>
+
+    <h3>4.1. Orientación vocacional y perfil de acompañamiento</h3>
+    <p>
+      Los test de personalidad y orientación vocacional, los intereses, aptitudes, fortalezas y sugerencias
+      de carrera se tratan con una finalidad exclusivamente educativa: acompañar al alumno en su elección
+      de bachillerato y apoyar al profesor en la tutoría. <strong>No son un diagnóstico clínico ni
+      psicológico</strong> y no se usan para tomar decisiones automáticas sobre el alumno.
+    </p>
+    <p>
+      El tutor puede consultar un <strong>resumen curado</strong> de ese perfil (intereses, aptitudes,
+      fortalezas, sugerencias de carrera y la carrera de interés declarada). Las <strong>notas internas de
+      orientación y las áreas a trabajar</strong> quedan reservadas al personal docente y no se muestran al
+      tutor. El alumno puede consultar su propio resumen dentro de la plataforma con la leyenda de que el
+      resultado es orientativo.
+    </p>
+
+    <h2>5. Base legal y consentimiento</h2>
+    <p>
+      El tratamiento se realiza con el consentimiento del padre, madre o tutor del alumno menor de edad,
+      o del propio alumno cuando sea mayor de edad, y con las bases legales que resulten aplicables.
+      El consentimiento se registra con fecha, versión del aviso, identificador del tutor y del alumno,
+      dirección del documento y hash del texto aceptado.
+    </p>
+    <p>
+      La negativa o revocación del consentimiento puede impedir el uso de la plataforma por el alumno,
+      salvo los datos estrictamente necesarios para la relación escolar o para cumplir una obligación legal.
+    </p>
+
+    <h2>6. Transferencias y remisiones</h2>
+    <p>
+      Para operar el servicio se utilizan proveedores de infraestructura en la nube, autenticación,
+      almacenamiento y mensajería. Estos proveedores tratan los datos por cuenta de la institución y
+      conforme a sus condiciones de servicio. No se transfieren datos personales a terceros para fines
+      comerciales.
+    </p>
+    <p>
+      Cuando el tutor comparte un enlace de acceso por WhatsApp, el contenido del mensaje y el enlace son
+      tratados también por ese servicio de mensajería, conforme a sus propias políticas.
+    </p>
+
+    <h2>7. Derechos de acceso, rectificación, cancelación y oposición</h2>
+    <p>
+      El titular o su representante puede ejercer los derechos de acceso, rectificación, cancelación y
+      oposición escribiendo a <span class="placeholder">[CORREO DE PRIVACIDAD]</span> o mediante el canal
+      que la institución habilite. La solicitud debe incluir la identificación del titular, el derecho que
+      desea ejercer y los datos que permitan localizar la información.
+    </p>
+    <p>
+      La institución responderá en los plazos que marque la legislación aplicable y registrará la
+      solicitud y su resolución.
+    </p>
+
+    <h2>8. Revocación del consentimiento</h2>
+    <p>
+      El tutor puede revocar su consentimiento desde el panel del tutor de la plataforma, con confirmación
+      expresa, o escribiendo a <span class="placeholder">[CORREO DE PRIVACIDAD]</span>. La revocación no
+      tiene efectos retroactivos y puede estar limitada por obligaciones de conservación escolar o legal.
+    </p>
+    <p>
+      Al revocar, la plataforma deja de mostrar la información del alumno al tutor hasta que se otorgue un
+      nuevo consentimiento para la versión vigente del aviso.
+    </p>
+
+    <h2>9. Medidas de seguridad</h2>
+    <ul>
+      <li>Control de acceso basado en roles y políticas de seguridad a nivel de fila.</li>
+      <li>Principio de mínimo privilegio y separación de funciones administrativas.</li>
+      <li>Contraseñas gestionadas por el proveedor de autenticación; la plataforma no las almacena en claro.</li>
+      <li>HTTPS para el tráfico y credenciales de servicio solo en el servidor.</li>
+      <li>Registro de auditoría para accesos y acciones administrativas relevantes.</li>
+      <li>Respaldos cifrados y pruebas de restauración.</li>
+      <li>Revisión de dependencias, secretos y accesos al panel de administración.</li>
+    </ul>
+
+    <h2>10. Plazos de conservación</h2>
+    <table>
+      <thead>
+        <tr><th>Dato</th><th>Conservación</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Expediente académico</td><td>Mientras dure la relación escolar y el plazo legal aplicable.</td></tr>
+        <tr><td>Progreso e intentos</td><td>Mientras dure la cuenta; pueden anonimizarse al egreso.</td></tr>
+        <tr><td>Asistencia y calificaciones</td><td>Plazo escolar y legal aplicable.</td></tr>
+        <tr><td>Mensajes y observaciones</td><td>Hasta un año después del egreso, salvo obligación mayor.</td></tr>
+        <tr><td>Registros de auditoría</td><td>Un año.</td></tr>
+        <tr><td>Respaldos</td><td>Rotación de 30 días; respaldo mensual hasta seis meses.</td></tr>
+        <tr><td>Consentimientos</td><td>Mientras dure el tratamiento y el plazo legal aplicable.</td></tr>
+      </tbody>
+    </table>
+    <p>Al vencer los plazos, los datos se eliminan o anonimizan de forma segura.</p>
+
+    <h2>11. Cookies y tecnologías de rastreo</h2>
+    <p>
+      La plataforma usa almacenamiento local del navegador para recordar preferencias, como el tema visual
+      y el estado de la sesión. No usa cookies publicitarias, píxeles de seguimiento ni herramientas de
+      analítica de terceros con fines comerciales.
+    </p>
+
+    <h2>12. Cambios al aviso</h2>
+    <p>
+      Cualquier cambio de fondo en este aviso se publicará con una versión nueva y una fecha de
+      actualización. Si el cambio afecta el consentimiento, se pedirá al tutor que acepte la nueva versión
+      antes de seguir mostrando la información del alumno.
+    </p>
+
+    <h2>13. Contacto y autoridad competente</h2>
+    <p>
+      Para dudas, solicitudes o inconformidades, escribe a
+      <span class="placeholder">[CORREO DE PRIVACIDAD]</span> o acude al
+      <span class="placeholder">[DOMICILIO]</span>.
+    </p>
+    <p>
+      Si considera que sus derechos han sido vulnerados, puede acudir al Instituto Nacional de
+      Transparencia, Acceso a la Información y Protección de Datos Personales (INAI) o a la autoridad que
+      lo sustituya, sin perjuicio de los recursos administrativos o judiciales que correspondan.
+    </p>
+
+    <p class="footer">
+      ECOEMS · Aviso de privacidad v3-2026 · Documento en revisión legal. Para aceptar este aviso, vuelve
+      al panel del tutor y marca la casilla correspondiente.
+    </p>
+  </main>
+</div>
+</body>
+</html>
