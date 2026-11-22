@@ -13,7 +13,9 @@ Base local de Fase 1. Proyecto Supabase: `ioikcrdxneuydylyhvwi` (staging por cre
 | Ruta | Qué es |
 |---|---|
 | `/` | Portal: login por rol (alumno/profesor/tutor), paneles y administración |
-| `/curso/` | Reproductor del curso (la plataforma anterior): materias, unidades, tareas, planificación, taller vocacional, XP |
+| `/curso/` | Reproductor del curso (la plataforma anterior): materias, unidades, tareas, planificación, XP y accesos a evaluación y orientación |
+| `/guia-examen-espanol.html` | Guía imprimible del examen final de Español (13 temas, 136 preguntas y 117 ejercicios) |
+| `/vocacional.html` | Taller vocacional como página propia: RIASEC, escuelas, universidades, planes/técnicas y guía de decisión |
 | `/herramientas-lectura.html`, `/herramientas-matematicas.html` | Herramientas embebidas en el reproductor |
 
 **Integración y seguridad:**
@@ -41,33 +43,38 @@ usándose solo en local para respaldos y restauración.
 
 **Estado final (22 nov 2026):** con autorización explícita se aplicaron
 `0041`/`0042` en producción tras un respaldo cifrado y se activó
-`final_exam_spanish_enabled=true`. El run `45059343395` publicó el frontend
-(`deploy-c3ef7c6`). Después se añadieron los accesos dentro del reproductor
-`/curso/` (`deploy-0aeb7e7`, run `45060761193`) y la vista de resultados del
-examen para el profesorado (`deploy-5207118`, run `45061693062`); los builds de
-Pages `45060808981` y `45061732099` terminaron en SUCCESS.
+`final_exam_spanish_enabled=true`. Después se publicaron los accesos en
+`/curso/` (`deploy-0aeb7e7`, run `45060761193`), la vista de resultados del
+examen (`deploy-5207118`, run `45061693062`) y, por último, la vista previa del
+profesorado y la página propia del vocacional (`deploy-f4bc229`, run
+`45074991966`; build de Pages `45075032798`). Todos los runs terminaron en
+SUCCESS.
 
-Producción quedó en **42/42 migraciones, 96 políticas, 115 funciones y 0
-`SECURITY DEFINER` sin `search_path`**. El examen final de Español responde
-`enabled=true` con 13 secciones y 136 preguntas; la guía imprimible está en
-`/guia-examen-espanol.html` y el taller vocacional reutiliza el material legacy
-sin escribir en la base (sus respuestas viven en `localStorage`).
+Producción y staging quedaron en **43/43 migraciones, 96 políticas, 116
+funciones y 0 `SECURITY DEFINER` sin `search_path`**. El examen final de Español
+sigue activo en producción con 13 secciones y 136 preguntas; la guía imprimible
+está siempre disponible en `/guia-examen-espanol.html`. El taller vocacional
+reutiliza el material legacy sin escribir en la base (RIASEC y checklist viven
+en `localStorage`).
 
 En `/curso/` hay un menú lateral «Evaluación y orientación» y tarjetas en el
-inicio que abren `../#examen`, `../#vocacional` y la guía imprimible. Los
-recursos estáticos del curso se versionaron con `?v=3` para evitar caché.
+inicio que abren `../#examen`, `../vocacional.html` y la guía imprimible. Los
+recursos estáticos del curso se versionaron con `?v=4` para evitar caché.
 
 En el panel del staff (profesor y administrador) hay una pestaña **🎓 Examen
-final** con sesiones, estado, aciertos, tiempo, puntaje y promedio. La RLS ya
-permitía leer `final_exam_sessions` al profesor del alumno y al administrador;
-se comprobó con un token de profesor (HTTP 200, sin escrituras). El test
-vocacional oficial sigue en la ficha del alumno; el taller ampliado permanece
-privado en su dispositivo.
+final** con sesiones, estado, aciertos, tiempo, puntaje y promedio, y el botón
+**«Vista previa del examen →»**. La vista previa usa `app_preview_final_exam`,
+restringida por `app_is_staff()`: muestra el banco real con clave y
+explicaciones, sin crear sesión ni guardar respuestas. Alumnos y tutores reciben
+HTTP 403. El test vocacional oficial sigue en la ficha del alumno; el taller
+ampliado tiene su propia página y permanece privado en el dispositivo.
 
-Verificación externa: `index=200`, `guia-examen-espanol.html=200`,
-`privacidad.html=200`, aviso `v3-2026` con hash `85d13859…f740b`, guía con hash
-`966fb846…d4094` y bundle actual `index-CYpOHLrA.js`. Evidencia detallada en
-`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`.
+Verificación externa: `/`, `/vocacional.html`, `/curso/`,
+`guia-examen-espanol.html` y `privacidad.html` responden 200. Bundle actual
+`main-CqpKtSk-.js` (contiene la vista previa), entrada `vocacional.html` y chunk
+`vocational-kkg0TQ4K.js`. Aviso `v3-2026` con hash `85d13859…f740b` y guía con
+hash `966fb846…d4094` sin cambios. Evidencia detallada en
+`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043`).
 
 ```bash
 # Publicación normal: commit en main

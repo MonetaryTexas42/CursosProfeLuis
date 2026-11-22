@@ -10,8 +10,9 @@ La Fase 3 añade `0032`–`0038`. La ejecución real en staging añadió `0039` 
 tres correcciones detectadas por la suite (grants a `authenticated` y visibilidad
 de perfiles) y `0040` con las RPCs del procesador de `email_outbox`. El 22 nov
 2026, con autorización explícita y tras respaldos cifrados, se aplicaron en
-producción `0023`–`0040` y, posteriormente, `0041`/`0042` del examen final.
-Staging y producción quedaron alineados en 42/42 migraciones.
+producción `0023`–`0040`, después `0041`/`0042` del examen final y, al cierre,
+`0043` de la vista previa del profesorado. Staging y producción quedaron
+alineados en 43/43 migraciones.
 
 En staging, después de `db push`:
 
@@ -26,7 +27,7 @@ El verificador es de solo lectura y comprueba:
 
 | Recurso | Umbral esperado | Observado en staging |
 |---|---|---|
-| Migraciones | ≥ 38 | 42 (40 + `0041`/`0042`) |
+| Migraciones | ≥ 38 | 43 (40 + `0041`/`0042` + `0043`) |
 | Tablas | 41 | 41 |
 | Políticas RLS | ≥ 93 | 96 |
 | Funciones `SECURITY DEFINER` | ≥ 53 | ver `staging-check.mjs` |
@@ -72,9 +73,11 @@ explícita.
 **Estado actual de producción (22 nov 2026, cierre final):** con autorización
 explícita se aplicaron `0041`/`0042` tras el respaldo cifrado
 `backup-2026-11-22-19-09-56.json.enc` (SHA-256 del contenido
-`30bc3762…7f141`, SHA-256 del archivo `784ada66…c631e`). La verificación final
-reporta **42/42 migraciones, 96 políticas, 115 funciones y 0 `SECURITY DEFINER`
-sin `search_path`**. `app_final_exam_status()` devuelve
+`30bc3762…7f141`, SHA-256 del archivo `784ada66…c631e`) y, al final del cierre,
+`0043` tras el respaldo `backup-2026-11-22-21-55-47.json.enc` (SHA-256 del
+contenido `ccb38143…816c8`, SHA-256 del archivo `3803a2c3…5207`). La
+verificación final reporta **43/43 migraciones, 96 políticas, 116 funciones y 0
+`SECURITY DEFINER` sin `search_path`**. `app_final_exam_status()` devuelve
 `{"enabled":true,"subject":"espanol","sections":13,"questions":136,"questionsPerSection":0}`.
 Los conteos de datos sensible no cambiaron: 13 perfiles, 4 alumnos, 2
 `student_profiles`, 4 pagos, 13 asignaciones y 24 entradas de auditoría;
@@ -83,9 +86,9 @@ Los conteos de datos sensible no cambiaron: 13 perfiles, 4 alumnos, 2
 concede permisos a `authenticated` (igual que en staging). Evidencia en
 `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`.
 
-**Verificación actual de staging (22 nov 2026, tras `0041`/`0042`):**
-`verify-migrations.mjs` reporta 42 migraciones locales y 42 aplicadas, 96
-políticas, 115 funciones y 0 `SECURITY DEFINER` sin `search_path`. La prueba
+**Verificación actual de staging (22 nov 2026, tras `0043`):**
+`verify-migrations.mjs` reporta 43 migraciones locales y 43 aplicadas, 96
+políticas, 116 funciones y 0 `SECURITY DEFINER` sin `search_path`. La prueba
 E2E `scripts/test-final-exam.mjs` confirma 13 secciones, 136 preguntas,
 respuestas y tiempos registrados, puntaje calculado en servidor, clave correcta
 no legible por el alumno y rollback sin residuos. La suite RLS sigue en
@@ -122,6 +125,35 @@ SUCCESS y publicó `deploy-5207118` (`gh-pages` en `2356aa8`); el build de Pages
 `index-CYpOHLrA.js` (200), que contiene «Resultados por alumno», «Promedio» y la
 nota del test vocacional oficial. El test vocacional oficial continúa en la
 ficha del alumno y el taller ampliado sigue en `localStorage`.
+
+**Vista previa del examen para el profesorado (22 nov 2026):** el commit
+`f4bc229` añadió el botón «Vista previa del examen →» a la pestaña «Examen
+final» del staff. La migración `0043` creó `app_preview_final_exam()`, una RPC
+de solo lectura restringida por `app_is_staff()` que devuelve las 13 secciones,
+las 136 preguntas, la respuesta correcta y la explicación. El frontend omite
+`app_answer_final_exam` y `app_finish_final_exam` en este modo: no hay sesión,
+no hay escrituras y la calificación en pantalla es solo local. Pruebas con
+tokens de prueba: profesor HTTP 200 con clave; alumno y tutor HTTP 403. Tras
+las pruebas, `final_exam_sessions=0` y `final_exam_answers=0` en staging y
+producción. En producción la CLI no pudo iniciar el rol de login (403) y la
+migración se aplicó por SQL directo, quedando registrada en
+`supabase_migrations.schema_migrations`; no se imprimieron secretos.
+
+**Página propia del vocacional (22 nov 2026):** `vocacional.html` es una entrada
+independiente con gate de sesión; el panel y `/curso/` enlazan a ella. Ya no se
+abre como diálogo dentro de la ficha del alumno. RIASEC y checklist siguen en
+`localStorage` y se limpian al cerrar sesión; el test oficial continúa en la
+ficha del alumno. Los recursos del curso se versionaron con `?v=4`.
+
+**Publicación final (22 nov 2026):** el run `45074991966` terminó en SUCCESS y
+publicó `deploy-f4bc229` (`gh-pages` en `0ea4c50`); el build de Pages
+`45075032798` también terminó en SUCCESS. Verificación externa:
+`/`, `/vocacional.html`, `/curso/`, `/guia-examen-espanol.html` y
+`/privacidad.html` → 200. Bundle `main-CqpKtSk-.js` con «Vista previa del
+profesorado», `data-preview-final-exam` y `app_preview_final_exam`; entrada
+`vocacional.html` con `vocacional-CayTz_gP.js` y chunk `vocational-kkg0TQ4K.js`.
+Detalle en `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§
+`cierre_0043`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.7.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

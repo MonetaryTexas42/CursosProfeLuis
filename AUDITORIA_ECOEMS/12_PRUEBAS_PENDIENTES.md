@@ -14,7 +14,7 @@ Este documento define las pruebas que faltan, cómo ejecutarlas en un entorno ai
 
 | Requisito | Detalle |
 |---|---|
-| Proyecto staging | `hsfhlhrkmhajmpethzqn` («Plataforma de Prueba ECOEMS»), con las 42 migraciones (`0032`–`0042` incluidas) y el seed; producción sigue en 40 (`0023`–`0040`) |
+| Proyecto staging | `hsfhlhrkmhajmpethzqn` («Plataforma de Prueba ECOEMS»), con las 43 migraciones (`0032`–`0043` incluidas) y el seed; producción también quedó en 43 (`0023`–`0043`) |
 | Usuarios ficticios | Un admin, un profesor con grupo, dos alumnos (uno con asignación, uno sin), un tutor vinculado sin consentimiento, un tutor no vinculado y un tutor con consentimiento vigente y revocado |
 | Contenido | Al menos una unidad publicada con `correctIndex`, una en borrador |
 | `psql` | Para pruebas SQL directas |
@@ -566,8 +566,8 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 42 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**; eran 40 antes de `0041`/`0042`) |
-| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** antes 22/38 aplicadas y `exit 1`; tras las autorizaciones del 22 nov, 42/42, 96 políticas, 115 funciones y 0 sin `search_path` |
+| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 43 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**; eran 40 antes de `0041`/`0042` y 42 antes de `0043`) |
+| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** antes 22/38 aplicadas y `exit 1`; tras las autorizaciones del 22 nov, 43/43, 96 políticas, 116 funciones y 0 sin `search_path` |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
 | OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**obtenido**) |
 | OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica (**configurado; no ejecutado en GitHub**) |
@@ -741,6 +741,37 @@ publicado. Staging conserva el flag en `false` como entorno de prueba. No se
 registraron respuestas de alumnos ni sesiones del examen: las tablas
 `final_exam_answers`, `final_exam_sessions`, `final_exam_questions` y
 `final_exam_key` siguen vacías.
+
+### 8.7. Vista previa del examen y página propia del vocacional (22 nov 2026)
+
+El profesorado reportó dos problemas: no podía abrir el examen para revisarlo y el
+taller vocacional seguía incrustado en el panel del alumno. Con autorización
+explícita («Con clave, en staging y producción» y «Página `/vocacional.html`»)
+se añadió la migración `0043` y se publicó un frontend nuevo.
+
+| # | Prueba | Resultado |
+|---|---|---|
+| OPS-61 | Vista previa del examen para profesorado | `0043_final_exam_teacher_preview.sql` crea `app_preview_final_exam()`: `SECURITY DEFINER`, `search_path=public, pg_temp`, restringida por `app_is_staff()`. Reconstruye las mismas 13 secciones y 136 preguntas del examen real, con orden aleatorio por llamada, y devuelve `correctIndex`/`explanation`. **No crea sesión, no inserta respuestas y no aparece en resultados.** El panel del staff tiene el botón «Vista previa del examen →» en la pestaña «Examen final»; el frontend omite `app_answer_final_exam` y `app_finish_final_exam` en este modo y califica solo en memoria para mostrar la clave. |
+| OPS-62 | Taller vocacional como página propia | `vocacional.html` es una entrada independiente de Vite, con gate de sesión y el mismo material legacy. Se eliminó el botón que lo abría dentro del panel; ahora el panel y `/curso/` enlazan a `vocacional.html`. El test oficial sigue en la ficha del alumno; RIASEC y checklist siguen en `localStorage`, y el logout limpia las claves `ecoems_*`. |
+| OPS-63 | `0043` en staging y producción | Staging: `supabase db push --remote=hsfhlhrkmhajmpethzqn --skip-vault --yes` aplicó `0043`. Producción: la CLI devolvió `DbConfigLoginRoleStatusError` (`unexpected login role status 403`) porque el token no tiene privilegios de plataforma; se aplicó el mismo SQL por conexión directa y se registró en `supabase_migrations.schema_migrations`. Respaldo cifrado previo: `backup-2026-11-22-21-55-47.json.enc` (SHA-256 del contenido `ccb38143…816c8`; SHA-256 del archivo `3803a2c3…5207`; solo `public`). |
+| OPS-64 | Verificación de base tras `0043` | Staging y producción: **43/43 migraciones, 96 políticas, 116 funciones y 0 `SECURITY DEFINER` sin `search_path`; «Estado consistente.»** La suite RLS volvió a correr en staging: **131 PASS · 0 FAIL · 0 SKIP**. El flag de staging sigue en `false`; producción sigue con el examen activo. |
+| OPS-65 | Permisos de la RPC | Con tokens reales de prueba: profesor → HTTP 200, 13 secciones, 136 preguntas y clave presente; alumno y tutor → HTTP 403 «La vista previa del examen es solo para profesorado». No se imprimieron tokens ni datos personales. Tras las pruebas, `final_exam_sessions=0` y `final_exam_answers=0` en **staging y producción**. |
+| OPS-66 | Publicación y verificación externa | Commit `f4bc229` sin `[skip ci]`. Run `45074991966` de «CI y despliegue» en SUCCESS (17 pasos: build, RLS, migraciones, recibo PDF, publicación, etiqueta y health check); build de Pages `45075032798` en SUCCESS; etiqueta `deploy-f4bc229`; `gh-pages` en `0ea4c50`. Verificación en vivo: `/`, `/vocacional.html`, `/curso/`, `/guia-examen-espanol.html` y `/privacidad.html` → 200. Bundle `main-CqpKtSk-.js` contiene «Vista previa del profesorado», `data-preview-final-exam` y `app_preview_final_exam`; `vocacional-CayTz_gP.js` y el chunk `vocational-kkg0TQ4K.js` contienen el flujo standalone. `/curso/` sirve `?v=4` (2 referencias) y `curso/js/app.js` enlaza `../vocacional.html` (2 referencias). Guía `966fb846…d4094` y aviso `v3-2026` `85d13859…f740b` sin cambios. |
+
+Comandos de verificación ejecutados sin credenciales en la salida:
+
+```bash
+cd app
+DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/verify-migrations.mjs
+DATABASE_URL="$(cat .secrets/database-url)" node scripts/verify-migrations.mjs
+DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/run-rls-tests.mjs
+cd frontend && npm run build -- --base=/CursosProfeLuis/
+```
+
+**Resultado:** el profesorado puede abrir el examen en vista previa con clave,
+sin convertirse en alumno ni contaminar los resultados, y el taller vocacional
+tiene acceso propio en `/vocacional.html`. Queda pendiente solo la revisión
+visual con cuentas reales, ya registrada como no bloqueante en OPS-50.
 
 ---
 

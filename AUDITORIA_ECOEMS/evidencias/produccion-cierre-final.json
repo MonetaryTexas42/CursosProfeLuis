@@ -92,5 +92,106 @@
     ],
     "test_vocacional_oficial": "ficha del alumno",
     "taller_ampliado": "localStorage del alumno (decision del usuario)"
+  },
+  "cierre_0043": {
+    "fecha_utc": "2026-11-22T21:58:27Z",
+    "motivo": [
+      "vista previa del examen para profesorado",
+      "pagina propia del taller vocacional"
+    ],
+    "migracion": {
+      "version": "0043",
+      "archivo": "app/supabase/migrations/0043_final_exam_teacher_preview.sql",
+      "rpc": "app_preview_final_exam",
+      "stging_aplicacion": "supabase db push --remote=hsfhlhrkmhajmpethzqn --skip-vault --yes",
+      "produccion_aplicacion": "SQL directo y registro en supabase_migrations.schema_migrations (CLI devolvio DbConfigLoginRoleStatusError 403)",
+      "rollback": "drop function if exists public.app_preview_final_exam();"
+    },
+    "respaldo_previo": {
+      "archivo": "app/.backups/backup-2026-11-22-21-55-47.json.enc",
+      "sha256_contenido": "ccb381431818352da5f40a4f3e3c1830e71c6084aba70a605c5f2e9d9ac816c8",
+      "sha256_archivo": "3803a2c3230955c7b09b05227f9115156975be38c31e38098c94fc253fa65207",
+      "incluye_auth": false
+    },
+    "base_verificada": {
+      "staging": {
+        "migraciones_locales": 43,
+        "migraciones_aplicadas": 43,
+        "politicas_public": 96,
+        "funciones_public": 116,
+        "security_definer_sin_search_path": 0,
+        "resultado": "Estado consistente.",
+        "rls": "131 PASS · 0 FAIL · 0 SKIP",
+        "flag_examen": false
+      },
+      "produccion": {
+        "migraciones_locales": 43,
+        "migraciones_aplicadas": 43,
+        "politicas_public": 96,
+        "funciones_public": 116,
+        "security_definer_sin_search_path": 0,
+        "resultado": "Estado consistente.",
+        "flag_examen": true
+      }
+    },
+    "rpc_preview": {
+      "teacher": {
+        "staging": "HTTP 200 · secciones=13 · preguntas=136 · clave=true",
+        "produccion": "HTTP 200 · secciones=13 · preguntas=136 · clave=true"
+      },
+      "student": {
+        "produccion": "HTTP 403 · La vista previa del examen es solo para profesorado"
+      },
+      "guardian": {
+        "staging": "HTTP 403 · La vista previa del examen es solo para profesorado",
+        "produccion": "HTTP 403 · La vista previa del examen es solo para profesorado"
+      },
+      "escrituras": false,
+      "tablas_examen_tras_pruebas": {
+        "staging": {
+          "final_exam_sessions": 0,
+          "final_exam_answers": 0
+        },
+        "produccion": {
+          "final_exam_sessions": 0,
+          "final_exam_answers": 0
+        }
+      }
+    },
+    "despliegue": {
+      "commit": "f4bc229fc3f7ed7ff48e6a67f983a710a322a094",
+      "run_id": "45074991966",
+      "run_conclusion": "success",
+      "pasos_exitosos": 17,
+      "pages_build_run_id": "45075032798",
+      "pages_build_conclusion": "success",
+      "tag": "deploy-f4bc229",
+      "gh_pages_commit": "0ea4c505913897d6984ae3bb46e8d6f8a1a12a6f",
+      "entradas": [
+        "index.html",
+        "vocacional.html"
+      ],
+      "bundles": {
+        "main": "main-CqpKtSk-.js",
+        "vocacional": "vocacional-CayTz_gP.js",
+        "vocational_chunk": "vocational-kkg0TQ4K.js",
+        "css": "vocational-DfnxNZIF.css"
+      }
+    },
+    "verificacion_publica": {
+      "index": 200,
+      "vocacional": 200,
+      "curso": 200,
+      "guia": 200,
+      "privacidad": 200,
+      "bundle_contiene_vista_previa": true,
+      "bundle_contiene_data_preview": true,
+      "bundle_contiene_rpc": true,
+      "chunk_contiene_standalone": true,
+      "curso_recursos_versionados": "?v=4",
+      "curso_enlaces_vocacional": 2,
+      "hash_guia": "966fb84677c5d8d408de95026da953236f5dc3dde2bd17fb2b70a4693a2d4094",
+      "hash_aviso": "85d13859e9681bbbea548e67422fd069c9b91a5a1c51705062183c0e460f740b"
+    }
   }
 }
