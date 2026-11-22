@@ -65,5 +65,32 @@
       "css": "index-DfnxNZIF.css",
       "js": "index-D58IlHdW.js"
     }
+  },
+  "vista_profesor": {
+    "commit": "5207118dee11e94423edb6a832ad90323fece6fc",
+    "run_id": "45061693062",
+    "pages_build_run_id": "45061732099",
+    "tag": "deploy-5207118",
+    "gh_pages_commit": "2356aa8cb6bc867fbd04a2896ef1d95e5c9c3486",
+    "bundle": "index-CYpOHLrA.js",
+    "pestana": "Examen final",
+    "roles": ["teacher", "admin"],
+    "rls_verificada": {
+      "consulta": "GET /rest/v1/final_exam_sessions",
+      "token": "profesor autenticado",
+      "http": 200,
+      "filas": 0,
+      "escrituras": false
+    },
+    "datos_mostrados": [
+      "sesiones",
+      "estado",
+      "aciertos",
+      "duracion",
+      "puntaje",
+      "promedio"
+    ],
+    "test_vocacional_oficial": "ficha del alumno",
+    "taller_ampliado": "localStorage del alumno (decision del usuario)"
   }
 }

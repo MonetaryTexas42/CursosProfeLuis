@@ -111,6 +111,18 @@ SUCCESS y publicó `deploy-0aeb7e7` (`gh-pages` en `3bb4484`); el build de Pages
 Español»; `/curso/css/styles.css?v=3` contiene `.tool-grid`; el bundle actual es
 `index-DOGMA5Xi.js` (200).
 
+**Resultados del examen para el profesorado (22 nov 2026):** la RLS de `0041`
+ya autorizaba a `app_is_teacher_of_student()` y a los administradores a leer
+`final_exam_sessions`; comprobado con un token de profesor (`GET
+/rest/v1/final_exam_sessions` → HTTP 200 `[]`, sin escrituras). El commit
+`5207118` añadió la pestaña «Examen final» al panel del staff con sesiones,
+estado, aciertos, duración, puntaje y promedio. El run `45061693062` terminó en
+SUCCESS y publicó `deploy-5207118` (`gh-pages` en `2356aa8`); el build de Pages
+`45061732099` también terminó en SUCCESS. Verificación externa: bundle actual
+`index-CYpOHLrA.js` (200), que contiene «Resultados por alumno», «Promedio» y la
+nota del test vocacional oficial. El test vocacional oficial continúa en la
+ficha del alumno y el taller ampliado sigue en `localStorage`.
+
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 
 Consultas de solo lectura para revisar la actividad reciente. Se ejecutan en

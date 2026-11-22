@@ -43,8 +43,9 @@ usándose solo en local para respaldos y restauración.
 `0041`/`0042` en producción tras un respaldo cifrado y se activó
 `final_exam_spanish_enabled=true`. El run `45059343395` publicó el frontend
 (`deploy-c3ef7c6`). Después se añadieron los accesos dentro del reproductor
-`/curso/`: el run `45060761193` publicó el commit `0aeb7e7` como
-`deploy-0aeb7e7`, y el build de Pages `45060808981` terminó en SUCCESS.
+`/curso/` (`deploy-0aeb7e7`, run `45060761193`) y la vista de resultados del
+examen para el profesorado (`deploy-5207118`, run `45061693062`); los builds de
+Pages `45060808981` y `45061732099` terminaron en SUCCESS.
 
 Producción quedó en **42/42 migraciones, 96 políticas, 115 funciones y 0
 `SECURITY DEFINER` sin `search_path`**. El examen final de Español responde
@@ -56,9 +57,16 @@ En `/curso/` hay un menú lateral «Evaluación y orientación» y tarjetas en e
 inicio que abren `../#examen`, `../#vocacional` y la guía imprimible. Los
 recursos estáticos del curso se versionaron con `?v=3` para evitar caché.
 
+En el panel del staff (profesor y administrador) hay una pestaña **🎓 Examen
+final** con sesiones, estado, aciertos, tiempo, puntaje y promedio. La RLS ya
+permitía leer `final_exam_sessions` al profesor del alumno y al administrador;
+se comprobó con un token de profesor (HTTP 200, sin escrituras). El test
+vocacional oficial sigue en la ficha del alumno; el taller ampliado permanece
+privado en su dispositivo.
+
 Verificación externa: `index=200`, `guia-examen-espanol.html=200`,
 `privacidad.html=200`, aviso `v3-2026` con hash `85d13859…f740b`, guía con hash
-`966fb846…d4094` y bundle actual `index-DOGMA5Xi.js`. Evidencia detallada en
+`966fb846…d4094` y bundle actual `index-CYpOHLrA.js`. Evidencia detallada en
 `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`.
 
 ```bash
