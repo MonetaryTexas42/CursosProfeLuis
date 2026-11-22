@@ -1,23 +1,28 @@
 // Taller vocacional completo.
 //
 // Reutiliza todo el material del sistema legacy extraído en vocational-data.js:
-// test RIASEC (30 preguntas), 44 escuelas, 11 instituciones, 11 planes de
-// estudio, 40 carreras técnicas, catálogos, guía de decisión y preparación.
+// test RIASEC (60 preguntas), 8 preguntas de contexto, 47 escuelas,
+// 12 instituciones, 11 planes de estudio, 40 carreras técnicas, expos con
+// fuentes citadas, colegiaturas de referencia y guía de decisión.
 //
-// El resultado del RIASEC se guarda solo en este navegador (localStorage).
-// El test oficial de orientación que se guarda en el expediente sigue siendo
-// el de la tarjeta "Mi orientación" de app.js; aquí no se sobrescribe.
+// El resultado del RIASEC y del contexto se guarda solo en este navegador
+// (localStorage). Las respuestas v1 se migran a v2 sin perderlas. El test
+// oficial de orientación de la ficha del alumno no se sobrescribe.
 
 import { VOCATIONAL_CATALOG as V } from './vocational-data.js';
 
 const APP_BASE = import.meta.env.BASE_URL || '/';
-const RESULTS_KEY = 'ecoems_vocational_riasec_v1';
+const RESULTS_KEY_V1 = 'ecoems_vocational_riasec_v1';
+const RESULTS_KEY = 'ecoems_vocational_riasec_v2';
+const RESULT_KEY = RESULTS_KEY + ':result';
+const CONTEXT_KEY = 'ecoems_vocational_context_v1';
 const CHECKLIST_KEY = 'ecoems_vocational_checklist_v1';
 
 const TABS = [
   { id: 'inicio', label: 'Inicio', icon: '🏠' },
   { id: 'test', label: 'Descúbrete', icon: '🧭' },
   { id: 'escuelas', label: 'Escuelas y carreras', icon: '🎓' },
+  { id: 'expos', label: 'Expos y fechas', icon: '📅' },
   { id: 'universidades', label: 'Universidades', icon: '🏛️' },
   { id: 'planes', label: 'Planes y técnicas', icon: '📘' },
   { id: 'decision', label: 'Decide tu futuro', icon: '✨' }
@@ -28,7 +33,9 @@ const CHECKLIST = [
   'Comparé bachillerato general y bachillerato técnico.',
   'Elegí tres escuelas y verifiqué cortes y fechas oficiales.',
   'Revisé el plan de estudios y las carreras técnicas que ofrecen.',
-  'Hablé con mi familia y mi profesor sobre mi decisión.',
+  'Hablé con mi familia sobre costos, transporte y apoyo.',
+  'Hablé con mi profesor y contrasté mi resultado con el test oficial.',
+  'Revisé una expo o una convocatoria oficial con fecha y fuente.',
   'Preparé un plan de repaso para el examen de admisión.'
 ];
 
@@ -103,6 +110,27 @@ export function vocationalDashboardCard() {
   `;
 }
 
+function loadAnswers() {
+  const current = readStorage(RESULTS_KEY, null);
+  if (current && typeof current === 'object' && !Array.isArray(current)) return current;
+
+  // Migración v1 → v2: las 30 respuestas antiguas conservan su índice.
+  const legacy = readStorage(RESULTS_KEY_V1, null);
+  if (!legacy || typeof legacy !== 'object' || Array.isArray(legacy)) return {};
+
+  const migrated = {};
+  Object.entries(legacy).forEach(([key, value]) => {
+    const index = Number(key);
+    if (Number.isInteger(index) && index >= 0 && index < V.riasecQuestions.length) {
+      migrated[index] = value;
+    }
+  });
+  writeStorage(RESULTS_KEY, migrated);
+  removeStorage(RESULTS_KEY_V1);
+  removeStorage(RESULTS_KEY_V1 + ':result');
+  return migrated;
+}
+
 export function openVocationalWorkshop(root, { onClose, readOnly = false, standalone = false } = {}) {
   workshop = {
     root,
@@ -110,11 +138,12 @@ export function openVocationalWorkshop(root, { onClose, readOnly = false, standa
     readOnly,
     standalone,
     tab: 'inicio',
-    filters: { q: '', inst: '', tipo: '', tag: '', dist: 'todas' },
+    filters: { q: '', inst: '', tipo: '', tag: '', dist: 'todas', sector: '', costo: '' },
     plan: 'UNAM_ENP',
     techInst: 'IPN',
-    answers: readStorage(RESULTS_KEY, {}) || {},
-    savedResult: readStorage(RESULTS_KEY + ':result', null),
+    answers: loadAnswers(),
+    savedResult: readStorage(RESULT_KEY, null),
+    context: readStorage(CONTEXT_KEY, {}) || {},
     checklist: readStorage(CHECKLIST_KEY, []) || [],
     focusSearch: false
   };
@@ -122,36 +151,172 @@ export function openVocationalWorkshop(root, { onClose, readOnly = false, standa
 }
 
 function currentResult() {
-  const complete = V.riasecQuestions.every((_, index) => workshop.answers[index] != null);
-  if (!complete) return workshop.savedResult;
+  const answered = V.riasecQuestions
+    .map((_, index) => index)
+    .filter((index) => workshop.answers[index] != null);
+  if (!answered.length) return workshop.savedResult || null;
 
   const scores = {};
-  for (const type of V.riasecTypes) scores[type.id] = 0;
-  V.riasecQuestions.forEach((question, index) => {
-    scores[question.d] = (scores[question.d] || 0) + Number(workshop.answers[index] || 0);
+  const counts = {};
+  for (const type of V.riasecTypes) {
+    scores[type.id] = 0;
+    counts[type.id] = 0;
+  }
+  answered.forEach((index) => {
+    const question = V.riasecQuestions[index];
+    scores[question.d] += Number(workshop.answers[index]) || 0;
+    counts[question.d] += 1;
   });
 
   const normalized = {};
   for (const key of Object.keys(scores)) {
-    normalized[key] = Math.round((scores[key] / (V.riasecMaxPerType * 4)) * 100);
+    normalized[key] = counts[key]
+      ? Math.round((scores[key] / (counts[key] * 4)) * 100)
+      : 0;
   }
-
-  const result = {
-    completed_at: new Date().toISOString(),
+  const complete = answered.length === V.riasecQuestions.length;
+  return {
+    complete,
+    answered: answered.length,
+    total: V.riasecQuestions.length,
+    completed_at: complete ? new Date().toISOString() : null,
     scores: normalized,
     top: Object.entries(normalized)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([id, value]) => ({ id, value }))
   };
-  return result;
+}
+
+function persistAnswers() {
+  writeStorage(RESULTS_KEY, workshop.answers);
 }
 
 function persistResult(result) {
-  if (!result?.completed_at) return;
-  writeStorage(RESULTS_KEY, workshop.answers);
-  writeStorage(RESULTS_KEY + ':result', result);
+  persistAnswers();
+  if (!result?.complete) return;
+  writeStorage(RESULT_KEY, result);
   workshop.savedResult = result;
+}
+
+function contextProfile() {
+  const answers = workshop.context || {};
+  const values = {};
+  const tags = [];
+  const notes = [];
+  let maxKm = null;
+  let costMax = null;
+
+  for (const question of V.contextQuestions) {
+    const value = answers[question.id];
+    if (value == null) continue;
+    if (Array.isArray(value)) {
+      if (!value.length) continue;
+      values[question.id] = value;
+      value.forEach((item) => {
+        const option = (question.options || []).find((entry) => entry.v === item);
+        (option?.tags || []).forEach((tag) => tags.push(tag));
+        if (option?.note) notes.push(option.note);
+      });
+      continue;
+    }
+    values[question.id] = value;
+    const option = (question.options || []).find((entry) => entry.v === value);
+    if (!option) continue;
+    (option.tags || []).forEach((tag) => tags.push(tag));
+    if (option.note) notes.push(option.note);
+    if (option.maxKm != null) maxKm = option.maxKm;
+    if (option.costMax != null) costMax = option.costMax;
+  }
+
+  return {
+    values,
+    tags: unique(tags),
+    notes: unique(notes),
+    maxKm,
+    costMax,
+    answered: Object.keys(values).length,
+    total: V.contextQuestions.length
+  };
+}
+
+function schoolProfile(school) {
+  const extra = V.schoolExtras[school.nombre] || {};
+  const sector = extra.sector
+    || (school.inst === 'Privadas' ? 'Privada' : school.inst === 'Militares' ? 'Militar' : 'Pública');
+  return {
+    sector,
+    nivel: extra.nivel || 'Bachillerato',
+    colegiatura: extra.colegiatura || 'Sin colegiatura (verifica otros pagos)',
+    band: extra.band || 'gratis',
+    fuente: extra.fuente || null
+  };
+}
+
+const COST_BANDS = { gratis: 0, medio: 2, alto: 3 };
+
+function schoolAffinity(school, result, ctx) {
+  const profile = schoolProfile(school);
+  const tags = new Set([...(school.tags || []), profile.sector, profile.nivel]);
+  const reasons = [];
+  let score = 0;
+
+  (result?.top || []).slice(0, 3).forEach((item, index) => {
+    const type = V.riasecById[item.id];
+    if (!type || item.value <= 0) return;
+    const hits = (type.tags || []).filter((tag) => tags.has(tag));
+    if (!hits.length) return;
+    score += [4, 3, 2][index] * hits.length;
+    reasons.push(`${type.icon} ${type.nombre}: ${hits.join(', ')}`);
+  });
+
+  ctx.tags.forEach((tag) => {
+    if (tag === 'Beca' && profile.band !== 'gratis' && profile.band !== 'confirmar') return;
+    if (tags.has(tag)) {
+      score += 2;
+      reasons.push(`Coincide con tu respuesta: ${tag}`);
+    }
+  });
+
+  const technical = /técnic|tecnológ|profesional técnico/i.test(`${school.tipo} ${school.carreras}`);
+  if (ctx.values.modalidad === 'tecnico' && technical) {
+    score += 3;
+    reasons.push('Incluye carrera técnica');
+  }
+  if (ctx.values.modalidad === 'general' && !technical) {
+    score += 3;
+    reasons.push('Bachillerato general flexible');
+  }
+
+  const militar = ctx.values.militar;
+  if (militar === 'si' || militar === 'informarme' || militar === 'nose') {
+    if (profile.sector === 'Militar') {
+      score += 5;
+      reasons.push('Opción militar que pediste explorar');
+    }
+  } else if (militar === 'no' && profile.sector === 'Militar') {
+    score -= 6;
+  }
+
+  const km = Number(school.km) || 0;
+  if (ctx.maxKm != null && km <= ctx.maxKm) {
+    score += 2;
+    reasons.push(`A ${km} km de Cuautitlán`);
+  }
+
+  const band = COST_BANDS[profile.band];
+  if (ctx.costMax != null && band != null && band <= ctx.costMax) {
+    score += 2;
+    reasons.push(profile.band === 'gratis' ? 'Sin colegiatura' : 'Colegiatura dentro de tu presupuesto');
+  }
+
+  return { score, reasons: unique(reasons).slice(0, 4), profile };
+}
+
+function rankedSchools(list, result, ctx) {
+  return list
+    .map((school) => ({ school, affinity: schoolAffinity(school, result, ctx) }))
+    .sort((a, b) => b.affinity.score - a.affinity.score || (a.school._i ?? 0) - (b.school._i ?? 0));
 }
 
 function render() {
@@ -218,6 +383,7 @@ function panelMarkup() {
   switch (workshop.tab) {
     case 'test': return testPanel();
     case 'escuelas': return schoolsPanel();
+    case 'expos': return exposPanel();
     case 'universidades': return universitiesPanel();
     case 'planes': return plansPanel();
     case 'decision': return decisionPanel();
@@ -232,11 +398,15 @@ function homePanel() {
       <div class="voc-home-grid">
         <button class="voc-home-tile" data-voc-go="test">
           <span>🧭</span><strong>Descúbrete</strong>
-          <small>Responde 30 preguntas RIASEC y conoce tus intereses dominantes.</small>
+          <small>Responde ${V.riasecQuestions.length} preguntas RIASEC y ${V.contextQuestions.length} de contexto para afinar tu perfil.</small>
         </button>
         <button class="voc-home-tile" data-voc-go="escuelas">
           <span>🎓</span><strong>Compara escuelas</strong>
-          <small>Filtra por institución, tipo, área, distancia y lo que cada escuela ofrece.</small>
+          <small>Públicas, privadas y militares. Si ya respondiste Descúbrete, verás arriba las que mejor encajan contigo.</small>
+        </button>
+        <button class="voc-home-tile" data-voc-go="expos">
+          <span>📅</span><strong>Expos y fechas</strong>
+          <small>Qué se estudia en prepa y universidad, convocatorias con fuente citada y qué preguntar en la feria.</small>
         </button>
         <button class="voc-home-tile" data-voc-go="universidades">
           <span>🏛️</span><strong>Entiende las universidades</strong>
@@ -248,7 +418,7 @@ function homePanel() {
         </button>
         <button class="voc-home-tile" data-voc-go="decision">
           <span>✨</span><strong>Decide y prepárate</strong>
-          <small>Guía para elegir, perfiles de ejemplo y un plan para el examen de admisión.</small>
+          <small>Qué considerar por ti y en familia, perfiles de ejemplo y tu plan de decisión.</small>
         </button>
       </div>
       <div class="voc-note">
@@ -262,6 +432,7 @@ function homePanel() {
 
 function testPanel() {
   const result = currentResult();
+  const ctx = contextProfile();
   const answered = V.riasecQuestions.filter((_, i) => workshop.answers[i] != null).length;
   const total = V.riasecQuestions.length;
 
@@ -269,66 +440,112 @@ function testPanel() {
     <article class="card wide voc-panel">
       <div class="card-heading">
         <div>
-          <span class="card-label">Test RIASEC</span>
+          <span class="card-label">Descúbrete · versión ampliada</span>
           <h2>¿Qué tipo de actividades te atraen?</h2>
         </div>
-        <span class="pill ${answered === total ? 'success' : ''}">${answered}/${total} respondidas</span>
+        <span class="pill ${answered === total ? 'success' : ''}">${answered}/${total} RIASEC · ${ctx.answered}/${ctx.total} contexto</span>
       </div>
-      <p class="muted">Para cada actividad elige qué tanto te gusta. No hay respuestas correctas: cuenta lo que realmente te interesa, no lo que crees que «debería» gustarte.</p>
+      <p class="muted">Para cada actividad elige qué tanto te gusta. No hay respuestas correctas: cuenta lo que realmente te interesa, no lo que crees que «debería» gustarte. Puedes ver un resultado parcial desde la primera respuesta.</p>
       ${result ? riasecResultMarkup(result) : ''}
+      ${ctx.answered ? contextSummaryMarkup(ctx) : ''}
       <div class="row voc-test-actions">
-        <button class="btn ghost" data-voc-action="clear-riasec" ${answered ? '' : 'disabled'}>Borrar respuestas</button>
-        ${answered === total ? '<button class="btn primary" data-voc-action="save-riasec">Guardar mi resultado ✓</button>' : ''}
+        <button class="btn ghost" data-voc-action="clear-riasec" ${answered ? '' : 'disabled'}>Borrar respuestas RIASEC</button>
+        <button class="btn ghost" data-voc-action="clear-context" ${ctx.answered ? '' : 'disabled'}>Borrar contexto</button>
+        ${(result || ctx.answered) ? '<button class="btn primary" data-voc-action="go-matches">Ver mis mejores opciones →</button>' : ''}
       </div>
       <p class="hint">${workshop.readOnly ? 'Estás explorando en modo invitado.' : 'Tus respuestas se guardan automáticamente en este dispositivo.'} No se modifican tus calificaciones ni tu ficha.</p>
 
-      <div class="voc-riasec-groups">
-        ${V.riasecTypes.map((type) => {
-          const questions = V.riasecQuestions
-            .map((question, index) => ({ ...question, index }))
-            .filter((question) => question.d === type.id);
-          return `
-            <section class="voc-riasec-group" style="--voc-color:${esc(type.color)}">
-              <header>
-                <span aria-hidden="true">${type.icon}</span>
-                <div><strong>${esc(type.nombre)}</strong><small>${esc(type.desc)}</small></div>
-              </header>
-              ${questions.map((question) => `
-                <div class="voc-question">
-                  <p><span>${question.index + 1}.</span> ${esc(question.t)}</p>
-                  <div class="voc-scale" role="group" aria-label="Respuesta para: ${esc(question.t)}">
-                    ${V.riasecScale.map((label, value) => `
-                      <button type="button" class="voc-scale-btn ${workshop.answers[question.index] === value ? 'selected' : ''}" data-voc-riasec="${question.index}" data-value="${value}" title="${esc(label)}" aria-pressed="${workshop.answers[question.index] === value}">
-                        <strong>${value + 1}</strong><small>${esc(label)}</small>
-                      </button>
-                    `).join('')}
+      <section class="voc-subsection">
+        <div class="voc-subhead">
+          <h3>Parte 1 · Intereses (RIASEC)</h3>
+          <span class="muted"><small>${V.riasecScale.length} opciones por actividad · 10 por tipo</small></span>
+        </div>
+        <div class="voc-riasec-groups">
+          ${V.riasecTypes.map((type) => {
+            const questions = V.riasecQuestions
+              .map((question, index) => ({ ...question, index }))
+              .filter((question) => question.d === type.id);
+            return `
+              <section class="voc-riasec-group" style="--voc-color:${esc(type.color)}">
+                <header>
+                  <span aria-hidden="true">${type.icon}</span>
+                  <div><strong>${esc(type.nombre)}</strong><small>${esc(type.desc)}</small></div>
+                </header>
+                ${questions.map((question, questionIndex) => `
+                  <div class="voc-question">
+                    <p><span>${questionIndex + 1}.</span> ${esc(question.t)}</p>
+                    <div class="voc-scale" role="group" aria-label="Respuesta para: ${esc(question.t)}">
+                      ${V.riasecScale.map((label, value) => `
+                        <button type="button" class="voc-scale-btn ${workshop.answers[question.index] === value ? 'selected' : ''}" data-voc-riasec="${question.index}" data-value="${value}" title="${esc(label)}" aria-pressed="${workshop.answers[question.index] === value}">
+                          <strong>${value + 1}</strong><small>${esc(label)}</small>
+                        </button>
+                      `).join('')}
+                    </div>
                   </div>
-                </div>
-              `).join('')}
-            </section>
-          `;
-        }).join('')}
-      </div>
+                `).join('')}
+              </section>
+            `;
+          }).join('')}
+        </div>
+      </section>
+
+      ${contextPanel(ctx)}
     </article>
   `;
 }
 
+function contextPanel(ctx) {
+  return `
+    <section class="voc-subsection">
+      <div class="voc-subhead">
+        <h3>Parte 2 · Tu contexto y preferencias</h3>
+        <span class="pill ${ctx.answered === ctx.total ? 'success' : ''}">${ctx.answered}/${ctx.total} respondidas</span>
+      </div>
+      <p class="muted">Estas respuestas ajustan el orden del catálogo: escuelas militares, distancia, colegiatura y tipo de bachillerato. Son privadas y no se guardan en tu ficha.</p>
+      <div class="voc-context-grid">
+        ${V.contextQuestions.map((question, index) => {
+          const selected = workshop.context[question.id];
+          return `
+            <section class="voc-context-card">
+              <h4><span>${index + 1}.</span> ${esc(question.t)}</h4>
+              ${question.hint ? `<p class="hint">${esc(question.hint)}</p>` : ''}
+              <div class="voc-context-options">
+                ${(question.options || []).map((option) => question.multiple
+                  ? `<label class="voc-context-option"><input type="checkbox" data-voc-context-multi="${esc(question.id)}" value="${esc(option.v)}" ${(Array.isArray(selected) && selected.includes(option.v)) ? 'checked' : ''}><span>${esc(option.label)}</span></label>`
+                  : `<button type="button" class="voc-context-option ${selected === option.v ? 'selected' : ''}" data-voc-context="${esc(question.id)}" data-value="${esc(option.v)}" aria-pressed="${selected === option.v}"><span>${esc(option.label)}</span></button>`
+                ).join('')}
+              </div>
+            </section>
+          `;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function contextSummaryMarkup(ctx) {
+  if (!ctx.notes.length) return '';
+  return `
+    <div class="voc-context-summary">
+      <span class="card-label">Lo que dijiste</span>
+      <div class="ficha-tags">${ctx.notes.map((note) => `<span class="ficha-tag">${esc(note)}</span>`).join('')}</div>
+    </div>
+  `;
+}
+
 function riasecResultMarkup(result) {
-  const complete = V.riasecQuestions.every((_, i) => workshop.answers[i] != null);
+  const ctx = contextProfile();
   const top = result.top || [];
   const interests = unique(top.flatMap((item) => V.riasecInterestsByType[item.id] || []));
-  const tags = unique(top.flatMap((item) => V.riasecTagsByType[item.id] || []));
   const templates = unique(top.map((item) => V.riasecTemplateByType[item.id])).map((id) => V.templatesById[id]).filter(Boolean);
-  const schools = V.schools
-    .map((school) => ({ school, matches: (school.tags || []).filter((tag) => tags.includes(tag)) }))
-    .filter((item) => item.matches.length)
-    .sort((a, b) => b.matches.length - a.matches.length || a.school.nombre.localeCompare(b.school.nombre))
+  const schools = rankedSchools(V.schools, result, ctx)
+    .filter((item) => item.affinity.score > 0)
     .slice(0, 5);
 
   return `
     <section class="voc-result">
       <div class="voc-result-head">
-        <span class="card-label">${complete ? 'Tu resultado' : 'Último resultado guardado'}</span>
+        <span class="card-label">${result.complete ? 'Tu resultado' : `Resultado parcial · ${result.answered}/${result.total} respondidas`}</span>
         <h3>${top.length ? top.map((item) => esc(V.riasecById[item.id]?.nombre || item.id)).join(' · ') : 'Aún sin resultado'}</h3>
       </div>
       <div class="voc-score-grid">
@@ -361,7 +578,7 @@ function riasecResultMarkup(result) {
         ${schools.length ? `
           <div class="voc-result-schools">
             <span class="card-label">Escuelas que podrías revisar</span>
-            <div class="ficha-tags">${schools.map((item) => `<button class="ficha-tag" data-voc-action="filter-inst" data-inst="${esc(item.school.inst)}">${esc(item.school.inst)} · ${esc(item.school.nombre)}</button>`).join('')}</div>
+            <div class="ficha-tags">${schools.map(({ school }) => `<button class="ficha-tag" data-voc-action="filter-inst" data-inst="${esc(school.inst)}">${esc(school.inst)} · ${esc(school.nombre)}</button>`).join('')}</div>
           </div>
         ` : ''}
       ` : ''}
@@ -370,13 +587,16 @@ function riasecResultMarkup(result) {
 }
 
 function filteredSchools() {
-  const { q, inst, tipo, tag, dist } = workshop.filters;
+  const { q, inst, tipo, tag, dist, sector, costo } = workshop.filters;
   const needle = q.trim().toLowerCase();
 
   return V.schools.filter((school) => {
     if (inst && school.inst !== inst) return false;
     if (tipo && school.tipo !== tipo) return false;
     if (tag && !(school.tags || []).includes(tag)) return false;
+    const profile = schoolProfile(school);
+    if (sector && profile.sector !== sector) return false;
+    if (costo && profile.band !== costo) return false;
     if (dist !== 'todas') {
       const km = Number(school.km) || 0;
       if (dist === '<20' && !(km < 20)) return false;
@@ -385,7 +605,8 @@ function filteredSchools() {
       if (dist === '>45' && !(km > 45)) return false;
     }
     if (!needle) return true;
-    return [school.nombre, school.inst, school.tipo, school.zona, school.fuerte, school.orienta, school.carreras, school.uni, ...(school.tags || [])]
+    return [school.nombre, school.inst, school.tipo, school.zona, school.fuerte, school.orienta,
+      school.carreras, school.uni, profile.colegiatura, profile.nivel, ...(school.tags || [])]
       .join(' ')
       .toLowerCase()
       .includes(needle);
@@ -393,62 +614,143 @@ function filteredSchools() {
 }
 
 function schoolsPanel() {
-  const schools = filteredSchools();
+  const result = currentResult();
+  const ctx = contextProfile();
+  const hasProfile = Boolean(result || ctx.answered);
+  const ranked = rankedSchools(filteredSchools(), result, ctx);
+  const top = hasProfile ? ranked.filter((item) => item.affinity.score > 0).slice(0, 6) : [];
+
   return `
     <article class="card wide voc-panel">
       <div class="card-heading">
         <div>
-          <span class="card-label">Catálogo</span>
+          <span class="card-label">Catálogo ampliado</span>
           <h2>Escuelas y lo que puedes estudiar</h2>
         </div>
-        <span class="pill">${schools.length} de ${V.schools.length} escuelas</span>
+        <span class="pill">${ranked.length} de ${V.schools.length} escuelas</span>
       </div>
-      <p class="muted">Compara distancia desde Cuautitlán, aciertos de referencia, pase a universidad, carrera técnica y orientación. Verifica siempre los datos oficiales del año.</p>
+      <p class="muted">Públicas, privadas y militares. Compara distancia desde Cuautitlán, aciertos, pase, carrera técnica, colegiatura y orientación. Verifica siempre los datos oficiales del año.</p>
 
-      <div class="voc-filters">
-        <label class="voc-search">
-          <span>Buscar</span>
-          <input id="voc-q" type="search" placeholder="Escuela, zona, carrera, área…" value="${esc(workshop.filters.q)}" data-voc-filter="q">
-        </label>
-        <label><span>Institución</span>
-          <select data-voc-filter="inst">
-            <option value="">Todas</option>
-            ${V.institutions.map((item) => `<option value="${esc(item)}" ${workshop.filters.inst === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}
-          </select>
-        </label>
-        <label><span>Tipo</span>
-          <select data-voc-filter="tipo">
-            <option value="">Todos</option>
-            ${V.schoolTypes.map((item) => `<option value="${esc(item)}" ${workshop.filters.tipo === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}
-          </select>
-        </label>
-        <label><span>Área</span>
-          <select data-voc-filter="tag">
-            <option value="">Todas</option>
-            ${V.catalogTags.map((item) => `<option value="${esc(item)}" ${workshop.filters.tag === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}
-          </select>
-        </label>
-        <label><span>Distancia</span>
-          <select data-voc-filter="dist">
-            ${V.catalogDistanceFilters.map(([value, label]) => `<option value="${esc(value)}" ${workshop.filters.dist === value ? 'selected' : ''}>${esc(label)}</option>`).join('')}
-          </select>
-        </label>
-        <button class="btn ghost" data-voc-action="reset-filters">Limpiar filtros</button>
-      </div>
-
-      ${schools.length ? `
-        <div class="voc-school-grid">
-          ${schools.map((school, index) => schoolCard(school, index)).join('')}
-        </div>
+      ${hasProfile ? `
+        <section class="voc-match-section">
+          <div class="voc-match-head">
+            <div>
+              <span class="card-label">Ordenado para ti</span>
+              <h3>Mejores opciones para ti</h3>
+            </div>
+            <span class="pill ${result?.complete ? 'success' : ''}">${result
+              ? (result.complete ? 'Perfil RIASEC completo' : `Perfil RIASEC parcial · ${result.answered}/${result.total}`)
+              : 'Solo respuestas de contexto'}</span>
+          </div>
+          <p class="muted">Calculado con tus respuestas de «Descúbrete»${ctx.answered ? ` y ${ctx.answered} de ${ctx.total} respuestas de contexto` : ''}. Es una guía para investigar, no una promesa de admisión.</p>
+          ${top.length ? `
+            <div class="voc-match-grid">
+              ${top.map((item, index) => matchCard(item, index)).join('')}
+            </div>
+          ` : `
+            <p class="empty-state">Todavía no hay coincidencias claras. Responde más preguntas o quita filtros para ver todo el catálogo.</p>
+          `}
+        </section>
       ` : `
-        <p class="empty-state">No hay escuelas con esos filtros. Prueba con otra institución o distancia.</p>
+        <div class="voc-note">
+          <strong>¿Quieres ver primero las escuelas que encajan contigo?</strong>
+          <p>Responde «Descúbrete» y este catálogo se ordena solo con tus intereses, distancia, presupuesto y preferencia de bachillerato.</p>
+          <button class="btn-mini" data-voc-go="test">Ir a Descúbrete →</button>
+        </div>
       `}
+
+      <section class="voc-subsection">
+        <div class="voc-subhead">
+          <h3>Todas las escuelas</h3>
+          <span class="pill">${ranked.length} resultados</span>
+        </div>
+        <div class="voc-filters">
+          <label class="voc-search">
+            <span>Buscar</span>
+            <input id="voc-q" type="search" placeholder="Escuela, zona, carrera, área…" value="${esc(workshop.filters.q)}" data-voc-filter="q">
+          </label>
+          <label><span>Institución</span>
+            <select data-voc-filter="inst">
+              <option value="">Todas</option>
+              ${V.institutions.map((item) => `<option value="${esc(item)}" ${workshop.filters.inst === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}
+            </select>
+          </label>
+          <label><span>Tipo</span>
+            <select data-voc-filter="tipo">
+              <option value="">Todos</option>
+              ${V.schoolTypes.map((item) => `<option value="${esc(item)}" ${workshop.filters.tipo === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}
+            </select>
+          </label>
+          <label><span>Área</span>
+            <select data-voc-filter="tag">
+              <option value="">Todas</option>
+              ${V.catalogTags.map((item) => `<option value="${esc(item)}" ${workshop.filters.tag === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}
+            </select>
+          </label>
+          <label><span>Distancia</span>
+            <select data-voc-filter="dist">
+              ${V.catalogDistanceFilters.map(([value, label]) => `<option value="${esc(value)}" ${workshop.filters.dist === value ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+            </select>
+          </label>
+          <label><span>Sector</span>
+            <select data-voc-filter="sector">
+              ${V.catalogSectorFilters.map(([value, label]) => `<option value="${esc(value)}" ${workshop.filters.sector === value ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+            </select>
+          </label>
+          <label><span>Colegiatura</span>
+            <select data-voc-filter="costo">
+              ${V.catalogCostFilters.map(([value, label]) => `<option value="${esc(value)}" ${workshop.filters.costo === value ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+            </select>
+          </label>
+          <button class="btn ghost" data-voc-action="reset-filters">Limpiar filtros</button>
+        </div>
+
+        ${ranked.length ? `
+          <div class="voc-school-grid">
+            ${ranked.map(({ school, affinity }, index) => schoolCard(school, index, affinity)).join('')}
+          </div>
+        ` : `
+          <p class="empty-state">No hay escuelas con esos filtros. Prueba con otra institución, sector o distancia.</p>
+        `}
+      </section>
       <div class="voc-disclaimer">${rich(V.catalogDisclaimer)}</div>
+      <div class="voc-disclaimer">${esc(V.tuitionNote)}</div>
     </article>
   `;
 }
 
-function schoolCard(school, index) {
+function reasonsMarkup(reasons, compact = false) {
+  if (!reasons?.length) return '';
+  return `
+    <div class="voc-match-reasons ${compact ? 'compact' : ''}">
+      ${reasons.map((reason) => `<span class="voc-reason">${esc(reason)}</span>`).join('')}
+    </div>
+  `;
+}
+
+function matchCard({ school, affinity }, index) {
+  return `
+    <article class="voc-match-card">
+      <header>
+        <span class="voc-school-index">${index + 1}</span>
+        <div>
+          <span class="card-label">${esc(school.inst)} · ${esc(affinity.profile.sector)}</span>
+          <h4>${esc(school.nombre)}</h4>
+          <small>${esc(affinity.profile.nivel)} · ${esc(school.tipo)}</small>
+        </div>
+      </header>
+      ${reasonsMarkup(affinity.reasons)}
+      <p><small><strong>Colegiatura:</strong> ${esc(affinity.profile.colegiatura)}</small></p>
+      <div class="row voc-school-actions">
+        <button class="btn-mini" data-voc-action="school-plan" data-school="${esc(school.nombre)}">Ver plan</button>
+        <button class="btn-mini" data-voc-action="filter-inst" data-inst="${esc(school.inst)}">Ver ${esc(school.inst)}</button>
+      </div>
+    </article>
+  `;
+}
+
+function schoolCard(school, index, affinity) {
+  const profile = affinity?.profile || schoolProfile(school);
   return `
     <article class="voc-school-card">
       <header>
@@ -459,20 +761,92 @@ function schoolCard(school, index) {
           <small>${esc(school.tipo)} · ${esc(school.zona)}</small>
         </div>
       </header>
+      <div class="ficha-tags voc-school-badges">
+        <span class="voc-badge voc-badge-${esc(profile.sector.toLowerCase())}">${esc(profile.sector)}</span>
+        <span class="voc-badge">${esc(profile.nivel)}</span>
+      </div>
       <dl class="voc-school-facts">
         <div><dt>Distancia</dt><dd>${esc(school.km)} km · ${esc(school.tiempo)}</dd></div>
         <div><dt>Aciertos</dt><dd>${esc(school.aciertos)}</dd></div>
         <div><dt>Pase</dt><dd>${esc(school.pase)}</dd></div>
         <div><dt>Carrera técnica</dt><dd>${esc(school.carreras)}</dd></div>
+        <div><dt>Colegiatura</dt><dd>${esc(profile.colegiatura)}</dd></div>
       </dl>
       <p><strong>Fuerte:</strong> ${esc(school.fuerte)}</p>
       <p><strong>Orienta a:</strong> ${esc(school.orienta)}</p>
       <p><strong>Universidad:</strong> ${esc(school.uni)}</p>
+      ${reasonsMarkup(affinity?.reasons, true)}
       <div class="ficha-tags">${(school.tags || []).map((tag) => `<span class="ficha-tag">${esc(tag)}</span>`).join('')}</div>
+      ${profile.fuente ? `
+        <p class="voc-source"><small>Fuente: <a href="${esc(profile.fuente.url)}" target="_blank" rel="noopener">${esc(profile.fuente.label)}</a>${profile.fuente.oficial ? ` · <a href="${esc(profile.fuente.oficial)}" target="_blank" rel="noopener">simulador oficial</a>` : ''} · consultada ${esc(profile.fuente.consulta)}</small></p>
+      ` : ''}
       <div class="row voc-school-actions">
         <button class="btn-mini" data-voc-action="school-plan" data-school="${esc(school.nombre)}">Ver plan de estudios</button>
         <button class="btn-mini" data-voc-action="filter-inst" data-inst="${esc(school.inst)}">Ver ${esc(school.inst)}</button>
       </div>
+    </article>
+  `;
+}
+
+function exposPanel() {
+  const fairSections = [
+    { key: 'prepa', title: 'Para elegir prepa o bachillerato', desc: 'Sirve aunque aún no sepas qué carrera seguirás.' },
+    { key: 'uni', title: 'Para pensar en la universidad', desc: 'Útil al terminar el bachillerato o para comparar desde ahora.' },
+    { key: 'militar', title: 'Para la opción militar', desc: 'El Heroico Colegio Militar es licenciatura: pide bachillerato terminado.' }
+  ];
+
+  return `
+    <article class="card wide voc-panel">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Orientación profesiográfica</span>
+          <h2>Expos, fechas y qué preguntar</h2>
+        </div>
+        <span class="pill">${V.expoEvents.length} fuentes citadas</span>
+      </div>
+      <p class="muted">Aquí verás qué se estudia en la prepa y en la universidad, con fechas públicas verificables. Cuando no hay convocatoria confirmada se muestra «Por confirmar» y se enlaza el sitio oficial: no se inventan fechas ni montos.</p>
+
+      <div class="voc-expo-grid">
+        ${V.expoEvents.map((event) => `
+          <article class="voc-expo-card">
+            <header>
+              <span aria-hidden="true">📌</span>
+              <div><h3>${esc(event.nombre)}</h3><small>${esc(event.nivel)}</small></div>
+            </header>
+            <span class="pill ${/concluida/i.test(event.estado) ? '' : 'voc-pending'}">${esc(event.estado)}</span>
+            <dl class="voc-expo-facts">
+              <div><dt>Fechas</dt><dd>${esc(event.fechas)}</dd></div>
+              <div><dt>Lugar</dt><dd>${esc(event.lugar)}</dd></div>
+              <div><dt>Costo</dt><dd>${esc(event.costo)}</dd></div>
+            </dl>
+            <p><strong>Para qué sirve:</strong> ${esc(event.paraQue)}</p>
+            ${event.etapas ? `
+              <details>
+                <summary>Calendario de referencia del ciclo 2026 (${event.etapas.length} etapas)</summary>
+                <ul>${event.etapas.map(([step, dates]) => `<li><strong>${esc(step)}:</strong> ${esc(dates)}</li>`).join('')}</ul>
+              </details>
+            ` : ''}
+            ${event.notaEtapas ? `<p class="hint">${esc(event.notaEtapas)}</p>` : ''}
+            <p class="voc-source"><small>Fuente: <a href="${esc(event.fuente.url)}" target="_blank" rel="noopener">${esc(event.fuente.label)}</a>${event.fuente.secundaria ? ` · <a href="${esc(event.fuente.secundaria)}" target="_blank" rel="noopener">cobertura secundaria</a>` : ''} · consultada ${esc(event.fuente.consulta)}</small></p>
+          </article>
+        `).join('')}
+      </div>
+
+      <section class="voc-subsection">
+        <h3>Qué preguntar en la feria</h3>
+        <p class="muted">Lleva tus tres opciones escritas y estas preguntas. Anota las respuestas: te servirán para hablar en familia y con tu profesor.</p>
+        <div class="voc-fair-grid">
+          ${fairSections.map((section) => `
+            <article>
+              <h4>${esc(section.title)}</h4>
+              <p class="muted"><small>${esc(section.desc)}</small></p>
+              <ol>${(V.fairQuestions[section.key] || []).map((question) => `<li>${esc(question)}</li>`).join('')}</ol>
+            </article>
+          `).join('')}
+        </div>
+      </section>
+
+      <div class="voc-note"><strong>Antes de ir:</strong> revisa la pestaña «Descúbrete» para llevar tu perfil RIASEC y tus respuestas de contexto; así podrás preguntar por carreras afines en lugar de quedarte solo con el nombre.</div>
     </article>
   `;
 }
@@ -596,6 +970,25 @@ function decisionPanel() {
       </div>
       <div class="voc-guide rich">${rich(V.careerGuideHtml)}</div>
 
+      <section class="voc-subsection decision-section">
+        <div class="voc-subhead">
+          <h3>Qué considerar antes de decidir</h3>
+          <span class="pill">Por ti · en familia · con tu profesor</span>
+        </div>
+        <div class="voc-decision-grid">
+          ${[V.decisionGuide.individual, V.decisionGuide.family, V.decisionGuide.teacher].map((block) => `
+            <article>
+              <h4><span aria-hidden="true">${block.icon}</span> ${esc(block.title)}</h4>
+              <ul>${(block.items || []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+            </article>
+          `).join('')}
+        </div>
+        <div class="voc-note">
+          <strong>Preguntas para llevar a la conversación</strong>
+          <ol>${(V.decisionGuide.questions || []).map((question) => `<li>${esc(question)}</li>`).join('')}</ol>
+        </div>
+      </section>
+
       <section class="voc-subsection">
         <h3>Preparación para el futuro</h3>
         <div class="voc-note rich">${rich(V.careerGuide.examPreparation)}</div>
@@ -671,8 +1064,27 @@ function bindPanel() {
     button.addEventListener('click', () => {
       const index = Number(button.dataset.vocRiasec);
       workshop.answers[index] = Number(button.dataset.value);
-      const result = currentResult();
-      persistResult(result);
+      persistResult(currentResult());
+      refreshPanel();
+    });
+  });
+
+  panel.querySelectorAll('[data-voc-context]').forEach((button) => {
+    button.addEventListener('click', () => {
+      workshop.context[button.dataset.vocContext] = button.dataset.value;
+      writeStorage(CONTEXT_KEY, workshop.context);
+      refreshPanel();
+    });
+  });
+
+  panel.querySelectorAll('[data-voc-context-multi]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const id = input.dataset.vocContextMulti;
+      const selected = new Set(Array.isArray(workshop.context[id]) ? workshop.context[id] : []);
+      if (input.checked) selected.add(input.value);
+      else selected.delete(input.value);
+      workshop.context[id] = [...selected];
+      writeStorage(CONTEXT_KEY, workshop.context);
       refreshPanel();
     });
   });
@@ -716,8 +1128,23 @@ function handleAction(action, dataset) {
     workshop.answers = {};
     workshop.savedResult = null;
     removeStorage(RESULTS_KEY);
-    removeStorage(RESULTS_KEY + ':result');
+    removeStorage(RESULT_KEY);
+    removeStorage(RESULTS_KEY_V1);
+    removeStorage(RESULTS_KEY_V1 + ':result');
     refreshPanel();
+    return;
+  }
+
+  if (action === 'clear-context') {
+    workshop.context = {};
+    removeStorage(CONTEXT_KEY);
+    refreshPanel();
+    return;
+  }
+
+  if (action === 'go-matches') {
+    workshop.tab = 'escuelas';
+    render();
     return;
   }
 
@@ -728,13 +1155,13 @@ function handleAction(action, dataset) {
   }
 
   if (action === 'reset-filters') {
-    workshop.filters = { q: '', inst: '', tipo: '', tag: '', dist: 'todas' };
+    workshop.filters = { q: '', inst: '', tipo: '', tag: '', dist: 'todas', sector: '', costo: '' };
     refreshPanel();
     return;
   }
 
   if (action === 'filter-inst') {
-    workshop.filters = { q: '', inst: dataset.inst || '', tipo: '', tag: '', dist: 'todas' };
+    workshop.filters = { q: '', inst: dataset.inst || '', tipo: '', tag: '', dist: 'todas', sector: '', costo: '' };
     workshop.tab = 'escuelas';
     render();
     return;

@@ -28,7 +28,7 @@ export const APTITUDES = [
 export const SCHOOL_TYPES = ["Bachillerato general", "Bachillerato técnico", "Carrera técnica", "Preparatoria", "Opción de trabajo", "Otro"];
 
 /* legacy: INSTITUCIONES */
-export const INSTITUTIONS = ["UNAM", "IPN", "Colegio de Bachilleres", "CONALEP", "DGETI (CBTIS)", "DGETA (CBTA)", "CECyTE", "UAEMéx", "UAM", "Privadas", "Otra"];
+export const INSTITUTIONS = ["UNAM", "IPN", "Colegio de Bachilleres", "CONALEP", "DGETI (CBTIS)", "DGETA (CBTA)", "CECyTE", "UAEMéx", "UAM", "Privadas", "Militares", "Otra"];
 
 /* legacy: ESCUELAS · referencias de aciertos aproximadas (COMIPEMS, máx. 128) */
 /* Referencias de aciertos aproximadas (COMIPEMS, máx. 128). Verificar corte oficial del año. */
@@ -103,6 +103,7 @@ export const SCHOOL_SCORE_REFERENCES = {
     { n: "Prepa 3 Toluca", r: "68–76" }
   ],
   "UAM": [],
+  "Militares": [],
   "Otra": []
 };
 
@@ -158,6 +159,11 @@ export const SCHOOL_INFO = {
     pase: "No hay 'pase' automático a universidad pública; muchas están incorporadas y puedes presentar examen de admisión como cualquier egresado.",
     uni: "Sí, por examen (o por pase a la universidad privada del mismo grupo). Revisa si está incorporada a UNAM/IPN/UAEMéx."
   },
+  "Militares": {
+    desc: "Instituciones del Sistema Educativo Militar (SEDENA). Importante: el Heroico Colegio Militar y la Universidad del Ejército y Fuerza Aérea son de nivel LICENCIATURA: piden bachillerato terminado y no son preparatorias. Los bachilleratos militarizados estatales no pertenecen al Sistema Educativo Militar federal: verifica cada caso.",
+    pase: "No aplica: se ingresa por convocatoria y proceso de selección de la SEDENA, no por COMIPEMS ni por pase directo.",
+    uni: "Es educación superior militar. Si aún cursas la prepa, primero termina el bachillerato y prepara tu decisión con las expos profesiográficas."
+  },
   "Otra": { desc: "Otras instituciones.", pase: "—", uni: "—" }
 };
 
@@ -212,7 +218,10 @@ export const CATALOG_ROWS = [
   ["Privadas", "Prepa UNITEC (Atizapán)", "Bachillerato general", "Atizapán, Edomex", "26", "45 min", "N/A (privada)", "No aplica (ingreso propio)", "Enfoque profesionalizante y tecnológico", "Negocios, tecnología y salud", "No ofrece carrera técnica", "Pase a licenciaturas UNITEC; también puedes aplicar a públicas", ["Negocios", "Tecnología", "Salud"]],
   ["Privadas", "Prepa Tec de Monterrey (Campus Edo. Méx.)", "Bachillerato bilingüe", "Atizapán/Zona Esmeralda, Edomex", "30", "50 min", "N/A (privada)", "No aplica (ingreso propio)", "Tecnología, emprendimiento y bilingüismo", "Ingeniería, negocios y tecnología", "No ofrece carrera técnica", "Pase a licenciaturas del Tec; también a universidades públicas", ["Tecnología", "Negocios", "Ciencias"]],
   ["Privadas", "Colegio Alemán Alexander von Humboldt (Lomas Verdes)", "Bachillerato bilingüe", "Lomas Verdes, Naucalpan, Edomex", "30", "50 min", "N/A (privada)", "No aplica (ingreso propio)", "Bilingüe (alemán) y muy alta exigencia", "Ciencias, ingeniería y humanidades", "No ofrece carrera técnica", "Preparación para universidades en México y Alemania", ["Ciencias", "Humanidades", "Tecnología"]],
-  ["Privadas", "Bachillerato Anáhuac (Lomas Verdes)", "Bachillerato general", "Lomas Verdes, Naucalpan, Edomex", "28", "45 min", "N/A (privada)", "No aplica (ingreso propio)", "Formación integral (académica y valores)", "General, negocios y salud", "No ofrece carrera técnica", "Pase a universidades Anáhuac; también a públicas", ["General", "Negocios", "Salud"]]
+  ["Privadas", "Bachillerato Anáhuac (Lomas Verdes)", "Bachillerato general", "Lomas Verdes, Naucalpan, Edomex", "28", "45 min", "N/A (privada)", "No aplica (ingreso propio)", "Formación integral (académica y valores)", "General, negocios y salud", "No ofrece carrera técnica", "Pase a universidades Anáhuac; también a públicas", ["General", "Negocios", "Salud"]],
+  ["Militares", "Heroico Colegio Militar", "Licenciatura militar (internado)", "Tlalpan, CDMX", "42", "1 h 25", "Por confirmar (convocatoria SEDENA)", "No aplica; requiere bachillerato terminado", "Disciplina, liderazgo y formación de oficiales", "Seguridad, administración militar y servicio", "Lic. en Administración Militar · Lic. en Seguridad Pública", "Licenciatura de 4 años en modalidad interna. Requiere mexicano por nacimiento, bachillerato con RVOE y promedio mínimo 7.0, 18 años al 1 sep, máximo 20 años 11 meses 30 días al 31 dic, estatura 1.56 m mujeres / 1.63 m hombres e IMC 18–25. Consulta la convocatoria vigente.", ["Militar", "Licenciatura", "Internado", "Liderazgo", "Sociales", "Negocios", "Beca"]],
+  ["Militares", "Universidad del Ejército y Fuerza Aérea", "Licenciatura militar", "CDMX e interior de la República", "42", "1 h 25", "Por confirmar (convocatoria SEDENA)", "No aplica; requiere bachillerato terminado", "Formación profesional militar en varias disciplinas", "Ingeniería, salud, administración y seguridad", "Licenciaturas del Sistema Educativo Militar (según convocatoria)", "Educación superior de la SEDENA. Requisitos, carreras y sedes: por confirmar en https://www.gob.mx/defensa", ["Militar", "Licenciatura", "Ciencias", "Tecnología", "Salud", "Beca"]],
+  ["Militares", "Escuela Militar de Ingeniería", "Licenciatura militar", "CDMX", "38", "1 h 15", "Por confirmar (convocatoria SEDENA)", "No aplica; requiere bachillerato terminado", "Ingeniería aplicada y disciplina", "Ingeniería, tecnología y construcción", "Licenciaturas en ingeniería (según convocatoria)", "Requiere bachillerato terminado. Consulta la convocatoria vigente en https://www.gob.mx/defensa", ["Militar", "Licenciatura", "Tecnología", "Ciencias", "Técnico", "Beca"]]
 ];
 
 /* legacy: CATALOGO (44 escuelas), con _i = índice original */
@@ -224,10 +233,14 @@ export const SCHOOLS = CATALOG_ROWS.map((r, i) => {
 });
 
 /* legacy: CAT_TAGS */
-export const CATALOG_TAGS = ["General", "Ciencias", "Humanidades", "Sociales", "Arte", "Salud", "Tecnología", "Técnico", "Negocios"];
+export const CATALOG_TAGS = ["General", "Ciencias", "Humanidades", "Sociales", "Arte", "Salud", "Tecnología", "Técnico", "Negocios", "Militar", "Licenciatura", "Privada", "Pública", "Beca", "Internado", "Liderazgo"];
 
 /* legacy: distOpts del catálogo */
 export const CATALOG_DISTANCE_FILTERS = [["todas", "Todas"], ["<20", "Menos de 20 km"], ["20-30", "20–30 km"], ["30-45", "30–45 km"], [">45", "Más de 45 km"]];
+
+/* Filtros nuevos del catálogo ampliado */
+export const CATALOG_SECTOR_FILTERS = [["", "Todos"], ["Pública", "Pública"], ["Privada", "Privada"], ["Militar", "Militar"]];
+export const CATALOG_COST_FILTERS = [["", "Cualquiera"], ["gratis", "Sin colegiatura"], ["medio", "Hasta $5,000 / mes"], ["alto", "Más de $5,000 / mes"], ["confirmar", "Por confirmar"]];
 
 /* Textos del catálogo (legacy) */
 export const CATALOG_INTRO = "Qué se estudia, qué tan lejos queda de Cuautitlán, aciertos, pase directo, en qué es fuerte, a qué orienta y cómo sirve para la universidad.";
@@ -345,11 +358,44 @@ export const RIASEC_QUESTIONS = [
   { t: "Llevar registros, cuentas o listas con cuidado", d: "C" },
   { t: "Seguir reglas y pasos bien definidos para hacer las cosas", d: "C" },
   { t: "Revisar que todo esté correcto, completo y en orden", d: "C" },
-  { t: "Organizar mi tiempo con horarios y metas claras", d: "C" }
+  { t: "Organizar mi tiempo con horarios y metas claras", d: "C" },
+
+  /* Ampliación v2: 5 preguntas adicionales por dimensión (10 en total).
+     Las 30 primeras conservan su índice para migrar respuestas guardadas en v1. */
+  { t: "Reparar la bicicleta, los muebles o algo que se rompió en casa", d: "R" },
+  { t: "Trabajar con herramientas, equipo pesado o maquinaria", d: "R" },
+  { t: "Cultivar plantas, cuidar animales o trabajar en el campo", d: "R" },
+  { t: "Participar en actividades de rescate, patrullaje o seguridad", d: "R" },
+  { t: "Medir, cortar y armar piezas con las manos", d: "R" },
+  { t: "Leer artículos o ver documentales para entender un tema a fondo", d: "I" },
+  { t: "Hacer cálculos o resolver acertijos y retos de lógica", d: "I" },
+  { t: "Observar y clasificar seres vivos, materiales o fenómenos", d: "I" },
+  { t: "Programar una computadora o resolver un problema técnico", d: "I" },
+  { t: "Plantear una hipótesis y comprobarla con datos", d: "I" },
+  { t: "Inventar historias, personajes o un guion para video", d: "A" },
+  { t: "Diseñar ropa, espacios, logos o ilustraciones", d: "A" },
+  { t: "Actuar, cantar, bailar o participar en una obra", d: "A" },
+  { t: "Tomar fotografías o editar videos con mi propio estilo", d: "A" },
+  { t: "Expresar mis ideas con dibujo, color o movimiento", d: "A" },
+  { t: "Acompañar a alguien que está pasando por un problema", d: "S" },
+  { t: "Enseñar a otros una actividad o explicar una materia", d: "S" },
+  { t: "Participar en un grupo que ayuda a la comunidad", d: "S" },
+  { t: "Escuchar a mis compañeros y ayudarlos a decidir", d: "S" },
+  { t: "Trabajar en un equipo donde todos aportan", d: "S" },
+  { t: "Organizar un evento, un club o una actividad escolar", d: "E" },
+  { t: "Convencer a otras personas de un proyecto o idea", d: "E" },
+  { t: "Calcular ganancias y pensar en un negocio", d: "E" },
+  { t: "Tomar el mando cuando el grupo no sabe qué hacer", d: "E" },
+  { t: "Negociar para llegar a un acuerdo con otras personas", d: "E" },
+  { t: "Revisar listas, tablas o documentos para que no falte nada", d: "C" },
+  { t: "Seguir un procedimiento paso a paso y cumplirlo", d: "C" },
+  { t: "Llevar un registro de gastos, horas o materiales", d: "C" },
+  { t: "Clasificar archivos, datos o información por categorías", d: "C" },
+  { t: "Planear mi semana con un horario y cumplirlo", d: "C" }
 ];
 
-/* legacy: TEST_MAX_POR_DIM = 5 (5 preguntas por dimensión) */
-export const RIASEC_MAX_PER_TYPE = 5;
+/* v2: 10 preguntas por dimensión · escala 0–4 */
+export const RIASEC_MAX_PER_TYPE = 10;
 
 /* Mapas derivados directamente de los datos legacy */
 export const RIASEC_BY_ID = Object.fromEntries(RIASEC_TYPES.map(t => [t.id, t]));
@@ -357,6 +403,285 @@ export const RIASEC_INTERESTS_BY_TYPE = Object.fromEntries(RIASEC_TYPES.map(t =>
 export const RIASEC_TEMPLATE_BY_TYPE = Object.fromEntries(RIASEC_TYPES.map(t => [t.id, t.plantilla]));
 export const RIASEC_TAGS_BY_TYPE = Object.fromEntries(RIASEC_TYPES.map(t => [t.id, t.tags]));
 export const TEMPLATES_BY_ID = Object.fromEntries(PROFILE_TEMPLATES.map(t => [t.id, t]));
+
+/* ================================================================
+   v2 · Contexto de la decisión (8 preguntas)
+   Las respuestas se guardan solo en este navegador (localStorage).
+   ================================================================ */
+export const CONTEXT_QUESTIONS = [
+  {
+    id: 'meta', t: 'Al terminar la preparatoria, ¿qué te gustaría hacer?',
+    hint: 'No es para siempre: solo ayuda a orientar la búsqueda.',
+    options: [
+      { v: 'trabajo', label: 'Trabajar pronto', tags: ['Técnico', 'Tecnología'], note: 'Te convienen opciones con carrera técnica.' },
+      { v: 'universidad', label: 'Continuar a la universidad', tags: ['General', 'Ciencias', 'Humanidades', 'Salud'], note: 'Busca pase directo o buena preparación para el examen.' },
+      { v: 'ambas', label: 'Las dos cosas', tags: ['Técnico', 'General'], note: 'Un bachillerato técnico bivalente puede ayudarte.' },
+      { v: 'nose', label: 'Aún no lo sé', tags: ['General'], note: 'Las opciones generales te dejan más caminos abiertos.' }
+    ]
+  },
+  {
+    id: 'modalidad', t: '¿Qué tipo de bachillerato prefieres?',
+    options: [
+      { v: 'general', label: 'General (más flexible)', tags: ['General', 'Ciencias', 'Humanidades', 'Sociales'] },
+      { v: 'tecnico', label: 'Técnico (trae carrera)', tags: ['Técnico', 'Tecnología'] },
+      { v: 'indiferente', label: 'Me da igual; quiero saber más', tags: ['General', 'Técnico'] },
+      { v: 'nose', label: 'No entiendo la diferencia', tags: ['General'], note: 'Mira la guía «¿Carrera técnica o bachillerato general?» en Decide tu futuro.' }
+    ]
+  },
+  {
+    id: 'militar', t: '¿Te interesa la opción militar?',
+    options: [
+      { v: 'si', label: 'Sí, quiero saber cómo entrar', tags: ['Militar', 'Beca', 'Liderazgo'], note: 'El Heroico Colegio Militar es licenciatura: requiere bachillerato terminado.' },
+      { v: 'informarme', label: 'Quiero informarme primero', tags: ['Militar'], note: 'Ve a «Expos y fechas» y consulta la convocatoria oficial.' },
+      { v: 'no', label: 'No me interesa', tags: [] },
+      { v: 'nose', label: 'Aún no lo sé', tags: ['Militar'], note: 'Puedes comparar sin compromiso.' }
+    ]
+  },
+  {
+    id: 'distancia', t: '¿Qué tan lejos de Cuautitlán podrías viajar?',
+    options: [
+      { v: 'corta', label: 'Menos de 20 km', maxKm: 20, tags: [] },
+      { v: 'media', label: 'Hasta 40 km', maxKm: 40, tags: [] },
+      { v: 'larga', label: 'Hasta 60 km', maxKm: 60, tags: [] },
+      { v: 'any', label: 'No me importa la distancia', maxKm: null, tags: [] }
+    ]
+  },
+  {
+    id: 'presupuesto', t: '¿Aproximadamente cuánto podría pagar tu familia al mes?',
+    hint: 'Es orientativo y privado: no se guarda en la base de datos ni se comparte.',
+    options: [
+      { v: 'gratis', label: 'Necesito sin colegiatura o con beca', costMax: 0, tags: ['Beca'] },
+      { v: 'bajo', label: 'Hasta $2,000', costMax: 1, tags: ['Beca'] },
+      { v: 'medio', label: '$2,000 a $5,000', costMax: 2, tags: [] },
+      { v: 'alto', label: 'Más de $5,000', costMax: 3, tags: [] },
+      { v: 'nose', label: 'Prefiero no decirlo', costMax: null, tags: [] }
+    ]
+  },
+  {
+    id: 'idioma', t: '¿Qué idioma te gustaría reforzar?',
+    options: [
+      { v: 'ingles', label: 'Inglés', tags: ['General', 'Tecnología'] },
+      { v: 'otro', label: 'Otro idioma', tags: ['Humanidades', 'General'] },
+      { v: 'ninguno', label: 'Ninguno por ahora', tags: [] },
+      { v: 'nose', label: 'Aún no lo sé', tags: ['General'] }
+    ]
+  },
+  {
+    id: 'apoyo', multiple: true, t: '¿Con quién te gustaría hablar antes de decidir?',
+    hint: 'Puedes elegir varias opciones.',
+    options: [
+      { v: 'familia', label: 'Mi familia', note: 'Lleva tres opciones y sus costos a la conversación.' },
+      { v: 'profesor', label: 'Mi profesor o consejero', note: 'Pide que contraste tu resultado con el test oficial de tu ficha.' },
+      { v: 'visita', label: 'Visitar las escuelas', note: 'Pregunta por plan de estudios, cortes y fechas.' },
+      { v: 'feria', label: 'Ir a una expo profesiográfica', note: 'Prepara tres preguntas antes de ir.' }
+    ]
+  },
+  {
+    id: 'certeza', t: '¿Qué tan claro tienes lo que quieres estudiar?',
+    options: [
+      { v: 'claro', label: 'Tengo algo claro', tags: [], note: 'Profundiza en planes de estudio y requisitos.' },
+      { v: 'dudas', label: 'Tengo dudas entre varias opciones', tags: ['General'], note: 'Compara al menos tres escuelas y dos carreras.' },
+      { v: 'muchas', label: 'No tengo idea', tags: ['General', 'Técnico'], note: 'Las expos profesiográficas son un buen primer paso.' },
+      { v: 'nose', label: 'Prefiero explorar', tags: ['General'], note: 'Empieza por el catálogo y las ferias.' }
+    ]
+  }
+];
+
+/* ================================================================
+   v2 · Expos profesiográficas y fechas
+   Fuentes públicas consultadas en noviembre de 2026. Cuando no hay
+   convocatoria confirmada se escribe «Por confirmar» y se enlaza el
+   sitio oficial. No se inventan fechas ni montos.
+   ================================================================ */
+export const EXPO_EVENTS = [
+  {
+    id: 'ipn-2026',
+    nombre: 'Expo Profesiográfica IPN 2026',
+    nivel: 'Preparatoria y universidad',
+    fechas: 'Media Superior: 22 ene – 1 feb 2026 · Superior: 5 – 15 feb 2026',
+    estado: 'Edición 2026 concluida · próxima edición por confirmar',
+    lugar: 'Av. IPN s/n, Zacatenco, CDMX',
+    costo: 'Consulta la convocatoria',
+    paraQue: 'Compara las carreras técnicas del IPN con las licenciaturas: sirve tanto para elegir bachillerato como para pensar en la universidad.',
+    fuente: { label: 'Expo Profesiográfica IPN (sitio oficial)', url: 'https://expoprofesiografica.ipn.mx/', consulta: '2026-11-22' }
+  },
+  {
+    id: 'sedena-feria-2026',
+    nombre: 'Feria Profesiográfica de las Fuerzas Armadas',
+    nivel: 'Universidad y opción militar',
+    fechas: 'Edición 2026: 7 de febrero, 9:00–16:00 h · próxima edición: por confirmar',
+    estado: 'Por confirmar',
+    lugar: 'Ex Colegio Militar de Popotla, CDMX',
+    costo: 'Gratuita en la edición 2026 (confirma en la fuente oficial)',
+    paraQue: 'Explica qué se estudia en las universidades del Ejército, Fuerza Aérea y Guardia Nacional y cómo es el proceso de ingreso.',
+    fuente: {
+      label: 'SEDENA · Gob.mx (sitio oficial — confirma aquí la convocatoria)',
+      url: 'https://www.gob.mx/defensa', consulta: '2026-11-22',
+      secundaria: 'https://heraldodemexico.com.mx/nacional/2026/1/24/quieres-estar-en-las-fuerzas-armadas-asi-puedes-entrar-las-universidades-del-ejercito-fuerza-aerea-guardia-nacional-761101.html'
+    }
+  },
+  {
+    id: 'sedena-convocatoria',
+    nombre: 'Convocatoria de ingreso a universidades militares (SEDENA)',
+    nivel: 'Licenciatura militar',
+    fechas: 'Ciclo 2026 concluido · convocatoria 2027: por confirmar',
+    estado: 'Por confirmar',
+    lugar: 'Centros de examen de la SEDENA (CDMX e interior de la República)',
+    costo: 'Sin colegiatura; beca militar según convocatoria',
+    paraQue: 'El Heroico Colegio Militar ofrece las licenciaturas en Administración Militar y Seguridad Pública. Requiere bachillerato terminado: NO es una preparatoria.',
+    etapas: [
+      ['Temarios', '19 nov 2025'],
+      ['Registro en línea', '15 dic 2025 – 18 feb 2026'],
+      ['Somatometría', '16 dic 2025 – 5 mar 2026'],
+      ['Prueba física', '17 dic 2025 – 6 mar 2026'],
+      ['Resultado físico', '23 mar – 3 abr 2026'],
+      ['Cultural / inglés / psicológico', '6–9, 13–16, 20–23 y 27–29 abr 2026'],
+      ['Resultados', '18 – 27 may 2026'],
+      ['Examen médico', '30–31 may y 1–10 jun 2026'],
+      ['Resultados finales', '6 – 24 jul 2026'],
+      ['Documentos', '25 jul – 21 ago 2026'],
+      ['Ingreso', '1 sep 2026']
+    ],
+    notaEtapas: 'Fechas del ciclo 2026 como referencia histórica. No son la convocatoria 2027.',
+    fuente: { label: 'Gob.mx / SEDENA (sitio oficial)', url: 'https://www.gob.mx/defensa', consulta: '2026-11-14' }
+  },
+  {
+    id: 'unam',
+    nombre: 'Orientación vocacional y oferta de carreras UNAM',
+    nivel: 'Universidad',
+    fechas: 'Convocatoria 2027: por confirmar · referencia 2026: registro 23 ene – 3 feb, examen 23 may – 10 jun, resultados 17 jul',
+    estado: 'Por confirmar',
+    lugar: 'CASE UNAM / DGAE, CDMX',
+    costo: 'Colegiatura pública; consulta derechos en la convocatoria',
+    paraQue: 'La guía de carreras explica qué es, qué hace y dónde trabaja cada profesionista: ayuda a pasar de «no sé qué estudiar» a opciones concretas.',
+    fuente: { label: 'CASE UNAM · Ingreso (sitio oficial)', url: 'https://case.unam.mx/ingreso', consulta: '2026-11-22' }
+  },
+  {
+    id: 'uaemex',
+    nombre: 'Oferta académica y orientación UAEMéx',
+    nivel: 'Preparatoria y universidad',
+    fechas: 'Ferias profesiográficas: por confirmar',
+    estado: 'Por confirmar',
+    lugar: 'Toluca y planteles del Estado de México',
+    costo: 'Colegiatura pública; consulta en la convocatoria',
+    paraQue: 'Útil para comparar el pase interno de la preparatoria UAEMéx con otras opciones del Estado de México.',
+    fuente: { label: 'UAEMéx (sitio oficial)', url: 'https://www.uaemex.mx/', consulta: '2026-11-22' }
+  }
+];
+
+export const FAIR_QUESTIONS = {
+  prepa: [
+    '¿Qué materias y optativas se cursan en cada semestre?',
+    '¿El certificado está incorporado y por quién? ¿Necesito examen para entrar a la universidad?',
+    '¿Hay pase directo? ¿Con qué promedio y a qué carreras?',
+    '¿Ofrecen carrera técnica y cuál es su duración y validez?',
+    '¿Cuánto cuesta el año y qué becas hay?'
+  ],
+  uni: [
+    '¿Qué se estudia en los primeros semestres y qué materias son las más difíciles?',
+    '¿Cuáles son los requisitos de ingreso y los cortes de los últimos años?',
+    '¿Qué porcentaje de egresados se titula y en cuánto tiempo?',
+    '¿Cómo es el campo laboral cerca de casa?',
+    '¿Qué simuladores o guías de estudio recomiendan?'
+  ],
+  militar: [
+    '¿La opción es de bachillerato o de licenciatura? ¿Necesito ya terminar la prepa?',
+    '¿Cuáles son los requisitos de edad, estatura, IMC y nacionalidad?',
+    '¿Cuándo se publica la convocatoria y en qué sitio oficial?',
+    '¿Cómo es el internado y la vida diaria?',
+    '¿Qué carreras ofrecen y a qué servicio militar se compromete uno al egresar?'
+  ]
+};
+
+/* ================================================================
+   v2 · Colegiaturas y perfil de cada escuela
+   band: gratis (0) · medio (2) · alto (3) · confirmar (sin banda)
+   ================================================================ */
+export const TUITION_NOTE = 'Montos y fechas consultados en fuentes públicas el 22 de noviembre de 2026. Son referencias para comparar, NO una cotización: confirma colegiatura vigente, becas y pagos adicionales en el sitio oficial. Las escuelas públicas no cobran colegiatura, pero pueden existir derechos u otros pagos.';
+
+export const SCHOOL_EXTRAS = {
+  'Greengate School': { sector: 'Privada', nivel: 'Bachillerato', colegiatura: 'Por confirmar · solicítala directamente a la escuela', band: 'confirmar' },
+  'Colegio Fray Pedro de Gante': { sector: 'Privada', nivel: 'Bachillerato', colegiatura: 'Por confirmar · solicítala directamente a la escuela', band: 'confirmar' },
+  'Prepa UNITEC (Atizapán)': {
+    sector: 'Privada', nivel: 'Bachillerato',
+    colegiatura: 'Desde $3,897 / mes en Atizapán; puede haber becas',
+    band: 'medio',
+    fuente: { label: 'El Universal · guía de preparatorias Edomex 2026', url: 'https://www.generacionuniversitaria.com.mx/oferta-academica/inscribete-2026-guia-de-secundarias-y-preparatorias-en-edomex', consulta: '2026-11-22' }
+  },
+  'Prepa Tec de Monterrey (Campus Edo. Méx.)': {
+    sector: 'Privada', nivel: 'Bachillerato',
+    colegiatura: 'Referencia 2026: Bicultural $103,845 / semestre; Internacional $153,590 / semestre (puede haber extras)',
+    band: 'alto',
+    fuente: { label: 'Expansión · comparativo de colegiaturas 2026', url: 'https://expansion.mx/carrera/2026/08/19/prepa-cuesta-mas-de-500-000-pesos-las-mas-caras-de-mexico', consulta: '2026-11-22', oficial: 'https://tec.mx/es/preparatoria/costos-de-colegiatura' }
+  },
+  'Colegio Alemán Alexander von Humboldt (Lomas Verdes)': { sector: 'Privada', nivel: 'Bachillerato', colegiatura: 'Por confirmar · solicítala directamente a la escuela', band: 'confirmar' },
+  'Bachillerato Anáhuac (Lomas Verdes)': {
+    sector: 'Privada', nivel: 'Bachillerato',
+    colegiatura: 'Referencia 2026: inscripción $38,655 + 10 pagos de $26,147 ≈ $300,125 el primer año',
+    band: 'alto',
+    fuente: { label: 'Expansión · comparativo de colegiaturas 2026', url: 'https://expansion.mx/carrera/2026/08/19/prepa-cuesta-mas-de-500-000-pesos-las-mas-caras-de-mexico', consulta: '2026-11-22' }
+  },
+  'Heroico Colegio Militar': {
+    sector: 'Militar', nivel: 'Licenciatura',
+    colegiatura: 'Sin colegiatura; beca militar según convocatoria',
+    band: 'gratis',
+    fuente: { label: 'Gob.mx / SEDENA (sitio oficial)', url: 'https://www.gob.mx/defensa', consulta: '2026-11-14' }
+  },
+  'Universidad del Ejército y Fuerza Aérea': {
+    sector: 'Militar', nivel: 'Licenciatura',
+    colegiatura: 'Sin colegiatura; beca militar según convocatoria',
+    band: 'gratis',
+    fuente: { label: 'Gob.mx / SEDENA (sitio oficial)', url: 'https://www.gob.mx/defensa', consulta: '2026-11-14' }
+  },
+  'Escuela Militar de Ingeniería': {
+    sector: 'Militar', nivel: 'Licenciatura',
+    colegiatura: 'Sin colegiatura; beca militar según convocatoria',
+    band: 'gratis',
+    fuente: { label: 'Gob.mx / SEDENA (sitio oficial)', url: 'https://www.gob.mx/defensa', consulta: '2026-11-14' }
+  }
+};
+
+/* ================================================================
+   v2 · Cómo decidir: por ti, en familia y con tu profesor
+   ================================================================ */
+export const DECISION_GUIDE = {
+  individual: {
+    title: 'Por ti', icon: '🧭',
+    items: [
+      'Contrasta tus tipos RIASEC más fuertes con las materias que se te dan bien y con lo que disfrutas de verdad.',
+      'Define si quieres un bachillerato general (más flexible) o técnico (trae carrera y permite trabajar antes).',
+      'Piensa en tu presupuesto, el tiempo de traslado y si te interesa la opción militar. Escribe qué estás dispuesto a sacrificar.',
+      'No elijas una carrera solo por el nombre: averigua qué se hace en la vida real y qué materias se cursan.',
+      'Lleva tres opciones y una de respaldo. Si no entras a tu primera elección, ya tendrás un plan.'
+    ]
+  },
+  family: {
+    title: 'En familia', icon: '👨‍👩‍👧',
+    items: [
+      'Hablen de dinero con claridad: colegiatura mensual, pago anual, transporte, libros, exámenes y posibles becas.',
+      'Consideren el tiempo de traslado, el horario y quién podría acompañarte en el proceso.',
+      'Escuchen sin imponer: quien cursará los estudios y ejercerá la profesión eres tú. La familia acompaña, no sustituye tu decisión.',
+      'Pregunten juntos en las expos profesiográficas. Lleven impresas las tres opciones y sus dudas.',
+      'Acuerden cuándo revisarán la decisión: un plan se puede ajustar con nueva información.'
+    ]
+  },
+  teacher: {
+    title: 'Con tu profesor', icon: '🧑‍🏫',
+    items: [
+      'Compara este resultado exploratorio con el test oficial de orientación de tu ficha; no tienen por qué coincidir exactamente.',
+      'Pide revisar juntos el plan de estudios semestre por semestre y tus materias más débiles.',
+      'Pregunta por simuladores, guías de admisión y fechas de convocatorias vigentes.',
+      'Si te interesa la opción militar, confirma en gob.mx/defensa los requisitos de la convocatoria vigente.'
+    ]
+  },
+  questions: [
+    '¿Qué materias se estudian y cuáles se me dificultan?',
+    '¿Podré trabajar al terminar o necesito ir a la universidad?',
+    '¿Cuánto cuesta el año y qué becas existen?',
+    '¿Cuál fue el corte real de los últimos años y cómo va mi promedio?',
+    '¿Qué pasa si no entro a mi primera opción?'
+  ]
+};
 
 /* ================================================================
    Guía técnica (legacy: guiaTecnicaHTML) · texto literal
@@ -580,6 +905,14 @@ export const VOCATIONAL_CATALOG = {
   schools: SCHOOLS,
   catalogTags: CATALOG_TAGS,
   catalogDistanceFilters: CATALOG_DISTANCE_FILTERS,
+  catalogSectorFilters: CATALOG_SECTOR_FILTERS,
+  catalogCostFilters: CATALOG_COST_FILTERS,
+  contextQuestions: CONTEXT_QUESTIONS,
+  expoEvents: EXPO_EVENTS,
+  fairQuestions: FAIR_QUESTIONS,
+  tuitionNote: TUITION_NOTE,
+  schoolExtras: SCHOOL_EXTRAS,
+  decisionGuide: DECISION_GUIDE,
   catalogIntro: CATALOG_INTRO,
   catalogDisclaimer: CATALOG_DISCLAIMER,
   scoreReferenceNote: SCORE_REFERENCE_NOTE,

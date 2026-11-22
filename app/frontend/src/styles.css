@@ -5183,16 +5183,286 @@ body.unit-assign-open {
   accent-color: var(--brand);
 }
 
+/* ---------------- Taller vocacional v2 ---------------- */
+.voc-context-grid,
+.voc-expo-grid,
+.voc-fair-grid,
+.voc-decision-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.voc-context-card,
+.voc-expo-card,
+.voc-fair-grid article,
+.voc-decision-grid article,
+.voc-match-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.voc-context-card h4,
+.voc-fair-grid h4,
+.voc-decision-grid h4,
+.voc-match-card h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.voc-context-card h4 span {
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.voc-context-options {
+  display: grid;
+  gap: 6px;
+}
+
+.voc-context-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.voc-context-option:hover,
+.voc-context-option.selected {
+  border-color: var(--brand);
+  background: var(--focus-ring);
+}
+
+.voc-context-option input {
+  margin-top: 1px;
+  accent-color: var(--brand);
+}
+
+.voc-context-summary {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--brand);
+  border-radius: 12px;
+  background: var(--focus-ring);
+}
+
+.voc-match-section {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid var(--brand);
+  border-radius: 16px;
+  background: linear-gradient(140deg, var(--focus-ring), var(--panel-2));
+}
+
+.voc-match-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.voc-match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.voc-match-card {
+  border-left: 4px solid var(--brand);
+  background: var(--panel);
+}
+
+.voc-match-card > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.voc-match-card > header > div {
+  min-width: 0;
+}
+
+.voc-match-card small {
+  color: var(--muted);
+}
+
+.voc-match-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.voc-reason {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--focus-ring);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.voc-match-reasons.compact .voc-reason {
+  background: var(--soft-row);
+}
+
+.voc-school-badges {
+  margin: 2px 0;
+}
+
+.voc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft-row);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.voc-badge-militar { border-color: #0F766E; background: #0F766E; color: #fff; }
+.voc-badge-privada { border-color: #B45309; background: #B45309; color: #fff; }
+.voc-badge-publica { border-color: #0369A1; background: #0369A1; color: #fff; }
+
+.voc-source {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.voc-source a {
+  color: var(--brand);
+}
+
+.voc-expo-card > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.voc-expo-card > header > span {
+  font-size: 20px;
+}
+
+.voc-expo-card h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.voc-expo-card small {
+  color: var(--muted);
+}
+
+.voc-expo-card p,
+.voc-expo-card li {
+  font-size: 12px;
+}
+
+.voc-expo-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.voc-expo-facts > div {
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: var(--soft-row);
+}
+
+.voc-expo-facts dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.voc-expo-facts dd {
+  margin: 2px 0 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.voc-expo-card details {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--soft-row);
+  font-size: 12px;
+}
+
+.voc-expo-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.voc-expo-card details ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.voc-pending {
+  border-color: #B45309;
+  background: #B45309;
+  color: #fff;
+}
+
+.voc-fair-grid ol,
+.voc-decision-grid ul,
+.voc-note ol {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.voc-fair-grid li,
+.voc-decision-grid li,
+.voc-note li {
+  margin: 4px 0;
+}
+
 @media (max-width: 980px) {
   .voc-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .voc-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .voc-match-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
   .voc-filters,
   .voc-score-grid,
   .voc-result-columns,
-  .voc-guide .guide-2col { grid-template-columns: 1fr; }
+  .voc-guide .guide-2col,
+  .voc-context-grid,
+  .voc-expo-grid,
+  .voc-fair-grid,
+  .voc-decision-grid,
+  .voc-match-grid { grid-template-columns: 1fr; }
   .voc-scale { grid-template-columns: repeat(5, minmax(42px, 1fr)); overflow-x: auto; }
   .voc-tab { padding: 8px 11px; font-size: 12px; }
 }
