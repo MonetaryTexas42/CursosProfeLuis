@@ -572,6 +572,16 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 | OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica (**configurado; no ejecutado en GitHub**) |
 | OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check (**no ejecutado**) |
 | OPS-46 | CI en `main` sin `STAGING_DATABASE_URL` | publicaba igual | falla antes de publicar y deja `::error::` (**configurado; no ejecutado en GitHub**) |
+| OPS-47 | CI con URL directa de staging | `db.<ref>.supabase.co` solo tiene AAAA; el runner falla con `ENETUNREACH` | usar el pooler IPv4 del diálogo Connect de Supabase (**corregido y verificado**) |
+
+**Incidente del primer push (22 nov 2026):** el run `45051062729` falló en
+`Pruebas de RLS contra staging` con `connect ENETUNREACH 2600:1f11:…:5432`.
+GitHub Actions no tiene egress IPv6 y el host directo de staging solo publica un
+registro AAAA. La URL del secreto `STAGING_DATABASE_URL` se cambió al pooler
+IPv4 `aws-1-ca-central-1.pooler.supabase.com:6543`, obtenido de
+`GET /v1/projects/<ref>/config/database/pooler`. Con esa URL,
+`verify-migrations.mjs` (40/40) y la suite RLS (131 PASS · 0 FAIL) pasan en
+local; el CI se relanza con el secreto corregido.
 | OPS-45 | Rollback | manual y lento | volver a una etiqueta anterior en menos de 15 minutos |
 
 **Resultado real en staging (21 nov 2026):** la primera ejecución dio

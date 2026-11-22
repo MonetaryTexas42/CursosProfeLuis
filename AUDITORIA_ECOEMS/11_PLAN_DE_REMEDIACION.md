@@ -556,9 +556,11 @@ valores `jsonb` escalares, corregido en `literalFor` (`restore-db.mjs`).
 **Estado del workflow (22 nov 2026):** `ci.yml` construye con `npm ci`, valida
 el aviso y el recibo PDF, exige `STAGING_DATABASE_URL` en `main`, verifica
 migraciones y corre la suite RLS antes de publicar; etiqueta el commit y hace
-health check. **No se hizo push**: publicaría en GitHub Pages de producción y
-esa autorización no fue dada. Tampoco se activó el cron del outbox (sin
-secretos del repositorio).
+health check. El push a `main` fue autorizado y ejecutado. El primer run
+(`45051062729`) falló en RLS porque el host directo de staging solo resuelve
+IPv6 y GitHub Actions no tiene egress IPv6; se cambió el secreto al pooler IPv4
+(`aws-1-ca-central-1.pooler.supabase.com:6543`) y se relanzó. Tampoco se activó
+el cron del outbox (sin secretos del repositorio).
 
 **Aceptación:** un push a `main` genera un build verificable y publica; un fallo de prueba bloquea el despliegue; se puede volver a la versión anterior en menos de 15 minutos.
 

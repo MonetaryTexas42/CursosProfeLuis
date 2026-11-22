@@ -30,9 +30,17 @@ El despliegue ya **no** se hace con `git push -f`. El workflow
 frontend, valida el aviso de privacidad y el recibo PDF, verifica migraciones
 contra staging, corre la suite RLS y publica en `gh-pages`. En `main`, la falta
 de `STAGING_DATABASE_URL` detiene el workflow antes de publicar. Cada
-publicación deja la etiqueta `deploy-<sha>` y pasa un health check. **El push a
-`main` no se ejecutó durante la remediación**: publicaría en Pages de
-producción y requiere autorización explícita.
+publicación deja la etiqueta `deploy-<sha>` y pasa un health check.
+
+`STAGING_DATABASE_URL` en GitHub debe apuntar al **pooler IPv4** de Supabase
+(`aws-<índice>-<región>.pooler.supabase.com:6543`; el índice se copia del
+diálogo Connect, no se deduce de la región). La conexión directa
+`db.<ref>.supabase.co:5432` solo resuelve AAAA y GitHub Actions no tiene salida
+IPv6: el primer intento falló con `ENETUNREACH`. La conexión directa sigue
+usándose solo en local para respaldos y restauración.
+
+**Estado:** push a `main` autorizado y ejecutado el 22 nov 2026; el primer CI
+falló por el problema de IPv6 y se relanzó con el secreto corregido.
 
 ```bash
 # Publicación normal: commit en main

@@ -19,10 +19,12 @@
 > procesador de `email_outbox` con proveedor `log` (sin envío real) y el recibo
 > PDF de `FUN-02`, validado con `test-receipt-pdf.mjs`. El 22 nov se probó una
 > restauración cifrada en staging: dato modificado y recuperado, 41 tablas
-> comparadas sin diferencias y `restore.log` completo. El CI quedó reforzado
-> localmente, sin push (publicaría en Pages de producción). Producción no fue
-> modificada y solo se verificó en modo lectura. La auditoría original
-> queda como línea base; esta addenda documenta la validación posterior.
+> comparadas sin diferencias y `restore.log` completo. El CI quedó reforzado y
+> el push a `main` se ejecutó con autorización; el primer run falló por IPv6 y
+> se corrigió usando el pooler IPv4 de staging para `STAGING_DATABASE_URL`.
+> Producción no fue modificada por la auditoría y solo se verificó en modo
+> lectura; el despliegue a Pages sí se relanzó. La auditoría original queda
+> como línea base; esta addenda documenta la validación posterior.
 
 ---
 

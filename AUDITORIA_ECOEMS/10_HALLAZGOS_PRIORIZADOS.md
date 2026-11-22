@@ -295,7 +295,7 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [ ] `PRIV-03` verificado en staging: el tutor no lee `student_profiles` crudo ni notas internas; solo `student_guidance`.
 - [x] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura, con una restauración de prueba exitosa en staging (22 nov 2026).
 - [x] `OPS-03` y `OPS-09` resueltos: staging real creado, suites ejecutadas allí y producción intacta.
-- [ ] `OPS-04`: workflow local listo sin `push -f`, con etiqueta y health check; no ejecutado en GitHub porque el push publicaría en Pages de producción.
+- [ ] `OPS-04`: push a `main` ejecutado y workflow sin `push -f`, con etiqueta y health check; el primer run falló por IPv6, corregido con el pooler de staging y relanzado.
 - [ ] `COD-07` implementado: suite de RLS negativa en CI.
 - [x] `SEC-06` verificado en staging: cola drenada con token, reintentos y auditoría sin enlaces; sin correo real (proveedor `log`).
 - [x] `DB-07` cerrado: `verify-migrations.mjs` confirma 40/40 en staging y deja registrado el resultado de producción en solo lectura (22/38 en ese momento, sin escrituras).
