@@ -39,23 +39,23 @@ diálogo Connect, no se deduce de la región). La conexión directa
 IPv6: el primer intento falló con `ENETUNREACH`. La conexión directa sigue
 usándose solo en local para respaldos y restauración.
 
-**Estado:** push a `main` autorizado y ejecutado el 22 nov 2026. Tras corregir
-el pooler IPv4 y la espera de propagación de Pages, el run final
-`45051723789` terminó en SUCCESS y publicó la etiqueta `deploy-473bda6`.
+**Estado final (22 nov 2026):** con autorización explícita se aplicaron
+`0041`/`0042` en producción tras un respaldo cifrado, se activó
+`final_exam_spanish_enabled=true` y se publicó el frontend. El run
+`45059343395` terminó en SUCCESS, publicó la rama `gh-pages` y dejó la etiqueta
+`deploy-c3ef7c6` para el commit `c3ef7c6`.
 
-El frontend publicado espera el esquema de `0040`, así que **la BD de producción
-debe estar alineada**: el mismo 22 nov, con autorización y tras un respaldo
-cifrado, se aplicaron las migraciones `0023`–`0040` en producción (40/40
-verificadas). Si se publica el frontend contra una BD atrasada, aparecerán
-errores `400` en `payments` y `404` en `student_billing_status`.
+Producción quedó en **42/42 migraciones, 96 políticas, 115 funciones y 0
+`SECURITY DEFINER` sin `search_path`**. El examen final de Español responde
+`enabled=true` con 13 secciones y 136 preguntas; la guía imprimible está en
+`/guia-examen-espanol.html` y el taller vocacional reutiliza el material legacy
+sin escribir en la base (sus respuestas viven en `localStorage`).
 
-Los cambios locales posteriores (cards, examen final, guía y taller vocacional)
-**aún no están publicados**. El examen y la guía usan `0041`/`0042`, aplicadas
-solo en staging (42/42); el flag `final_exam_spanish_enabled` sigue en `false`.
-No aplicar esas migraciones en producción ni publicar el frontend sin la
-autorización explícita correspondiente. El taller vocacional no necesita DDL
-nuevo: reutiliza el material legacy y guarda sus respuestas solo en
-`localStorage`.
+Verificación externa posterior al despliegue: `index=200`,
+`guia-examen-espanol.html=200`, `privacidad.html=200`, aviso `v3-2026` con hash
+`85d13859…f740b`, guía con hash `966fb846…d4094` y bundle publicado
+`index-D58IlHdW.js`. Evidencia detallada en
+`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`.
 
 ```bash
 # Publicación normal: commit en main

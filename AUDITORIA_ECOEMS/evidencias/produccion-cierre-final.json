@@ -1,0 +1,58 @@
+{
+  "fecha_utc": "2026-11-22T19:13:44Z",
+  "entorno": "produccion",
+  "proyecto": "ioikcrdxneuydylyhvwi",
+  "base_verificada": {
+    "migraciones_locales": 42,
+    "migraciones_aplicadas": 42,
+    "politicas_public": 96,
+    "funciones_public": 115,
+    "security_definer_sin_search_path": 0,
+    "resultado": "Estado consistente."
+  },
+  "conteos": {
+    "profiles": 13,
+    "students": 4,
+    "student_profiles": 2,
+    "payments": 4,
+    "unit_assignments": 13,
+    "audit_log": 24,
+    "settings": 9
+  },
+  "examen_final": {
+    "flag": "final_exam_spanish_enabled",
+    "enabled": true,
+    "subject": "espanol",
+    "sections": 13,
+    "questions": 136,
+    "questionsPerSection": 0,
+    "final_exam_questions": 0,
+    "final_exam_key": 0,
+    "final_exam_answers": 0,
+    "final_exam_sessions": 0
+  },
+  "respaldo_previo": {
+    "archivo": "app/.backups/backup-2026-11-22-19-09-56.json.enc",
+    "sha256_contenido": "30bc3762714fcfe6c58241daa2db488da2f9dc21893b560afe1bae0869d7f141",
+    "sha256_archivo": "784ada66715abcf98d9a3636cf204c44952094d1092ae579b07f025c2cfc631e",
+    "incluye_auth": false
+  },
+  "despliegue": {
+    "commit": "c3ef7c67ac45fe89d7880c0946a92ec5e4d8b81a",
+    "run_id": "45059343395",
+    "run_conclusion": "success",
+    "tag": "deploy-c3ef7c6",
+    "gh_pages_commit": "9e5e9dbaf4a982b76b9a529dc941b274436dc1b3",
+    "urls": {
+      "index": "https://monetarytexas42.github.io/CursosProfeLuis/",
+      "guia": "https://monetarytexas42.github.io/CursosProfeLuis/guia-examen-espanol.html",
+      "privacidad": "https://monetarytexas42.github.io/CursosProfeLuis/privacidad.html"
+    },
+    "hashes_publicados": {
+      "guia_sha256": "966fb84677c5d8d408de95026da953236f5dc3dde2bd17fb2b70a4693a2d4094",
+      "aviso_privacidad_sha256": "85d13859e9681bbbea548e67422fd069c9b91a5a1c51705062183c0e460f740b",
+      "css": "index-DfnxNZIF.css",
+      "js": "index-D58IlHdW.js"
+    }
+  }
+}

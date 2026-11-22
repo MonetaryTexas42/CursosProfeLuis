@@ -567,11 +567,11 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
 | OPS-40 | `verify-migrations.mjs` contra staging | no existía | 42 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**; eran 40 antes de `0041`/`0042`) |
-| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** antes 22/38 aplicadas y `exit 1`; tras la autorización del 22 nov, 40/40, 93 políticas, 111 funciones y 0 sin `search_path` |
+| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** antes 22/38 aplicadas y `exit 1`; tras las autorizaciones del 22 nov, 42/42, 96 políticas, 115 funciones y 0 sin `search_path` |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
 | OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**obtenido**) |
 | OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica (**configurado; no ejecutado en GitHub**) |
-| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check (**obtenido**) |
+| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check (**obtenido**: `deploy-473bda6` y, en el cierre final, `deploy-c3ef7c6`) |
 | OPS-46 | CI en `main` sin `STAGING_DATABASE_URL` | publicaba igual | falla antes de publicar y deja `::error::` (**configurado; no ejecutado en GitHub**) |
 | OPS-47 | CI con URL directa de staging | `db.<ref>.supabase.co` solo tiene AAAA; el runner falla con `ENETUNREACH` | usar el pooler IPv4 del diálogo Connect de Supabase (**corregido y verificado**) |
 | OPS-48 | Health check tras publicar | el índice podía responder antes que `privacidad.html` | esperar a que el portal **y** el aviso `v3-2026` respondan (**corregido**) |
@@ -699,18 +699,22 @@ añadió el 22 nov. Quedan la validación legal del aviso y el despliegue en CI
 (requiere autorización explícita porque publica en Pages). El proveedor `log`
 evitó cualquier envío real durante P3-17.
 
-### 8.6. Cards, examen final, guía y taller vocacional (22 nov 2026)
+### 8.6. Cards, examen final, guía y taller vocacional (cierre 22 nov 2026)
 
-Trabajo local listo para revisión. **No se publicó en Pages ni se activó el
-examen.** Producción sigue con 40 migraciones y sin `0041`/`0042`.
+Trabajo cerrado con autorización explícita: se aplicaron `0041`/`0042` en
+producción, se activó el examen y se publicó el frontend en Pages.
 
 | # | Prueba | Resultado |
 |---|---|---|
 | OPS-50 | Cards de estado de cuenta | Anulados excluidos de resumen, totales y último pago; saldo en bloque destacado; cuerpo 2×2 sin celdas vacías; periodo visible; montos con `overflow-wrap`; breakpoints 720/440. Verificado por revisión de código y `npm run build`; queda la comprobación visual E2E con cuentas reales. |
-| OPS-51 | Migraciones `0041`/`0042` en staging | Aplicadas con `supabase db push --remote=hsfhlhrkmhajmpethzqn --skip-vault --yes`; staging quedó en 42/42, 96 políticas, 115 funciones y 0 `SECURITY DEFINER` sin `search_path`. Producción **no** fue tocada. |
-| OPS-52 | Examen final de Español (SQL, W) | `DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/test-final-exam.mjs` → **PASS**: 13 secciones, 136 preguntas, respuestas y tiempos registrados, puntaje calculado en servidor (78.68 %, 107/136), `final_exam_key` no legible por el alumno y `ROLLBACK` sin residuos. El flag `final_exam_spanish_enabled` quedó en `false`. |
-| OPS-53 | Guía imprimible | `node scripts/generate-exam-guide.mjs` → 13 temas, 136 preguntas y 117 ejercicios desde `content-v1.json`. SHA-256 `966fb846…d4094` idéntico entre `frontend/public/guia-examen-espanol.html` y `frontend/dist/guia-examen-espanol.html`. Siempre enlazada desde el panel y desde el examen. |
+| OPS-51 | Migraciones `0041`/`0042` en staging | Aplicadas con `supabase db push --remote=hsfhlhrkmhajmpethzqn --skip-vault --yes`; staging quedó en 42/42, 96 políticas, 115 funciones y 0 `SECURITY DEFINER` sin `search_path`. |
+| OPS-52 | Examen final de Español (SQL, W) | `DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/test-final-exam.mjs` → **PASS**: 13 secciones, 136 preguntas, respuestas y tiempos registrados, puntaje calculado en servidor (78.68 %, 107/136), `final_exam_key` no legible por el alumno y `ROLLBACK` sin residuos. El flag de staging quedó en `false`. |
+| OPS-53 | Guía imprimible | `node scripts/generate-exam-guide.mjs` → 13 temas, 136 preguntas y 117 ejercicios desde `content-v1.json`. SHA-256 `966fb846…d4094`, idéntico en `frontend/public/guia-examen-espanol.html`, en el build local y en Pages. Siempre enlazada desde el panel y desde el examen. |
 | OPS-54 | Taller vocacional | Material legacy extraído literalmente a `vocational-data.js` (30 RIASEC, 6 tipos, 44 escuelas, 11 instituciones, 11 planes, 40 técnicas, catálogos y guía). La UI tiene seis secciones: inicio, test RIASEC, escuelas filtrables, universidades, planes/técnicas y decisión/preparación. El RIASEC y la lista de pasos se guardan solo en `localStorage`; no se sobrescribe el test oficial del expediente ni se hace write a la base. |
+| OPS-55 | `0041`/`0042` en producción | Tras respaldo cifrado `backup-2026-11-22-19-09-56.json.enc` (SHA-256 del contenido `30bc3762…7f141`; SHA-256 del archivo `784ada66…c631e`; solo `public`), `supabase db push --remote=ioikcrdxneuydylyhvwi --skip-vault --yes` aplicó ambas migraciones. Verificación final: 42/42, 96 políticas, 115 funciones y 0 definers sin `search_path`. Conteos sin cambios excepto `settings` 7 → 9. |
+| OPS-56 | Activación del examen en producción | Actualización transaccional de `final_exam_spanish_enabled` a `true` (1 fila). `app_final_exam_status()` → `{"enabled":true,"subject":"espanol","sections":13,"questions":136,"questionsPerSection":0}`. Tablas del examen vacías; no se escribieron respuestas reales. |
+| OPS-57 | Publicación final | Commit `c3ef7c6` pusheado a `main` sin `[skip ci]`. Run `45059343395` de «CI y despliegue» terminó en SUCCESS; publicó `gh-pages` (`9e5e9db`) y la etiqueta `deploy-c3ef7c6`. Health check del workflow: portal y aviso `v3-2026` OK. |
+| OPS-58 | Verificación externa de Pages | `https://monetarytexas42.github.io/CursosProfeLuis/`, `/guia-examen-espanol.html` y `/privacidad.html` responden 200. Hash de la guía `966fb846…d4094`; hash del aviso `85d13859…f740b`; CSS `index-DfnxNZIF.css`; bundle publicado `index-D58IlHdW.js` (200, contiene examen, guía y vocación). Evidencia en `evidencias/produccion-cierre-final.json`. |
 
 Comandos de verificación ejecutados sin credenciales en la salida:
 
@@ -719,20 +723,22 @@ cd app
 npm run build
 DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/test-final-exam.mjs
 DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/verify-migrations.mjs
+DATABASE_URL="$(cat .secrets/database-url)" node scripts/verify-migrations.mjs
 ```
 
-Salida de `verify-migrations.mjs`: `Destino: hsfhlhrkmhajmpethzqn`,
-`Migraciones locales: 42`, `Migraciones aplicadas: 42`,
-`Políticas en public: 96`, `Funciones en public: 115`,
-`SECURITY DEFINER sin search_path: 0`, `Estado consistente.`
+Salida de `verify-migrations.mjs` en staging y producción: `Migraciones locales:
+42`, `Migraciones aplicadas: 42`, `Políticas en public: 96`, `Funciones en
+public: 115`, `SECURITY DEFINER sin search_path: 0`, `Estado consistente.`
 
 La suite RLS volvió a ejecutarse después de `0041`/`0042`:
 `Resumen: 131 PASS · 0 FAIL · 0 SKIP · 131 total`.
 
-**Pendiente para activar el examen:** autorización explícita para aplicar
-`0041`/`0042` en producción, cambio de `final_exam_spanish_enabled` a `true`,
-y una autorización separada para publicar el frontend en Pages. Hasta entonces
-la interfaz muestra «Aún no activado» y la guía estudiable ya está disponible.
+**Resultado del cierre:** el examen final quedó activo en producción y el
+frontend —con cards corregidas, guía imprimible y taller vocacional— quedó
+publicado. Staging conserva el flag en `false` como entorno de prueba. No se
+registraron respuestas de alumnos ni sesiones del examen: las tablas
+`final_exam_answers`, `final_exam_sessions`, `final_exam_questions` y
+`final_exam_key` siguen vacías.
 
 ---
 
@@ -797,7 +803,7 @@ la interfaz muestra «Aún no activado» y la guía estudiable ya está disponib
 | OPS-08 | Simulación de rotación | Manual |
 | OPS-09 | Existencia de staging | Manual |
 | OPS-10 | Rebuild reproducible | CI |
-| Cards / examen / guía / vocación | OPS-50…54 | Revisión, SQL (W), build y E2E visual pendiente |
+| Cards / examen / guía / vocación | OPS-50…58 | Revisión, SQL (W), build, activación en producción y verificación de Pages |
 
 ---
 
@@ -887,13 +893,15 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [ ] FUN-40…45 demuestran el panel del tutor de solo lectura con avance, calificaciones, asistencia, tareas y observaciones `family`.
 - [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
 - [x] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log; la prueba real restauró 41 tablas en staging el 22 nov 2026.
-- [x] OPS-40/41 demuestran qué migraciones están aplicadas (42/42 en staging; 40/40 en producción) y que no hay `SECURITY DEFINER` sin `search_path`.
-- [x] OPS-51/52 demuestran que `0041`/`0042` funcionan en staging, que el examen registra respuestas, puntaje y tiempos en servidor y que la clave correcta no es legible por el alumno. Falta la autorización para producción y para activar el flag.
-- [x] OPS-53/54 demuestran que la guía imprimible y el taller vocacional quedaron integrados en el build sin escribir en la base; falta la revisión visual E2E.
+- [x] OPS-40/41 demuestran qué migraciones están aplicadas (42/42 en staging y producción) y que no hay `SECURITY DEFINER` sin `search_path`.
+- [x] OPS-51/52 demuestran que `0041`/`0042` funcionan en staging, que el examen registra respuestas, puntaje y tiempos en servidor y que la clave correcta no es legible por el alumno.
+- [x] OPS-53/54 demuestran que la guía imprimible y el taller vocacional quedaron integrados en el build sin escribir en la base.
+- [x] OPS-55/56 demuestran que las migraciones se aplicaron en producción tras respaldo cifrado y que el examen quedó activo (`enabled=true`).
+- [x] OPS-57/58 demuestran que el run `45059343395` publicó la etiqueta `deploy-c3ef7c6` y que Pages sirve el portal, la guía y el aviso `v3-2026` con los hashes esperados.
 - [x] P3-17 demuestra que el procesador de correo no entrega enlaces ni correo real en staging.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
 - [x] OPS-42…45 demuestran que el despliegue es reproducible y etiquetado sin `push -f`; la reversión documentada no se ejecutó.
-- [ ] La suite corre en CI y bloquea el despliegue si falla (workflow configurado; no ejecutado en GitHub).
+- [x] La suite corre en CI y bloquea el despliegue si falla (run `45059343395` en SUCCESS; las compuertas de staging, RLS y migraciones pasaron antes de publicar).
 - [ ] Cada prueba tiene evidencia registrada sin PII.
 
 ---
@@ -904,7 +912,10 @@ La auditoría encontró los problemas leyendo el código; las pruebas deben **de
 
 La suite propuesta no es exhaustiva, pero cubre **todos los hallazgos, con énfasis en los de mayor riesgo**, y establece el hábito que hoy falta: probar la denegación, no solo el camino feliz. Ese hábito, más que cualquier migración, es lo que impide que `SEC-01` vuelva a ocurrir.
 
-El examen final, la guía y el taller vocacional ya tienen implementación y
-evidencia en staging, pero **no están activos en producción**: publicar el
-frontend, aplicar `0041`/`0042` y cambiar `final_exam_spanish_enabled` requieren
-autorizaciones separadas y explícitas.
+El examen final, la guía y el taller vocacional pasaron de la evidencia en
+staging al cierre en producción: con autorización explícita se aplicaron
+`0041`/`0042`, se activó `final_exam_spanish_enabled` y se publicó el frontend
+mediante el run `45059343395` (`deploy-c3ef7c6`). La verificación final confirma
+42/42 migraciones, base consistente, examen activo y Pages sirviendo los hashes
+esperados. Staging conserva el flag en `false` para pruebas; no se escribieron
+respuestas de alumnos durante el cierre.

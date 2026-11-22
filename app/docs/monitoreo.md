@@ -9,9 +9,9 @@ seguimiento a **OPS-09** (staging).
 La Fase 3 añade `0032`–`0038`. La ejecución real en staging añadió `0039` con
 tres correcciones detectadas por la suite (grants a `authenticated` y visibilidad
 de perfiles) y `0040` con las RPCs del procesador de `email_outbox`. El 22 nov
-2026, con autorización explícita, se aplicaron `0023`–`0040` en producción tras
-un respaldo cifrado. Las migraciones `0041`/`0042` del examen final existen solo
-en staging: **no se aplicaron en producción**.
+2026, con autorización explícita y tras respaldos cifrados, se aplicaron en
+producción `0023`–`0040` y, posteriormente, `0041`/`0042` del examen final.
+Staging y producción quedaron alineados en 42/42 migraciones.
 
 En staging, después de `db push`:
 
@@ -69,15 +69,19 @@ producción. No uses credenciales de escritura "por costumbre": la verificación
 no modifica la base, y producción no debe recibir migraciones sin aprobación
 explícita.
 
-**Estado actual (22 nov 2026):** con autorización explícita se aplicaron
-`0023`–`0040` en producción tras un respaldo cifrado. Una nueva ejecución de
-`verify-migrations.mjs` contra producción reporta **40/40 migraciones, 93
-políticas, 111 funciones y 0 `SECURITY DEFINER` sin `search_path`**. Las
-consultas del frontend que antes fallaban responden `200`; la vista
-`student_billing_status` responde `401` con clave anónima porque solo concede
-permisos a `authenticated` (igual que en staging). Evidencia en
-`AUDITORIA_ECOEMS/evidencias/produccion-post-migraciones.json` y en
-`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.5.
+**Estado actual de producción (22 nov 2026, cierre final):** con autorización
+explícita se aplicaron `0041`/`0042` tras el respaldo cifrado
+`backup-2026-11-22-19-09-56.json.enc` (SHA-256 del contenido
+`30bc3762…7f141`, SHA-256 del archivo `784ada66…c631e`). La verificación final
+reporta **42/42 migraciones, 96 políticas, 115 funciones y 0 `SECURITY DEFINER`
+sin `search_path`**. `app_final_exam_status()` devuelve
+`{"enabled":true,"subject":"espanol","sections":13,"questions":136,"questionsPerSection":0}`.
+Los conteos de datos sensible no cambiaron: 13 perfiles, 4 alumnos, 2
+`student_profiles`, 4 pagos, 13 asignaciones y 24 entradas de auditoría;
+`settings` pasó de 7 a 9 por los ajustes del examen. La vista
+`student_billing_status` sigue respondiendo `401` con clave anónima porque solo
+concede permisos a `authenticated` (igual que en staging). Evidencia en
+`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`.
 
 **Verificación actual de staging (22 nov 2026, tras `0041`/`0042`):**
 `verify-migrations.mjs` reporta 42 migraciones locales y 42 aplicadas, 96
@@ -85,9 +89,16 @@ políticas, 115 funciones y 0 `SECURITY DEFINER` sin `search_path`. La prueba
 E2E `scripts/test-final-exam.mjs` confirma 13 secciones, 136 preguntas,
 respuestas y tiempos registrados, puntaje calculado en servidor, clave correcta
 no legible por el alumno y rollback sin residuos. La suite RLS sigue en
-**131 PASS · 0 FAIL · 0 SKIP**. El flag `final_exam_spanish_enabled` quedó en
-`false`. Detalle en
+**131 PASS · 0 FAIL · 0 SKIP**. El flag de staging quedó en `false` para no
+alterar el entorno de prueba. Detalle en
 `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.6.
+
+**Publicación (22 nov 2026):** el run `45059343395` de «CI y despliegue»
+terminó en SUCCESS para el commit `c3ef7c6`, publicó `gh-pages` y la etiqueta
+`deploy-c3ef7c6`. El health check confirmó el portal y el aviso `v3-2026`.
+Verificación externa: `/`, `/guia-examen-espanol.html` y `/privacidad.html`
+responden 200; hashes `966fb846…d4094` (guía) y `85d13859…f740b` (aviso);
+bundle publicado `index-D58IlHdW.js`.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 
