@@ -128,14 +128,17 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           set -e
-          for i in $(seq 1 12); do
-            if curl -fsS -o /dev/null "https://monetarytexas42.github.io/CursosProfeLuis/"; then
-              echo "Portal: OK"
-              break
+          BASE="https://monetarytexas42.github.io/CursosProfeLuis"
+          # Pages puede servir el index anterior mientras propaga el resto de
+          # archivos. Esperar a los dos evita un falso fallo del health check.
+          for i in $(seq 1 18); do
+            if curl -fsS "$BASE/" > /dev/null &&
+               curl -fsS "$BASE/privacidad.html" | grep -q "v3-2026"; then
+              echo "Portal y aviso v3-2026: OK"
+              exit 0
             fi
-            echo "Esperando a que Pages publique… ($i/12)"
+            echo "Esperando a que Pages publique… ($i/18)"
             sleep 10
           done
-          curl -fsS "https://monetarytexas42.github.io/CursosProfeLuis/" > /dev/null
-          curl -fsS "https://monetarytexas42.github.io/CursosProfeLuis/privacidad.html" | grep -q "v3-2026"
-          echo "Aviso de privacidad v3-2026: OK"
+          echo "::error::Pages no publicó el aviso v3-2026 a tiempo"
+          exit 1
