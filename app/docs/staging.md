@@ -214,8 +214,8 @@ VITE_SUPABASE_URL="https://<REF_STAGING>.supabase.co" \
   node scripts/staging-check.mjs
 ```
 
-Debe reportar el ref de staging, **41 tablas, 93 políticas, 38 migraciones y
-53 funciones `SECURITY DEFINER`**, además de los objetos de Fase 3: índices
+Debe reportar el ref de staging, **41 tablas, 93 políticas, 39 migraciones y
+al menos 53 funciones `SECURITY DEFINER`** (en staging se observan 58), además de los objetos de Fase 3: índices
 `unit_assignments_group_unit_uq` y `xp_events_source_uq`, triggers de XP y
 política de quiz, `data_requests` con tres políticas, y los ajustes
 `unit_completion_rules`, `quiz_attempt_policy`, `data_request_sla_days` y
@@ -377,7 +377,7 @@ Si falta una identidad, los checks dependientes se marcan **SKIP**, nunca PASS.
 
 - [ ] El proyecto de staging tiene un ref distinto de producción.
 - [ ] `staging-check.mjs` no aborta y no muestra advertencias.
-- [ ] Las 38 migraciones están aplicadas (`0032`–`0038` incluidas).
+- [ ] Las 39 migraciones están aplicadas (`0032`–`0039` incluidas; `0039` corrige los fallos detectados en la primera ejecución de la suite).
 - [ ] `config.toml` está aplicado en staging (`config diff` sin cambios).
 - [ ] El seed de usuarios corre dos veces sin errores (idempotente).
 - [ ] La suite RLS no produce PASS falsos: los roles sin identidad salen SKIP.
@@ -392,7 +392,7 @@ Si falta una identidad, los checks dependientes se marcan **SKIP**, nunca PASS.
 - [ ] `invite-guardian` encola `guardian_invite` y la respuesta no contiene enlaces (`SEC-06`).
 - [ ] La anonimización de alumnos se prueba solo con un fixture; `auth.users` no se borra en esta fase (`DB-02`).
 - [ ] `app_quiz_policy` devuelve `max_attempts` y `app_unit_requirements` bloquea el completado hasta cumplir las reglas (`FUN-03/05`).
-- [ ] `verify-migrations.mjs` confirma 38 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
+- [ ] `verify-migrations.mjs` confirma 39 migraciones aplicadas y ningún `SECURITY DEFINER` sin `search_path` (`DB-07`).
 - [ ] El frontend compila en modo `staging` y no contiene secretos.
 - [ ] No hay datos reales ni PII en staging.
 

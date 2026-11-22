@@ -9,6 +9,15 @@
 
 > **Declaración de no modificación.** Esta auditoría no modificó archivos existentes, no aplicó migraciones, no escribió en la base de datos, no desplegó, no cambió contraseñas, permisos ni configuración, y no publicó secretos ni datos personales. Todos los entregables viven únicamente en `AUDITORIA_ECOEMS/`.
 
+> **Actualización 21 nov 2026 (addenda).** Las fases 0–3 se implementaron y se
+> ejecutaron en un staging real (`hsfhlhrkmhajmpethzqn`), distinto de producción:
+> 39/39 migraciones, 9 Edge Functions con `ALLOWED_ORIGIN`, seed ficticio,
+> suite RLS **135/135**, `test-functions.mjs` en PASS y build de staging
+> correcto. La primera ejecución en staging detectó 19 fallos; se corrigieron
+> con `0039_staging_rls_fixes.sql` y dos ajustes a la suite. Producción no fue
+> modificada y solo se verificó en modo lectura. La auditoría original queda
+> como línea base; esta addenda documenta la validación posterior.
+
 ---
 
 ## 1. Veredicto general

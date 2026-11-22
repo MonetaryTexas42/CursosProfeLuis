@@ -20,7 +20,12 @@ const privacyManifest = JSON.parse(
 const PRIVACY_VERSION = privacyManifest.version;
 
 function readTestUsers() {
-  const text = readFileSync(resolve(here, "../.secrets/test-users.txt"), "utf8");
+  // En staging usamos credenciales ficticias separadas. El archivo
+  // `.secrets/test-users.txt` puede contener datos reales y no se lee aquí.
+  const file = process.env.APP_ENV === "staging"
+    ? "../.secrets/staging-test-users.txt"
+    : "../.secrets/test-users.txt";
+  const text = readFileSync(resolve(here, file), "utf8");
   const lines = text.split("\n");
   const users = {};
   let current = null;
@@ -48,7 +53,10 @@ function readTestUsers() {
 }
 
 function readEnv() {
-  return readEnvFile(resolve(here, "../frontend/.env"));
+  const file = process.env.APP_ENV === "staging"
+    ? "../frontend/.env.staging"
+    : "../frontend/.env";
+  return readEnvFile(resolve(here, file));
 }
 
 const users = readTestUsers();

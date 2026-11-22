@@ -371,16 +371,16 @@ on conflict (student_id) do update
 
 ---
 
-### DB-07 · El estado real de las migraciones en producción se verificó solo en modo lectura
+### DB-07 · Estado de migraciones verificado en staging y en producción en modo lectura
 
 - **Severidad:** Medio (riesgo de desfase, no defecto confirmado)
 - **Categoría:** Base de datos / gobernanza
 - **Ubicación:** `app/supabase/.temp/linked-project.json`; `app/scripts/verify-migrations.mjs`
-- **Evidencia:** el 20 nov 2026 se ejecutó el verificador contra el proyecto enlazado `ioikcrdxneuydylyhvwi` usando la URL configurada en `app/.secrets/database-url`; el script solo emite `SELECT`. Resultado: **38 migraciones locales, 22 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, 87 políticas, 94 funciones y 0 funciones `SECURITY DEFINER` sin `search_path`**; `exit code 1`, esperado por las migraciones pendientes. No hubo `INSERT`, `UPDATE`, `DELETE` ni DDL. El verificador se corrigió porque `schema_migrations` no tiene `inserted_at`: las columnas reales son `version`, `statements` y `name` (commit `888a2ce`).
+- **Evidencia:** el 20 nov 2026 se ejecutó el verificador contra el proyecto enlazado `ioikcrdxneuydylyhvwi` usando la URL configurada en `app/.secrets/database-url`; el script solo emite `SELECT`. Resultado: **38 migraciones locales en ese momento, 22 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, 87 políticas, 94 funciones y 0 funciones `SECURITY DEFINER` sin `search_path`**; `exit code 1`, esperado por las migraciones pendientes. No hubo `INSERT`, `UPDATE`, `DELETE` ni DDL. El 21 nov 2026 se ejecutó en staging (`hsfhlhrkmhajmpethzqn`): **39/39 migraciones, 41 tablas, 93 políticas, 58 `SECURITY DEFINER`, 0 sin `search_path`, suite RLS 135/135 y `test-functions.mjs` en PASS**. El verificador se corrigió porque `schema_migrations` no tiene `inserted_at`: las columnas reales son `version`, `statements` y `name` (commit `888a2ce`); también aprendió a reportar una BD nueva con 0 aplicadas (commit `0455f1a`).
 - **Problema:** producción está 16 migraciones por detrás del repositorio; Fases 1, 2 y 3 no están operativas allí. La auditoría sigue basada en código, aunque ahora existe evidencia directa y de solo lectura del desfase.
 - **Escenario:** una política se aplicó a mano en el dashboard y no está en el repositorio; el `drop policy` propuesto no la elimina. El conteo de objetos no sustituye la comparación completa en staging.
 - **Impacto:** correcciones incompletas, falsa sensación de seguridad y riesgo si se intenta aplicar el conjunto completo sin un entorno de prueba ni rollback validado.
-- **Recomendación:** ejecutar el mismo verificador en staging tras aplicar `0023`–`0038` y esperar 38/38, 0 faltantes, 0 desconocidas y 0 `SECURITY DEFINER` sin `search_path`. No aplicar migraciones ni desplegar en producción hasta que staging pase y exista autorización explícita. La consulta base, corregida, es:
+- **Recomendación:** repetir el verificador en staging tras cualquier cambio de esquema y esperar 39/39, 0 faltantes, 0 desconocidas y 0 `SECURITY DEFINER` sin `search_path`. No aplicar migraciones ni desplegar en producción sin autorización explícita tras la validación en staging. La consulta base, corregida, es:
 
 ```sql
 select version, name, statements
@@ -391,7 +391,7 @@ order by version;
 Revisar también `pg_policies` y `pg_proc`. Ver `app/docs/monitoreo.md` y `12_PRUEBAS_PENDIENTES.md`.
 - **Prioridad:** P1 (verificación)
 - **Confianza:** Alta (evidencia directa de solo lectura)
-- **Estado:** Abierto — producción verificada en lectura; verificación de staging pendiente
+- **Estado:** Cerrado en staging; producción permanece sin cambios y verificada solo en lectura
 
 ---
 

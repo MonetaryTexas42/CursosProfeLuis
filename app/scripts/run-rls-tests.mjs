@@ -332,7 +332,11 @@ async function main() {
       results.push({ ...check, status: matches(actual, check.expected) ? "PASS" : "FAIL", actual });
     } catch (error) {
       // Para anon, "permission denied" es el resultado seguro esperado.
-      const denied = check.role === "anon" && error.code === "42501";
+      // En pruebas marcadas con `denyIsPass`, un rechazo de RLS también es
+      // seguro (por ejemplo, un alumno intentando insertar asignaciones).
+      const denied =
+        (check.role === "anon" || check.denyIsPass === true) &&
+        error.code === "42501";
       results.push({
         ...check,
         status: denied ? "PASS" : "FAIL",

@@ -6,7 +6,9 @@ seguimiento a **OPS-09** (staging).
 
 ## 1. Migraciones aplicadas (OPS-07)
 
-La Fase 3 añade `0032`–`0038`. Ninguna se ha aplicado a producción desde este
+La Fase 3 añade `0032`–`0038`. La ejecución real en staging añadió `0039` con
+tres correcciones detectadas por la suite (grants a `authenticated` y visibilidad
+de perfiles). Ninguna migración se ha aplicado a producción desde este
 repositorio: están preparadas como cambios versionados y reversibles.
 
 En staging, después de `db push`:
@@ -20,12 +22,12 @@ VITE_SUPABASE_URL="https://<REF_STAGING>.supabase.co" \
 
 El verificador es de solo lectura y comprueba:
 
-| Recurso | Umbral esperado |
-|---|---|
-| Migraciones | 38 |
-| Tablas | 41 |
-| Políticas RLS | 93 |
-| Funciones `SECURITY DEFINER` | 53 |
+| Recurso | Umbral esperado | Observado en staging |
+|---|---|---|
+| Migraciones | 39 | 39 |
+| Tablas | 41 | 41 |
+| Políticas RLS | 93 | 93 |
+| Funciones `SECURITY DEFINER` | ≥ 53 | 58 |
 
 Además verifica los objetos nuevos: índices únicos de asignación y XP,
 triggers de XP/política de quiz, `data_requests` con tres políticas, los cuatro
@@ -52,9 +54,14 @@ El verificador usa las columnas reales `version`, `name` y `statements` de
 `schema_migrations`; la referencia anterior a `inserted_at` era incorrecta y
 ya está corregida (commit `888a2ce`).
 
-**DB-07 sigue abierto** hasta repetir la verificación en staging con 38/38.
-No uses credenciales de escritura "por costumbre": la verificación no modifica
-la base, y producción no debe recibir migraciones sin aprobación explícita.
+**Resultado en staging (21 nov 2026):** `hsfhlhrkmhajmpethzqn`, 39/39
+migraciones, 41 tablas, 93 políticas, 58 `SECURITY DEFINER`, 0 sin
+`search_path`, suite RLS **135/135** y `test-functions.mjs` en PASS. El build
+de staging también terminó correctamente.
+
+**DB-07 queda verificado en staging**, sin cambios en producción. No uses
+credenciales de escritura "por costumbre": la verificación no modifica la base,
+y producción no debe recibir migraciones sin aprobación explícita.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

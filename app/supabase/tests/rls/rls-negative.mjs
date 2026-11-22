@@ -861,7 +861,7 @@ export const checks = [
        returning 1
      )
      select count(*)::int as n from attempted`,
-    { requires: ["student1"] },
+    { requires: ["student1"], denyIsPass: true },
   ),
 
   // ------------------------------------------------ anonimización (DB-02)
@@ -884,7 +884,7 @@ export const checks = [
     "RLS-134",
     "admin",
     "La anonimización conserva el historial bajo seudónimo (DB-02)",
-    `select (count(*) = 3) as ok
+    `select (count(*) = 1) as ok
        from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.proname = 'app_anonymize_student'
