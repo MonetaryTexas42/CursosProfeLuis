@@ -130,10 +130,10 @@
 
     // El reproductor ya no se auto-arranca: lo cargamos aquí y llamamos init().
     var sistema = document.createElement("script");
-    sistema.src = "js/sistema2.js?v=3";
+    sistema.src = "js/sistema2.js?v=4";
     sistema.onload = function () {
       var app = document.createElement("script");
-      app.src = "js/app.js?v=3";
+      app.src = "js/app.js?v=4";
       app.onload = function () {
         if (typeof init === "function") init();
         // Ahora sí existe saveState: lo envolvemos para sincronizar tras cada guardado.
