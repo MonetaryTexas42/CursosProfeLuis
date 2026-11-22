@@ -23,8 +23,9 @@
 > el push a `main` se ejecutó con autorización; el primer run falló por IPv6 y
 > se corrigió usando el pooler IPv4 de staging para `STAGING_DATABASE_URL`.
 > Producción no fue modificada por la auditoría y solo se verificó en modo
-> lectura; el despliegue a Pages sí se relanzó. La auditoría original queda
-> como línea base; esta addenda documenta la validación posterior.
+> lectura; el despliegue a Pages sí se ejecutó y el run final
+> `45051723789` terminó en SUCCESS. La auditoría original queda como línea
+> base; esta addenda documenta la validación posterior.
 
 ---
 

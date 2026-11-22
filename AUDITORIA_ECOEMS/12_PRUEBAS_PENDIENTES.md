@@ -568,9 +568,9 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 | OPS-40 | `verify-migrations.mjs` contra staging | no existía | 40 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**) |
 | OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** 22/38 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, `exit 1` esperado; sin escrituras |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
-| OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**workflow listo; push no ejecutado**) |
+| OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**obtenido**) |
 | OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica (**configurado; no ejecutado en GitHub**) |
-| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check (**no ejecutado**) |
+| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check (**obtenido**) |
 | OPS-46 | CI en `main` sin `STAGING_DATABASE_URL` | publicaba igual | falla antes de publicar y deja `::error::` (**configurado; no ejecutado en GitHub**) |
 | OPS-47 | CI con URL directa de staging | `db.<ref>.supabase.co` solo tiene AAAA; el runner falla con `ENETUNREACH` | usar el pooler IPv4 del diálogo Connect de Supabase (**corregido y verificado**) |
 | OPS-48 | Health check tras publicar | el índice podía responder antes que `privacidad.html` | esperar a que el portal **y** el aviso `v3-2026` respondan (**corregido**) |
@@ -589,6 +589,11 @@ health check falló con `404` en `privacidad.html` porque el índice respondía
 desde la versión anterior mientras Pages propagaba el resto. Consulta manual
 posterior: `index=200`, `privacidad.html=200`, `v3-2026` presente y rama
 `gh-pages` con el archivo correcto. El workflow ahora espera a ambos recursos.
+
+**Run final (`45051723789`): SUCCESS.** Los 17 pasos relevantes terminaron en
+éxito (build, RLS 131 PASS, migraciones 40/40, recibo PDF, despliegue, etiqueta
+`deploy-473bda6` y health check). Verificación externa: `index=200`,
+`privacidad.html=200`, aviso `v3-2026` presente. `main` quedó en `473bda6`.
 | OPS-45 | Rollback | manual y lento | volver a una etiqueta anterior en menos de 15 minutos |
 
 **Resultado real en staging (21 nov 2026):** la primera ejecución dio
@@ -813,7 +818,7 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [x] OPS-40/41 demuestran qué migraciones están aplicadas (40/40 en staging) y que no hay `SECURITY DEFINER` sin `search_path`.
 - [x] P3-17 demuestra que el procesador de correo no entrega enlaces ni correo real en staging.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
-- [ ] OPS-42…45 demuestran que el despliegue es reproducible, etiquetado y reversible sin `push -f`.
+- [x] OPS-42…45 demuestran que el despliegue es reproducible y etiquetado sin `push -f`; la reversión documentada no se ejecutó.
 - [ ] La suite corre en CI y bloquea el despliegue si falla (workflow configurado; no ejecutado en GitHub).
 - [ ] Cada prueba tiene evidencia registrada sin PII.
 

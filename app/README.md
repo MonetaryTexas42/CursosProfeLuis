@@ -39,8 +39,9 @@ diálogo Connect, no se deduce de la región). La conexión directa
 IPv6: el primer intento falló con `ENETUNREACH`. La conexión directa sigue
 usándose solo en local para respaldos y restauración.
 
-**Estado:** push a `main` autorizado y ejecutado el 22 nov 2026; el primer CI
-falló por el problema de IPv6 y se relanzó con el secreto corregido.
+**Estado:** push a `main` autorizado y ejecutado el 22 nov 2026. Tras corregir
+el pooler IPv4 y la espera de propagación de Pages, el run final
+`45051723789` terminó en SUCCESS y publicó la etiqueta `deploy-473bda6`.
 
 ```bash
 # Publicación normal: commit en main

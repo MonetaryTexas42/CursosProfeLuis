@@ -559,8 +559,11 @@ migraciones y corre la suite RLS antes de publicar; etiqueta el commit y hace
 health check. El push a `main` fue autorizado y ejecutado. El primer run
 (`45051062729`) falló en RLS porque el host directo de staging solo resuelve
 IPv6 y GitHub Actions no tiene egress IPv6; se cambió el secreto al pooler IPv4
-(`aws-1-ca-central-1.pooler.supabase.com:6543`) y se relanzó. Tampoco se activó
-el cron del outbox (sin secretos del repositorio).
+(`aws-1-ca-central-1.pooler.supabase.com:6543`). El segundo run falló en el
+health check por propagación de Pages; se ajustó para esperar también el aviso
+`v3-2026`. **Run final `45051723789`: SUCCESS**, con etiqueta
+`deploy-473bda6` y verificación externa del sitio. Tampoco se activó el cron
+del outbox (sin secretos del repositorio).
 
 **Aceptación:** un push a `main` genera un build verificable y publica; un fallo de prueba bloquea el despliegue; se puede volver a la versión anterior en menos de 15 minutos.
 
