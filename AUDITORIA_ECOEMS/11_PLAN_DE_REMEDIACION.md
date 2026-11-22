@@ -599,8 +599,16 @@ migraciones ni se desplegó.
 **Ejecutado en staging (21 nov 2026):** ref `hsfhlhrkmhajmpethzqn`; 40/40
 migraciones (incluye `0039_staging_rls_fixes.sql` y `0040_email_outbox_processor.sql`),
 41 tablas, 93 políticas, 61 `SECURITY DEFINER`, 0 sin `search_path`, suite RLS
-135/135, `test-functions.mjs` y `test-email-outbox.mjs` en PASS. Producción
-sigue intacta.
+135/135, `test-functions.mjs` y `test-email-outbox.mjs` en PASS.
+
+**Aplicación en producción (22 nov 2026, autorizada):** tras el despliegue del
+frontend aparecieron errores de esquema (`payments.period_start`,
+`student_billing_status`, `privacy_document` y RPCs ausentes). Se hizo un
+respaldo cifrado (`backup-2026-11-22-18-03-17.json.enc`) y se aplicaron las 18
+migraciones pendientes con `db push --remote=<ref-prod> --skip-vault`. La
+verificación posterior dio 40/40, 93 políticas, 111 funciones, 0 sin
+`search_path`, conteos sin cambios y el aviso `v3-2026` con el hash correcto.
+Detalle y evidencia en `12_PRUEBAS_PENDIENTES.md` §8.5.
 
 **Aceptación:** existe un documento que confirma qué migraciones están aplicadas y si hay diferencias.
 

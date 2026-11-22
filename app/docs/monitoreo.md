@@ -63,9 +63,20 @@ migraciones, 41 tablas, 93 políticas, 61 `SECURITY DEFINER`, 0 sin
 `test-email-outbox.mjs` en PASS. El build de staging también terminó
 correctamente.
 
-**DB-07 queda verificado en staging**, sin cambios en producción. No uses
-credenciales de escritura "por costumbre": la verificación no modifica la base,
-y producción no debe recibir migraciones sin aprobación explícita.
+**DB-07 quedó verificado en staging**; en ese momento no había cambios en
+producción. No uses credenciales de escritura "por costumbre": la verificación
+no modifica la base, y producción no debe recibir migraciones sin aprobación
+explícita.
+
+**Estado actual (22 nov 2026):** con autorización explícita se aplicaron
+`0023`–`0040` en producción tras un respaldo cifrado. Una nueva ejecución de
+`verify-migrations.mjs` contra producción reporta **40/40 migraciones, 93
+políticas, 111 funciones y 0 `SECURITY DEFINER` sin `search_path`**. Las
+consultas del frontend que antes fallaban responden `200`; la vista
+`student_billing_status` responde `401` con clave anónima porque solo concede
+permisos a `authenticated` (igual que en staging). Evidencia en
+`AUDITORIA_ECOEMS/evidencias/produccion-post-migraciones.json` y en
+`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.5.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

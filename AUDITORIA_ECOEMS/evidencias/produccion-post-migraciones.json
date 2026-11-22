@@ -1,0 +1,873 @@
+{
+  "generatedAt": "2026-11-22T18:03:41.804Z",
+  "target": "ioikcrdxneuydylyhvwi",
+  "migrations": {
+    "local": [
+      "0001",
+      "0002",
+      "0003",
+      "0004",
+      "0005",
+      "0006",
+      "0007",
+      "0008",
+      "0009",
+      "0010",
+      "0011",
+      "0012",
+      "0013",
+      "0014",
+      "0015",
+      "0016",
+      "0017",
+      "0018",
+      "0019",
+      "0020",
+      "0021",
+      "0022",
+      "0023",
+      "0024",
+      "0025",
+      "0026",
+      "0027",
+      "0028",
+      "0029",
+      "0030",
+      "0031",
+      "0032",
+      "0033",
+      "0034",
+      "0035",
+      "0036",
+      "0037",
+      "0038",
+      "0039",
+      "0040"
+    ],
+    "applied": [
+      {
+        "version": "0001",
+        "name": "schema"
+      },
+      {
+        "version": "0002",
+        "name": "enable_rls"
+      },
+      {
+        "version": "0003",
+        "name": "rls"
+      },
+      {
+        "version": "0004",
+        "name": "progress_rpcs"
+      },
+      {
+        "version": "0005",
+        "name": "fix_quiz_accuracy"
+      },
+      {
+        "version": "0006",
+        "name": "game_reading_rpcs"
+      },
+      {
+        "version": "0007",
+        "name": "exercise_answers"
+      },
+      {
+        "version": "0008",
+        "name": "admin_content_stats"
+      },
+      {
+        "version": "0009",
+        "name": "student_published_content"
+      },
+      {
+        "version": "0010",
+        "name": "player_sync_whatsapp"
+      },
+      {
+        "version": "0011",
+        "name": "force_password_change"
+      },
+      {
+        "version": "0012",
+        "name": "staff_dashboard"
+      },
+      {
+        "version": "0013",
+        "name": "student_cards"
+      },
+      {
+        "version": "0014",
+        "name": "fix_subject_board"
+      },
+      {
+        "version": "0015",
+        "name": "tasks_activity"
+      },
+      {
+        "version": "0016",
+        "name": "student_tests"
+      },
+      {
+        "version": "0017",
+        "name": "external_accounts"
+      },
+      {
+        "version": "0018",
+        "name": "link_confirm"
+      },
+      {
+        "version": "0019",
+        "name": "link_username_fix"
+      },
+      {
+        "version": "0020",
+        "name": "payments"
+      },
+      {
+        "version": "0021",
+        "name": "billing_guard"
+      },
+      {
+        "version": "0022",
+        "name": "quiz_retry"
+      },
+      {
+        "version": "0023",
+        "name": "fix_published_content_rls"
+      },
+      {
+        "version": "0024",
+        "name": "student_staff_notes"
+      },
+      {
+        "version": "0025",
+        "name": "password_change_server"
+      },
+      {
+        "version": "0026",
+        "name": "student_link_tokens"
+      },
+      {
+        "version": "0027",
+        "name": "privacy_notice"
+      },
+      {
+        "version": "0028",
+        "name": "offboarding"
+      },
+      {
+        "version": "0029",
+        "name": "payments_traceability"
+      },
+      {
+        "version": "0030",
+        "name": "vocational_visibility"
+      },
+      {
+        "version": "0031",
+        "name": "privacy_notice_v3"
+      },
+      {
+        "version": "0032",
+        "name": "unit_assignment_integrity"
+      },
+      {
+        "version": "0033",
+        "name": "student_anonymization"
+      },
+      {
+        "version": "0034",
+        "name": "server_side_xp"
+      },
+      {
+        "version": "0035",
+        "name": "unit_completion_rules"
+      },
+      {
+        "version": "0036",
+        "name": "quiz_attempt_policy"
+      },
+      {
+        "version": "0037",
+        "name": "data_requests"
+      },
+      {
+        "version": "0038",
+        "name": "ban_audit"
+      },
+      {
+        "version": "0039",
+        "name": "staging_rls_fixes"
+      },
+      {
+        "version": "0040",
+        "name": "email_outbox_processor"
+      }
+    ],
+    "missing": [],
+    "unknown": []
+  },
+  "counts": {
+    "local": 40,
+    "applied": 40,
+    "policies": 93,
+    "functions": 111,
+    "definerWithoutSearchPath": 0
+  },
+  "policies": [
+    {
+      "schemaname": "public",
+      "tablename": "academic_years",
+      "policyname": "academic_years_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "academic_years",
+      "policyname": "academic_years_select_authenticated",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "assessments",
+      "policyname": "assessments_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "assessments",
+      "policyname": "assessments_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "attendance",
+      "policyname": "attendance_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "attendance",
+      "policyname": "attendance_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "attendance_sessions",
+      "policyname": "attendance_sessions_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "attendance_sessions",
+      "policyname": "attendance_sessions_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "audit_log",
+      "policyname": "audit_log_select_admin",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "badges",
+      "policyname": "badges_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "badges",
+      "policyname": "badges_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "data_requests",
+      "policyname": "data_requests_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "data_requests",
+      "policyname": "data_requests_insert_own",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "data_requests",
+      "policyname": "data_requests_select_own",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "email_outbox",
+      "policyname": "email_outbox_select_admin",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "exercise_attempts",
+      "policyname": "exercise_attempts_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "exercise_attempts",
+      "policyname": "exercise_attempts_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "game_catalog",
+      "policyname": "game_catalog_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "game_catalog",
+      "policyname": "game_catalog_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "game_sessions",
+      "policyname": "game_sessions_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "game_sessions",
+      "policyname": "game_sessions_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "grades",
+      "policyname": "grades_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "grades",
+      "policyname": "grades_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "policyname": "groups_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "policyname": "groups_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "guardian_messages",
+      "policyname": "guardian_messages_delete_admin",
+      "cmd": "DELETE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "guardian_messages",
+      "policyname": "guardian_messages_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "guardian_messages",
+      "policyname": "guardian_messages_staff_insert",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "guardian_messages",
+      "policyname": "guardian_messages_staff_update",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "guardians",
+      "policyname": "guardians_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "guardians",
+      "policyname": "guardians_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "observations",
+      "policyname": "observations_delete_admin",
+      "cmd": "DELETE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "observations",
+      "policyname": "observations_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "observations",
+      "policyname": "observations_staff_insert",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "observations",
+      "policyname": "observations_staff_update",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "payments",
+      "policyname": "payments_insert_staff",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "payments",
+      "policyname": "payments_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "payments",
+      "policyname": "payments_update_staff",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "privacy_consents",
+      "policyname": "privacy_consents_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "privacy_consents",
+      "policyname": "privacy_consents_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "profiles",
+      "policyname": "profiles_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "profiles",
+      "policyname": "profiles_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "quiz_attempts",
+      "policyname": "quiz_attempts_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "quiz_attempts",
+      "policyname": "quiz_attempts_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reading_assessments",
+      "policyname": "reading_assessments_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "reading_assessments",
+      "policyname": "reading_assessments_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "settings",
+      "policyname": "settings_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "settings",
+      "policyname": "settings_select_admin",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_badges",
+      "policyname": "student_badges_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_badges",
+      "policyname": "student_badges_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_billing",
+      "policyname": "student_billing_insert_staff",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_billing",
+      "policyname": "student_billing_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_billing",
+      "policyname": "student_billing_update_staff",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_guardians",
+      "policyname": "student_guardians_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_guardians",
+      "policyname": "student_guardians_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_profiles",
+      "policyname": "student_profiles_delete_admin",
+      "cmd": "DELETE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_profiles",
+      "policyname": "student_profiles_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_profiles",
+      "policyname": "student_profiles_staff_insert",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_profiles",
+      "policyname": "student_profiles_staff_update",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_staff_notes",
+      "policyname": "student_staff_notes_delete",
+      "cmd": "DELETE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_staff_notes",
+      "policyname": "student_staff_notes_insert",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_staff_notes",
+      "policyname": "student_staff_notes_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_staff_notes",
+      "policyname": "student_staff_notes_update",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_stats",
+      "policyname": "student_stats_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_stats",
+      "policyname": "student_stats_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_unit_overrides",
+      "policyname": "student_unit_overrides_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "student_unit_overrides",
+      "policyname": "student_unit_overrides_write_staff",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "students",
+      "policyname": "students_delete_admin",
+      "cmd": "DELETE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "students",
+      "policyname": "students_insert_staff",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "students",
+      "policyname": "students_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "students",
+      "policyname": "students_update_staff",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "subjects",
+      "policyname": "subjects_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "subjects",
+      "policyname": "subjects_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "task_status",
+      "policyname": "task_status_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "task_status",
+      "policyname": "task_status_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "task_submissions",
+      "policyname": "task_submissions_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "task_submissions",
+      "policyname": "task_submissions_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tasks",
+      "policyname": "tasks_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tasks",
+      "policyname": "tasks_staff_write",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "terms",
+      "policyname": "terms_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "terms",
+      "policyname": "terms_select_authenticated",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_assignments",
+      "policyname": "unit_assignments_delete_staff",
+      "cmd": "DELETE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_assignments",
+      "policyname": "unit_assignments_insert_staff",
+      "cmd": "INSERT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_assignments",
+      "policyname": "unit_assignments_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_assignments",
+      "policyname": "unit_assignments_update_staff",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_progress",
+      "policyname": "unit_progress_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_progress",
+      "policyname": "unit_progress_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_versions",
+      "policyname": "unit_versions_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "unit_versions",
+      "policyname": "unit_versions_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "units",
+      "policyname": "units_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "units",
+      "policyname": "units_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "xp_events",
+      "policyname": "xp_events_admin_all",
+      "cmd": "ALL",
+      "roles": "{authenticated}"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "xp_events",
+      "policyname": "xp_events_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}"
+    }
+  ],
+  "definerWithoutSearchPath": []
+}

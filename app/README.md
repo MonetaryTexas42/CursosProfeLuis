@@ -43,6 +43,12 @@ usándose solo en local para respaldos y restauración.
 el pooler IPv4 y la espera de propagación de Pages, el run final
 `45051723789` terminó en SUCCESS y publicó la etiqueta `deploy-473bda6`.
 
+El frontend publicado espera el esquema de `0040`, así que **la BD de producción
+debe estar alineada**: el mismo 22 nov, con autorización y tras un respaldo
+cifrado, se aplicaron las migraciones `0023`–`0040` en producción (40/40
+verificadas). Si se publica el frontend contra una BD atrasada, aparecerán
+errores `400` en `payments` y `404` en `student_billing_status`.
+
 ```bash
 # Publicación normal: commit en main
 git push origin main

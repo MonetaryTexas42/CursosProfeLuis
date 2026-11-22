@@ -71,7 +71,7 @@ Este documento consolida los **63 hallazgos** de los informes 03–09 en una sol
 | DB-04 | M | P2 | A | `app_complete_unit` permite completar sin actividades | `0004:398-465` | 04 |
 | DB-05 | B | P3 | A | Migraciones sin rollback y no idempotentes | `0003:625`; `0009:8` | 04 |
 | DB-06 | B | P3 | A | Sin retención para `audit_log` y `email_outbox` | `0001:508-519` | 04 |
-| DB-07 | M | P1 | A | Estado real de migraciones verificado: 40/40 en staging y 22/38 en producción (solo lectura) | `supabase/.temp/`; `scripts/verify-migrations.mjs` | 04 |
+| DB-07 | M | P1 | C | Estado real de migraciones verificado: 40/40 en staging y 40/40 en producción tras la autorización del 22 nov (antes 22/38) | `supabase/.temp/`; `scripts/verify-migrations.mjs` | 04 |
 | DB-08 | B | P1 | A | `notes_internal` en tabla visible a la familia | `0001:111`; `0003:560` | 04 |
 
 ### 3.3. Funcionalidad
@@ -273,12 +273,15 @@ Para evitar confusiones en la revisión:
 > `0039` corrige tres fallos detectados por la propia suite y `0040` añade el
 > procesador de correo), 10 Edge Functions, seed ficticio, **135/135
 > verificaciones de RLS**, `test-functions.mjs` y `test-email-outbox.mjs` en
-> PASS y build de staging correcto. Producción no fue tocada: el 20 nov solo se
-> verificó en lectura y seguía con 22 migraciones aplicadas.
+> PASS y build de staging correcto. Durante la auditoría producción no fue
+> tocada: el 20 nov solo se verificó en lectura y seguía con 22 migraciones.
+> El 22 nov, con autorización explícita y tras respaldo cifrado, se aplicaron
+> `0023`–`0040` en producción: 40/40 migraciones, 93 políticas, 111 funciones y
+> 0 `SECURITY DEFINER` sin `search_path`; el aviso coincide con `v3-2026`.
 >
-> Siguen pendientes funcionales: la validación legal del aviso `v3-2026` con el
-> correo de contacto de `PRIV-06` y el despliegue en CI (el workflow está listo,
-> pero hacer push publicaría en Pages de producción). `SEC-06` quedó verificado
+> Siguen pendientes funcionales: la validación legal del aviso `v3-2026` y el
+> correo de contacto de `PRIV-06`. El despliegue en CI ya se ejecutó con
+> autorización (run final `45051723789`, SUCCESS). `SEC-06` quedó verificado
 > en staging con el proveedor `log` (sin envío real); el cron requiere secretos
 > del repositorio. `OPS-01`/`OPS-02` quedaron verificados con una restauración
 > real en staging el 22 nov 2026. `DB-07` quedó cerrado en staging; el borrado
@@ -294,11 +297,11 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [x] `FUN-02` verificado: periodo, saldo, duplicado y anulación auditada (RLS-118…129); recibo PDF implementado y validado por `test-receipt-pdf.mjs`.
 - [ ] `PRIV-03` verificado en staging: el tutor no lee `student_profiles` crudo ni notas internas; solo `student_guidance`.
 - [x] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura, con una restauración de prueba exitosa en staging (22 nov 2026).
-- [x] `OPS-03` y `OPS-09` resueltos: staging real creado, suites ejecutadas allí y producción intacta.
+- [x] `OPS-03` y `OPS-09` resueltos: staging real creado, suites ejecutadas allí; producción se migró después con autorización.
 - [x] `OPS-04`: push a `main` ejecutado y workflow sin `push -f`, con etiqueta y health check; tras dos fallos de configuración (IPv6 y propagación de Pages), el run final `45051723789` terminó en SUCCESS. La reversión está documentada pero no se probó.
 - [ ] `COD-07` implementado: suite de RLS negativa en CI.
 - [x] `SEC-06` verificado en staging: cola drenada con token, reintentos y auditoría sin enlaces; sin correo real (proveedor `log`).
-- [x] `DB-07` cerrado: `verify-migrations.mjs` confirma 40/40 en staging y deja registrado el resultado de producción en solo lectura (22/38 en ese momento, sin escrituras).
+- [x] `DB-07` cerrado: `verify-migrations.mjs` confirma 40/40 en staging y 40/40 en producción tras la migración autorizada del 22 nov 2026 (antes 22/38, solo lectura).
 - [ ] Aviso de privacidad `v3-2026` validado por abogado y sin placeholders.
 - [ ] Respaldos automáticos de Supabase verificados y restauración probada.
 - [ ] Runbook de incidentes documentado.

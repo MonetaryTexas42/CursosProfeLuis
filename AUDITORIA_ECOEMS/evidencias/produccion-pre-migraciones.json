@@ -1,0 +1,22 @@
+{
+  "fecha": "2026-11-22T18:03:09.622Z",
+  "entorno": "produccion",
+  "ref": "ioikcrdxneuydylyhvwi",
+  "conteos": {
+    "profiles": 13,
+    "students": 4,
+    "groups": 1,
+    "payments": 4,
+    "student_billing": 4,
+    "unit_assignments": 13,
+    "unit_progress": 3,
+    "observations": 2,
+    "guardians": 6,
+    "student_guardians": 4,
+    "audit_log": 24
+  },
+  "notas": {
+    "notas_internal_no_vacias": 0,
+    "asignaciones_duplicadas_grupo_unidad": 0
+  }
+}

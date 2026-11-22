@@ -22,9 +22,14 @@
 > comparadas sin diferencias y `restore.log` completo. El CI quedó reforzado y
 > el push a `main` se ejecutó con autorización; el primer run falló por IPv6 y
 > se corrigió usando el pooler IPv4 de staging para `STAGING_DATABASE_URL`.
-> Producción no fue modificada por la auditoría y solo se verificó en modo
-> lectura; el despliegue a Pages sí se ejecutó y el run final
-> `45051723789` terminó en SUCCESS. La auditoría original queda como línea
+> Durante la auditoría, producción solo se verificó en modo lectura. El
+> despliegue a Pages sí se ejecutó con autorización y el run final
+> `45051723789` terminó en SUCCESS. Ese despliegue dejó ver un desajuste: el
+> frontend pedía columnas y vistas que la BD no tenía. El 22 nov 2026, con
+> autorización explícita, se hizo un respaldo cifrado de producción y se
+> aplicaron las migraciones `0023`–`0040`; la verificación posterior dio
+> **40/40 migraciones, 93 políticas, 111 funciones, 0 `SECURITY DEFINER` sin
+> `search_path`** y conteos sin cambios. La auditoría original queda como línea
 > base; esta addenda documenta la validación posterior.
 
 ---

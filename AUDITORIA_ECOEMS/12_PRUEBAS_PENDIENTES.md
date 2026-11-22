@@ -519,8 +519,9 @@ comparadas contra el respaldo quedaron sin diferencias; las 3 filas de
 checksum y resultado. La primera ejecución falló en `settings` porque los
 valores `jsonb` escalares se insertaban como texto sin serializar; se corrigió
 `literalFor` en `restore-db.mjs` y la segunda ejecución terminó correctamente.
-Producción no se tocó: verificación posterior en solo lectura, 22 migraciones
-aplicadas.
+En ese momento producción no se tocó: verificación posterior en solo lectura,
+22 migraciones aplicadas. El 22 nov, con autorización explícita, se aplicaron
+`0023`–`0040` (ver §8.5).
 
 ### 8.2. Smoke E2E (OPS-03)
 
@@ -566,7 +567,7 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
 | OPS-40 | `verify-migrations.mjs` contra staging | no existía | 40 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**) |
-| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** 22/38 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, `exit 1` esperado; sin escrituras |
+| OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** antes 22/38 aplicadas y `exit 1`; tras la autorización del 22 nov, 40/40, 93 políticas, 111 funciones y 0 sin `search_path` |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
 | OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**obtenido**) |
 | OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica (**configurado; no ejecutado en GitHub**) |
@@ -594,6 +595,41 @@ posterior: `index=200`, `privacidad.html=200`, `v3-2026` presente y rama
 éxito (build, RLS 131 PASS, migraciones 40/40, recibo PDF, despliegue, etiqueta
 `deploy-473bda6` y health check). Verificación externa: `index=200`,
 `privacidad.html=200`, aviso `v3-2026` presente. `main` quedó en `473bda6`.
+
+### 8.5. Aplicación de migraciones en producción (22 nov 2026)
+
+Tras publicar el frontend aparecieron en consola `400`/`404` en
+`payments.period_start`, `student_billing_status`, `privacy_document` y varias
+RPCs: producción seguía en 22 migraciones y el build ya esperaba el esquema de
+`0040`. Con autorización explícita del usuario:
+
+1. **Dry-run** con `supabase db push --remote=<ref-prod> --skip-vault --dry-run`:
+   exactamente 18 migraciones pendientes (`0023`–`0040`).
+2. **Foto previa** (solo conteos, sin PII) en
+   `evidencias/produccion-pre-migraciones.json`: 13 perfiles, 4 alumnos, 4
+   pagos, 13 asignaciones, 24 eventos de auditoría, **0** notas internas y
+   **0** asignaciones duplicadas.
+3. **Respaldo cifrado**: `backup-2026-11-22-18-03-17.json.enc`, SHA-256 del
+   archivo `e561229c875655a1c04074d0ddb1cc095816598b7857241191b3e2a39de04a01`
+   (SHA-256 del contenido `725964816e6ec53f72cf606215613c8bc6b0c8e9009daccb06c91ae5951e0265`).
+4. **Aplicación** con `db push --remote=<ref-prod> --password=… --skip-vault
+   --yes`: las 18 migraciones terminaron sin error.
+5. **Verificación** (solo lectura): 40/40 migraciones, 93 políticas, 111
+   funciones, 0 `SECURITY DEFINER` sin `search_path`; columnas, vistas y RPCs
+   que faltaban ya existen; los 11 conteos comparados no cambiaron. Evidencia
+   en `evidencias/produccion-post-migraciones.json`.
+6. **Consultas que fallaban**: `payments` → `200`, `privacy_document` → `200`.
+   `student_billing_status` → `401` con clave anónima, **esperado** (la vista
+   solo concede permisos a `authenticated`, igual que en staging).
+7. **Aviso**: `privacy_document` tiene `v3-2026`, `/privacidad.html` y el hash
+   `85d13859…f740b`, idéntico al de `privacy-doc.mjs --check`.
+
+**No se hicieron pruebas de escritura ni se ejecutó la suite RLS contra
+producción**: esa suite usa identidades ficticias de staging. Las políticas
+RLS de producción se compararon con las de staging y coinciden. Quedó como
+recomendación pendiente el hecho de que, en producción, `anon` conserva grants
+amplios heredados en `payments` y `privacy_document` (RLS los contiene, pero
+staging tiene una configuración más restrictiva).
 | OPS-45 | Rollback | manual y lento | volver a una etiqueta anterior en menos de 15 minutos |
 
 **Resultado real en staging (21 nov 2026):** la primera ejecución dio
