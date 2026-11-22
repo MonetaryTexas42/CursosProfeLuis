@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase.js';
 
 export const EXAM_GUIDE_URL = './guia-examen-espanol.html';
 
+const APP_BASE = import.meta.env.BASE_URL || '/';
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 function esc(value) {
@@ -100,10 +101,11 @@ export function examDashboardCard(summary) {
 
 let exam = null;
 
-export function openFinalExam(root, { onClose }) {
+export function openFinalExam(root, { onClose, preview = false } = {}) {
   exam = {
     root,
     onClose,
+    preview,
     view: 'intro',
     error: '',
     status: null,
@@ -121,7 +123,7 @@ export function openFinalExam(root, { onClose }) {
 }
 
 async function refreshStatus() {
-  if (!exam) return;
+  if (!exam || exam.preview) return;
   const summary = await fetchExamSummary();
   if (!exam || exam.view !== 'intro') return;
   exam.status = summary.status;
@@ -133,7 +135,7 @@ function shell(content) {
   return `
     <div class="shell">
       <header class="top">
-        <a class="brand" href="/" aria-label="ECOEMS inicio">
+        <a class="brand" href="${APP_BASE}" aria-label="ECOEMS inicio">
           <span class="brand-mark">E</span>
           <span>ECOEMS <small>Plataforma</small></span>
         </a>
@@ -159,7 +161,7 @@ function render() {
 
   exam.root.innerHTML = shell(content);
   exam.root.querySelector('#exam-back')?.addEventListener('click', () => {
-    if (exam.view === 'question' && !window.confirm('¿Salir del examen? Tu sesión quedará abierta y podrías perder el tiempo medido.')) return;
+    if (!exam.preview && exam.view === 'question' && !window.confirm('¿Salir del examen? Tu sesión quedará abierta y podrías perder el tiempo medido.')) return;
     exam.onClose?.();
   });
   exam.root.querySelectorAll('[data-exam-action]').forEach((button) => {
@@ -172,30 +174,41 @@ function introMarkup() {
   const enabled = Boolean(status?.enabled);
   const sections = status?.sections ?? 13;
   const questions = status?.questions ?? 136;
+  const preview = exam.preview;
 
   return `
     <article class="card wide exam-intro">
-      <span class="card-label">Evaluación final</span>
-      <h1>Examen final de Español</h1>
-      <p class="muted">Una evaluación completa de todos los temas vistos en la materia.</p>
+      <span class="card-label">${preview ? 'Vista previa del profesorado' : 'Evaluación final'}</span>
+      <h1>Examen final de Español${preview ? ' · vista previa' : ''}</h1>
+      <p class="muted">${preview
+        ? 'El banco real que contestan los alumnos, sin crear sesión ni registrar respuestas.'
+        : 'Una evaluación completa de todos los temas vistos en la materia.'}</p>
       <div class="exam-facts">
         <div><strong>${sections}</strong><small>secciones (temas vistos)</small></div>
         <div><strong>${questions}</strong><small>preguntas del banco</small></div>
-        <div><strong>∞</strong><small>tiempo libre por respuesta</small></div>
+        <div><strong>${preview ? '✓' : '∞'}</strong><small>${preview ? 'clave visible al terminar' : 'tiempo libre por respuesta'}</small></div>
       </div>
-      <ul class="exam-rules">
-        <li>Las secciones aparecen en <strong>orden distinto</strong> al que se vieron en clase; cada una corresponde a un tema.</li>
-        <li>Se mide el tiempo de <strong>cada pregunta</strong> y de <strong>cada sección</strong>.</li>
-        <li>No verás si acertaste hasta terminar: el puntaje se calcula en el servidor.</li>
-        <li>Responde en una sola sesión y revisa antes de terminar.</li>
-      </ul>
+      ${preview ? `
+        <ul class="exam-rules">
+          <li>Ves las mismas preguntas y el mismo orden aleatorio por sección que usa el alumno.</li>
+          <li>Al terminar se muestran aciertos, respuestas correctas y explicaciones.</li>
+          <li>Esta revisión <strong>no crea sesión, no guarda respuestas y no aparece en resultados</strong>.</li>
+        </ul>
+      ` : `
+        <ul class="exam-rules">
+          <li>Las secciones aparecen en <strong>orden distinto</strong> al que se vieron en clase; cada una corresponde a un tema.</li>
+          <li>Se mide el tiempo de <strong>cada pregunta</strong> y de <strong>cada sección</strong>.</li>
+          <li>No verás si acertaste hasta terminar: el puntaje se calcula en el servidor.</li>
+          <li>Responde en una sola sesión y revisa antes de terminar.</li>
+        </ul>
+      `}
       <div class="row exam-intro-actions">
-        ${enabled
-          ? '<button class="btn primary" data-exam-action="start">Comenzar examen →</button>'
+        ${preview || enabled
+          ? `<button class="btn primary" data-exam-action="start">${preview ? 'Ver el examen →' : 'Comenzar examen →'}</button>`
           : '<button class="btn primary" disabled>Examen pendiente de activación</button>'}
         <a class="btn ghost" href="${EXAM_GUIDE_URL}" target="_blank" rel="noopener">📖 Estudiar con la guía</a>
       </div>
-      ${enabled ? '' : '<p class="muted"><small>Cuando se active, regresa aquí y podrás contestarlo en la plataforma. La guía ya está lista para estudiar en casa.</small></p>'}
+      ${preview || enabled ? '' : '<p class="muted"><small>Cuando se active, regresa aquí y podrás contestarlo en la plataforma. La guía ya está lista para estudiar en casa.</small></p>'}
     </article>
   `;
 }
@@ -281,7 +294,7 @@ async function handleAction(action, dataset) {
   if (action === 'prev') return goTo(exam.index - 1);
   if (action === 'jump') return goTo(Number(dataset.index));
   if (action === 'finish') return finishExam();
-  if (action === 'retry') return openFinalExam(exam.root, { onClose: exam.onClose });
+  if (action === 'retry') return openFinalExam(exam.root, { onClose: exam.onClose, preview: exam.preview });
 }
 
 async function startExam() {
@@ -290,13 +303,15 @@ async function startExam() {
     exam.error = 'La plataforma no está conectada a la base de datos.';
     return render();
   }
-  const { data, error } = await supabase.rpc('app_start_final_exam');
+  const { data, error } = await supabase.rpc(
+    exam.preview ? 'app_preview_final_exam' : 'app_start_final_exam'
+  );
   if (error) {
     exam.error = error.message || 'No se pudo iniciar el examen.';
     return render();
   }
 
-  exam.sessionId = data.sessionId;
+  exam.sessionId = exam.preview ? null : data.sessionId;
   exam.questions = data.questions || [];
   exam.sections = data.sections || [];
   exam.startedAt = Date.now();
@@ -330,6 +345,7 @@ async function selectOption(option) {
   exam.root.querySelectorAll('.exam-option').forEach((button) => {
     button.classList.toggle('selected', Number(button.dataset.option) === option);
   });
+  if (exam.preview) return;
 
   const { error } = await supabase.rpc('app_answer_final_exam', {
     p_session_id: exam.sessionId,
@@ -363,6 +379,14 @@ async function finishExam() {
   const unanswered = exam.questions.filter((q) => exam.answers.get(q.id)?.selected == null).length;
   if (unanswered && !window.confirm(`Todavía hay ${unanswered} preguntas sin contestar. ¿Terminar de todos modos?`)) return;
 
+  if (exam.preview) {
+    exam.result = previewResult();
+    exam.view = 'results';
+    exam.error = '';
+    render();
+    return;
+  }
+
   const { data, error } = await supabase.rpc('app_finish_final_exam', {
     p_session_id: exam.sessionId
   });
@@ -377,6 +401,52 @@ async function finishExam() {
   render();
 }
 
+// La vista previa se califica en el navegador solo para mostrar la clave al
+// profesorado. Nunca se envía ni se guarda: el examen real se califica en
+// servidor mediante app_finish_final_exam.
+function previewResult() {
+  const answers = exam.questions.map((question) => {
+    const answer = exam.answers.get(question.id) || { selected: null, elapsed: 0 };
+    const correctIndex = Number(question.correctIndex);
+    return {
+      id: question.id,
+      prompt: question.prompt,
+      selectedIndex: answer.selected ?? null,
+      correctIndex,
+      isCorrect: answer.selected === correctIndex,
+      durationMs: answer.elapsed || 0,
+      explanation: question.explanation || ''
+    };
+  });
+
+  const correct = answers.filter((answer) => answer.isCorrect).length;
+  const total = answers.length;
+  const sections = exam.sections.map((section) => {
+    const items = exam.questions
+      .map((question, index) => ({ question, answer: answers[index] }))
+      .filter((item) => item.question.sectionKey === section.key);
+    return {
+      num: section.order ?? section.num,
+      title: section.title,
+      correct: items.filter((item) => item.answer.isCorrect).length,
+      total: items.length,
+      answered: items.filter((item) => item.answer.selectedIndex != null).length,
+      timeMs: items.reduce((sum, item) => sum + item.answer.durationMs, 0)
+    };
+  });
+
+  return {
+    sessionId: 'Vista previa · no guardada',
+    score: total ? Math.round((correct * 10000) / total) / 100 : 0,
+    correct,
+    total,
+    answered: answers.filter((answer) => answer.selectedIndex != null).length,
+    durationMs: answers.reduce((sum, answer) => sum + answer.durationMs, 0),
+    sections,
+    answers
+  };
+}
+
 function resultsMarkup() {
   const result = exam.result;
   if (!result) return introMarkup();
@@ -386,9 +456,10 @@ function resultsMarkup() {
 
   return `
     <article class="card wide exam-result">
+      ${exam.preview ? '<p class="pill">Vista previa: nada se guardó en la base ni en el panel de resultados.</p>' : ''}
       <div class="exam-result-head">
         <div>
-          <span class="card-label">Resultado</span>
+          <span class="card-label">${exam.preview ? 'Revisión del profesorado' : 'Resultado'}</span>
           <h1>Examen final de Español</h1>
           <p class="muted">Sesión ${esc(result.sessionId)} · terminado ${esc(formatDate(new Date()))}</p>
         </div>

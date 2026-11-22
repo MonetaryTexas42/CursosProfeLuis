@@ -10,6 +10,7 @@
 
 import { VOCATIONAL_CATALOG as V } from './vocational-data.js';
 
+const APP_BASE = import.meta.env.BASE_URL || '/';
 const RESULTS_KEY = 'ecoems_vocational_riasec_v1';
 const CHECKLIST_KEY = 'ecoems_vocational_checklist_v1';
 
@@ -95,18 +96,19 @@ export function vocationalDashboardCard() {
       </div>
       <p class="muted">Descubre tus intereses con el test RIASEC, compara ${V.schools.length} escuelas y ${V.institutions.length} instituciones, revisa planes de estudio y carreras técnicas, y arma tu decisión con información.</p>
       <div class="row voc-dashboard-actions">
-        <button class="btn primary" data-open-vocational>Abrir taller vocacional →</button>
+        <a class="btn primary" href="./vocacional.html">Abrir taller vocacional →</a>
         <span class="muted"><small>${V.riasecQuestions.length} preguntas · ${countTechnicianPrograms()} carreras técnicas · guía imprimible</small></span>
       </div>
     </article>
   `;
 }
 
-export function openVocationalWorkshop(root, { onClose, readOnly = false } = {}) {
+export function openVocationalWorkshop(root, { onClose, readOnly = false, standalone = false } = {}) {
   workshop = {
     root,
     onClose,
     readOnly,
+    standalone,
     tab: 'inicio',
     filters: { q: '', inst: '', tipo: '', tag: '', dist: 'todas' },
     plan: 'UNAM_ENP',
@@ -158,12 +160,12 @@ function render() {
   workshop.root.innerHTML = `
     <div class="shell">
       <header class="top">
-        <a class="brand" href="/" aria-label="ECOEMS inicio">
+        <a class="brand" href="${APP_BASE}" aria-label="ECOEMS inicio">
           <span class="brand-mark">E</span>
           <span>ECOEMS <small>Plataforma</small></span>
         </a>
         <div class="top-actions">
-          <button class="btn ghost" id="voc-back">← Volver al panel</button>
+          <button class="btn ghost" id="voc-back">← ${workshop.standalone ? 'Volver a la plataforma' : 'Volver al panel'}</button>
         </div>
       </header>
       <main id="main-content" tabindex="-1" class="dashboard voc-main">
@@ -181,7 +183,10 @@ function render() {
     </div>
   `;
 
-  workshop.root.querySelector('#voc-back')?.addEventListener('click', () => workshop.onClose?.());
+  workshop.root.querySelector('#voc-back')?.addEventListener('click', () => {
+    if (workshop.onClose) workshop.onClose();
+    else if (workshop.standalone) window.location.assign(APP_BASE);
+  });
   workshop.root.querySelectorAll('[data-voc-tab]').forEach((button) => {
     button.addEventListener('click', () => {
       workshop.tab = button.dataset.vocTab;

@@ -37,5 +37,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [publicEnvPlugin(env)],
+    build: {
+      rollupOptions: {
+        input: {
+          main: resolve(process.cwd(), "index.html"),
+          vocacional: resolve(process.cwd(), "vocacional.html"),
+        },
+      },
+    },
   };
 });

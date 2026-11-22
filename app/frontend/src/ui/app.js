@@ -1,7 +1,7 @@
 import { supabase, isConfigured, toStudentEmail, studentEmailDomain, appEnv } from '../lib/supabase.js';
 import { downloadReceiptPdf } from './receipt-pdf.js';
 import { fetchExamSummary, examDashboardCard, openFinalExam, EXAM_GUIDE_URL } from './final-exam.js';
-import { vocationalDashboardCard, openVocationalWorkshop } from './vocational.js';
+import { vocationalDashboardCard } from './vocational.js';
 
 const roleLabels = {
   admin: 'Administrador',
@@ -1284,10 +1284,7 @@ function openDeepLink() {
     return;
   }
 
-  openVocationalWorkshop(appRoot, {
-    readOnly: state.profile.role !== 'student',
-    onClose: renderDashboard
-  });
+  window.location.assign(new URL('vocacional.html', window.location.href).href);
 }
 
 function assertNoError(error) {
@@ -3273,7 +3270,10 @@ function staffExamTabMarkup(data) {
         <span class="card-label">Evaluación</span>
         <h2>Examen final de Español</h2>
       </div>
-      <span class="pill ${completed.length ? 'success' : ''}">${completed.length} ${completed.length === 1 ? 'resultado' : 'resultados'}</span>
+      <div class="row">
+        <span class="pill ${completed.length ? 'success' : ''}">${completed.length} ${completed.length === 1 ? 'resultado' : 'resultados'}</span>
+        <button class="btn ghost" data-preview-final-exam>Vista previa del examen →</button>
+      </div>
     </div>
 
     <div class="dash-grid">
@@ -3336,7 +3336,7 @@ function staffExamTabMarkup(data) {
     <article class="card wide">
       <span class="card-label">Orientación vocacional</span>
       <h2>Test oficial y taller ampliado</h2>
-      <p class="muted">El test vocacional oficial se consulta en la ficha de cada alumno, dentro de la pestaña <strong>Alumnos</strong>. El taller ampliado (RIASEC y checklist) permanece en el dispositivo del alumno; no se guarda en la base.</p>
+      <p class="muted">El test vocacional oficial se consulta en la ficha de cada alumno, dentro de la pestaña <strong>Alumnos</strong>. El taller ampliado vive en su propia página, <a href="./vocacional.html">Taller vocacional →</a>; sus respuestas (RIASEC y checklist) permanecen en el dispositivo de quien lo usa y no se guardan en la base.</p>
     </article>
   `;
 }
@@ -7690,12 +7690,9 @@ function renderDashboard() {
     });
   });
 
-  appRoot.querySelectorAll('[data-open-vocational]').forEach((button) => {
+  appRoot.querySelectorAll('[data-preview-final-exam]').forEach((button) => {
     button.addEventListener('click', () => {
-      openVocationalWorkshop(appRoot, {
-        readOnly: state.profile?.role !== 'student',
-        onClose: renderDashboard
-      });
+      openFinalExam(appRoot, { preview: true, onClose: renderDashboard });
     });
   });
 

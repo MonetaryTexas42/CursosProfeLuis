@@ -441,7 +441,7 @@ function renderNav() {
         '<span class="nav-name">Examen final de Español</span>' +
         '<span class="nav-tag">nuevo</span>' +
       "</a>" +
-      '<a class="nav-sub" href="../#vocacional">' +
+      '<a class="nav-sub" href="../vocacional.html">' +
         '<span class="nav-icon">\u{1F9ED}</span>' +
         '<span class="nav-name">Taller vocacional</span>' +
         '<span class="nav-tag">nuevo</span>' +
@@ -1233,7 +1233,7 @@ function renderHome() {
         "<span>13 secciones y 136 preguntas. Tus respuestas y tiempos quedan registrados.</span>" +
         '<span class="tool-go">Contestar examen \u2192</span>' +
       "</a>" +
-      '<a class="tool-card" href="../#vocacional">' +
+      '<a class="tool-card" href="../vocacional.html">' +
         '<span class="tool-icon">\u{1F9ED}</span>' +
         "<b>Taller vocacional completo</b>" +
         "<span>Test RIASEC, escuelas, universidades y decisión informada.</span>" +
