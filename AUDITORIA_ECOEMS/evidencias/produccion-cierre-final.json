@@ -192,6 +192,33 @@
       "curso_enlaces_vocacional": 2,
       "hash_guia": "966fb84677c5d8d408de95026da953236f5dc3dde2bd17fb2b70a4693a2d4094",
       "hash_aviso": "85d13859e9681bbbea548e67422fd069c9b91a5a1c51705062183c0e460f740b"
+    },
+    "sidebar_staff": {
+      "commit": "a5630a9bd1168e76a414444f843011ba407fd096",
+      "run_id": "45076042391",
+      "run_conclusion": "success",
+      "pages_build_run_id": "45076128140",
+      "pages_build_conclusion": "success",
+      "tag": "deploy-a5630a9",
+      "gh_pages_commit": "a7a7bb8efad7a965a7f8651bc437b39db44e54d9",
+      "grupo": "Orientación",
+      "enlace": "./vocacional.html",
+      "texto": "Taller vocacional",
+      "roles": [
+        "teacher",
+        "admin"
+      ],
+      "bundle": "main-iJOzKbpb.js",
+      "verificacion_publica": {
+        "index": 200,
+        "vocacional": 200,
+        "curso": 200,
+        "bundle_contiene_grupo": true,
+        "bundle_contiene_enlace": true,
+        "bundle_contiene_vista_previa": true,
+        "curso_recursos_versionados": "?v=4",
+        "curso_enlaces_vocacional": 2
+      }
     }
   }
 }

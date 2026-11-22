@@ -147,13 +147,22 @@ ficha del alumno. Los recursos del curso se versionaron con `?v=4`.
 
 **Publicación final (22 nov 2026):** el run `45074991966` terminó en SUCCESS y
 publicó `deploy-f4bc229` (`gh-pages` en `0ea4c50`); el build de Pages
-`45075032798` también terminó en SUCCESS. Verificación externa:
-`/`, `/vocacional.html`, `/curso/`, `/guia-examen-espanol.html` y
-`/privacidad.html` → 200. Bundle `main-CqpKtSk-.js` con «Vista previa del
-profesorado», `data-preview-final-exam` y `app_preview_final_exam`; entrada
-`vocacional.html` con `vocacional-CayTz_gP.js` y chunk `vocational-kkg0TQ4K.js`.
-Detalle en `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§
-`cierre_0043`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.7.
+`45075032798` también terminó en SUCCESS. Después el run `45076042391` publicó
+`deploy-a5630a9` (`gh-pages` en `a7a7bb8`), con build de Pages `45076128140`,
+también en SUCCESS. Verificación externa: `/`, `/vocacional.html`, `/curso/`,
+`/guia-examen-espanol.html` y `/privacidad.html` → 200. Bundle actual
+`main-iJOzKbpb.js` con «Vista previa del profesorado», `data-preview-final-exam`,
+`app_preview_final_exam`, «Orientación» y «Taller vocacional»; entrada
+`vocacional.html` con `vocacional-jPl_Qn9c.js` y chunk `vocational-D_Y7809e.js`.
+
+**Acceso en el sidebar del staff (22 nov 2026):** el commit `a5630a9` añadió el
+grupo «Orientación» con el enlace «🧭 Taller vocacional» en el sidebar del
+panel de profesores y administradores. Es una navegación a `/vocacional.html`,
+no un panel incrustado; el enlace conserva el estilo de los botones del menú y
+sigue visible como emoji cuando el sidebar está plegado. `/curso/` mantuvo sus
+2 enlaces a `../vocacional.html` y los recursos `?v=4`. Detalle en
+`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043` y
+`sidebar_staff`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.7 (OPS-67).
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

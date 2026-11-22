@@ -757,6 +757,7 @@ se añadió la migración `0043` y se publicó un frontend nuevo.
 | OPS-64 | Verificación de base tras `0043` | Staging y producción: **43/43 migraciones, 96 políticas, 116 funciones y 0 `SECURITY DEFINER` sin `search_path`; «Estado consistente.»** La suite RLS volvió a correr en staging: **131 PASS · 0 FAIL · 0 SKIP**. El flag de staging sigue en `false`; producción sigue con el examen activo. |
 | OPS-65 | Permisos de la RPC | Con tokens reales de prueba: profesor → HTTP 200, 13 secciones, 136 preguntas y clave presente; alumno y tutor → HTTP 403 «La vista previa del examen es solo para profesorado». No se imprimieron tokens ni datos personales. Tras las pruebas, `final_exam_sessions=0` y `final_exam_answers=0` en **staging y producción**. |
 | OPS-66 | Publicación y verificación externa | Commit `f4bc229` sin `[skip ci]`. Run `45074991966` de «CI y despliegue» en SUCCESS (17 pasos: build, RLS, migraciones, recibo PDF, publicación, etiqueta y health check); build de Pages `45075032798` en SUCCESS; etiqueta `deploy-f4bc229`; `gh-pages` en `0ea4c50`. Verificación en vivo: `/`, `/vocacional.html`, `/curso/`, `/guia-examen-espanol.html` y `/privacidad.html` → 200. Bundle `main-CqpKtSk-.js` contiene «Vista previa del profesorado», `data-preview-final-exam` y `app_preview_final_exam`; `vocacional-CayTz_gP.js` y el chunk `vocational-kkg0TQ4K.js` contienen el flujo standalone. `/curso/` sirve `?v=4` (2 referencias) y `curso/js/app.js` enlaza `../vocacional.html` (2 referencias). Guía `966fb846…d4094` y aviso `v3-2026` `85d13859…f740b` sin cambios. |
+| OPS-67 | Acceso al taller en el sidebar del staff | El commit `a5630a9` añadió el grupo «Orientación» con el enlace «🧭 Taller vocacional» al sidebar del panel del staff (profesor y administrador), sin volver a incrustar el taller en el panel. Se ajustó `.staff-tab-btn` con `text-decoration: none` para que el enlace se vea igual que los botones y siga legible con el sidebar plegado. Run `45076042391` en SUCCESS, build de Pages `45076128140` en SUCCESS, etiqueta `deploy-a5630a9`, `gh-pages` en `a7a7bb8`. Bundle `main-iJOzKbpb.js` contiene «Orientación», «Taller vocacional» y `./vocacional.html`, además de la vista previa del examen. Verificación en vivo: `/` y `/vocacional.html` → 200; `/curso/` mantiene `?v=4` y sus 2 enlaces a `../vocacional.html`. |
 
 Comandos de verificación ejecutados sin credenciales en la salida:
 
@@ -770,8 +771,9 @@ cd frontend && npm run build -- --base=/CursosProfeLuis/
 
 **Resultado:** el profesorado puede abrir el examen en vista previa con clave,
 sin convertirse en alumno ni contaminar los resultados, y el taller vocacional
-tiene acceso propio en `/vocacional.html`. Queda pendiente solo la revisión
-visual con cuentas reales, ya registrada como no bloqueante en OPS-50.
+tiene acceso propio en `/vocacional.html`, enlazado desde el sidebar del staff,
+desde el panel y desde `/curso/`. Queda pendiente solo la revisión visual con
+cuentas reales, ya registrada como no bloqueante en OPS-50.
 
 ---
 

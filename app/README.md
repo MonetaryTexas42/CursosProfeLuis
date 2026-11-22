@@ -47,8 +47,9 @@ usándose solo en local para respaldos y restauración.
 `/curso/` (`deploy-0aeb7e7`, run `45060761193`), la vista de resultados del
 examen (`deploy-5207118`, run `45061693062`) y, por último, la vista previa del
 profesorado y la página propia del vocacional (`deploy-f4bc229`, run
-`45074991966`; build de Pages `45075032798`). Todos los runs terminaron en
-SUCCESS.
+`45074991966`; build de Pages `45075032798`). Al final se añadió el acceso en
+el sidebar del staff (`deploy-a5630a9`, run `45076042391`; Pages `45076128140`).
+Todos los runs terminaron en SUCCESS.
 
 Producción y staging quedaron en **43/43 migraciones, 96 políticas, 116
 funciones y 0 `SECURITY DEFINER` sin `search_path`**. El examen final de Español
@@ -67,12 +68,14 @@ final** con sesiones, estado, aciertos, tiempo, puntaje y promedio, y el botón
 restringida por `app_is_staff()`: muestra el banco real con clave y
 explicaciones, sin crear sesión ni guardar respuestas. Alumnos y tutores reciben
 HTTP 403. El test vocacional oficial sigue en la ficha del alumno; el taller
-ampliado tiene su propia página y permanece privado en el dispositivo.
+ampliado tiene su propia página y permanece privado en el dispositivo. El
+sidebar del staff incluye el grupo **Orientación** con **🧭 Taller vocacional**,
+que abre `/vocacional.html` sin incrustar el taller en el panel.
 
 Verificación externa: `/`, `/vocacional.html`, `/curso/`,
 `guia-examen-espanol.html` y `privacidad.html` responden 200. Bundle actual
-`main-CqpKtSk-.js` (contiene la vista previa), entrada `vocacional.html` y chunk
-`vocational-kkg0TQ4K.js`. Aviso `v3-2026` con hash `85d13859…f740b` y guía con
+`main-iJOzKbpb.js` (contiene la vista previa, «Orientación» y «Taller
+vocacional»), entrada `vocacional.html` y chunk `vocational-D_Y7809e.js`. Aviso `v3-2026` con hash `85d13859…f740b` y guía con
 hash `966fb846…d4094` sin cambios. Evidencia detallada en
 `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043`).
 
