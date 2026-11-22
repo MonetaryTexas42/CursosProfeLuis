@@ -1,4 +1,4 @@
-import{o as e,t}from"./vocational-kkg0TQ4K.js";var n=`/CursosProfeLuis/`,r=document.querySelector(`#app`);function i(e){r.innerHTML=`
+import{o as e,t}from"./vocational-ChlEof2e.js";var n=`/CursosProfeLuis/`,r=document.querySelector(`#app`);function i(e){r.innerHTML=`
     <div class="shell">
       <header class="top">
         <a class="brand" href="${n}" aria-label="ECOEMS inicio">
