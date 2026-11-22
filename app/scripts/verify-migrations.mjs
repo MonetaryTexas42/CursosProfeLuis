@@ -54,11 +54,20 @@ const client = new pg.Client({ connectionString: databaseUrl, statement_timeout:
 await client.connect();
 
 try {
-  const appliedRes = await client.query(`
-    select version, name
-      from supabase_migrations.schema_migrations
-     order by version
+  // En un proyecto recién creado la tabla todavía no existe: eso significa
+  // 0 migraciones aplicadas, no un error de conexión.
+  const tableRes = await client.query(`
+    select to_regclass('supabase_migrations.schema_migrations') as oid
   `);
+  const hasMigrationTable = Boolean(tableRes.rows[0]?.oid);
+
+  const appliedRes = hasMigrationTable
+    ? await client.query(`
+        select version, name
+          from supabase_migrations.schema_migrations
+         order by version
+      `)
+    : { rows: [] };
 
   const applied = appliedRes.rows.map((row) => ({
     version: String(row.version),
@@ -115,6 +124,9 @@ try {
   };
 
   console.log(`Destino: ${target}`);
+  if (!hasMigrationTable) {
+    console.log("Tabla de migraciones: no existe todavía (BD nueva; 0 aplicadas)");
+  }
   console.log(`Migraciones locales: ${localVersions.length}`);
   console.log(`Migraciones aplicadas: ${applied.length}`);
   console.log(`Políticas en public: ${policiesRes.rowCount}`);
