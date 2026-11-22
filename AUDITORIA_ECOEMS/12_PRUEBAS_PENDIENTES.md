@@ -14,7 +14,7 @@ Este documento define las pruebas que faltan, cómo ejecutarlas en un entorno ai
 
 | Requisito | Detalle |
 |---|---|
-| Proyecto staging | `hsfhlhrkmhajmpethzqn` («Plataforma de Prueba ECOEMS»), con las 40 migraciones (`0032`–`0040` incluidas) y el seed |
+| Proyecto staging | `hsfhlhrkmhajmpethzqn` («Plataforma de Prueba ECOEMS»), con las 42 migraciones (`0032`–`0042` incluidas) y el seed; producción sigue en 40 (`0023`–`0040`) |
 | Usuarios ficticios | Un admin, un profesor con grupo, dos alumnos (uno con asignación, uno sin), un tutor vinculado sin consentimiento, un tutor no vinculado y un tutor con consentimiento vigente y revocado |
 | Contenido | Al menos una unidad publicada con `correctIndex`, una en borrador |
 | `psql` | Para pruebas SQL directas |
@@ -566,7 +566,7 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 40 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**) |
+| OPS-40 | `verify-migrations.mjs` contra staging | no existía | 42 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**; eran 40 antes de `0041`/`0042`) |
 | OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** antes 22/38 aplicadas y `exit 1`; tras la autorización del 22 nov, 40/40, 93 políticas, 111 funciones y 0 sin `search_path` |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
 | OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**obtenido**) |
@@ -699,6 +699,41 @@ añadió el 22 nov. Quedan la validación legal del aviso y el despliegue en CI
 (requiere autorización explícita porque publica en Pages). El proveedor `log`
 evitó cualquier envío real durante P3-17.
 
+### 8.6. Cards, examen final, guía y taller vocacional (22 nov 2026)
+
+Trabajo local listo para revisión. **No se publicó en Pages ni se activó el
+examen.** Producción sigue con 40 migraciones y sin `0041`/`0042`.
+
+| # | Prueba | Resultado |
+|---|---|---|
+| OPS-50 | Cards de estado de cuenta | Anulados excluidos de resumen, totales y último pago; saldo en bloque destacado; cuerpo 2×2 sin celdas vacías; periodo visible; montos con `overflow-wrap`; breakpoints 720/440. Verificado por revisión de código y `npm run build`; queda la comprobación visual E2E con cuentas reales. |
+| OPS-51 | Migraciones `0041`/`0042` en staging | Aplicadas con `supabase db push --remote=hsfhlhrkmhajmpethzqn --skip-vault --yes`; staging quedó en 42/42, 96 políticas, 115 funciones y 0 `SECURITY DEFINER` sin `search_path`. Producción **no** fue tocada. |
+| OPS-52 | Examen final de Español (SQL, W) | `DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/test-final-exam.mjs` → **PASS**: 13 secciones, 136 preguntas, respuestas y tiempos registrados, puntaje calculado en servidor (78.68 %, 107/136), `final_exam_key` no legible por el alumno y `ROLLBACK` sin residuos. El flag `final_exam_spanish_enabled` quedó en `false`. |
+| OPS-53 | Guía imprimible | `node scripts/generate-exam-guide.mjs` → 13 temas, 136 preguntas y 117 ejercicios desde `content-v1.json`. SHA-256 `966fb846…d4094` idéntico entre `frontend/public/guia-examen-espanol.html` y `frontend/dist/guia-examen-espanol.html`. Siempre enlazada desde el panel y desde el examen. |
+| OPS-54 | Taller vocacional | Material legacy extraído literalmente a `vocational-data.js` (30 RIASEC, 6 tipos, 44 escuelas, 11 instituciones, 11 planes, 40 técnicas, catálogos y guía). La UI tiene seis secciones: inicio, test RIASEC, escuelas filtrables, universidades, planes/técnicas y decisión/preparación. El RIASEC y la lista de pasos se guardan solo en `localStorage`; no se sobrescribe el test oficial del expediente ni se hace write a la base. |
+
+Comandos de verificación ejecutados sin credenciales en la salida:
+
+```bash
+cd app
+npm run build
+DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/test-final-exam.mjs
+DATABASE_URL="$(cat .secrets/staging-database-url)" node scripts/verify-migrations.mjs
+```
+
+Salida de `verify-migrations.mjs`: `Destino: hsfhlhrkmhajmpethzqn`,
+`Migraciones locales: 42`, `Migraciones aplicadas: 42`,
+`Políticas en public: 96`, `Funciones en public: 115`,
+`SECURITY DEFINER sin search_path: 0`, `Estado consistente.`
+
+La suite RLS volvió a ejecutarse después de `0041`/`0042`:
+`Resumen: 131 PASS · 0 FAIL · 0 SKIP · 131 total`.
+
+**Pendiente para activar el examen:** autorización explícita para aplicar
+`0041`/`0042` en producción, cambio de `final_exam_spanish_enabled` a `true`,
+y una autorización separada para publicar el frontend en Pages. Hasta entonces
+la interfaz muestra «Aún no activado» y la guía estudiable ya está disponible.
+
 ---
 
 ## 10. Matriz de cobertura
@@ -762,6 +797,7 @@ evitó cualquier envío real durante P3-17.
 | OPS-08 | Simulación de rotación | Manual |
 | OPS-09 | Existencia de staging | Manual |
 | OPS-10 | Rebuild reproducible | CI |
+| Cards / examen / guía / vocación | OPS-50…54 | Revisión, SQL (W), build y E2E visual pendiente |
 
 ---
 
@@ -796,7 +832,7 @@ Cada prueba ejecutada debe dejar un registro como este:
 ## 12. Orden recomendado de ejecución
 
 1. **Preparar staging** y usuarios ficticios.
-2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 40 migraciones aplicadas.
+2. **`verify-migrations.mjs`** (OPS-40/41): confirmar 42 en staging y 40 en producción; las diferencias deben ser solo `0041`/`0042`.
 3. **RLS-01…08** (contenido): confirma `SEC-01` y sirve de línea base.
 4. **RLS-16/50 y RLS-85…88** (notas internas).
 5. **RLS-30…33** (observaciones).
@@ -851,7 +887,9 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [ ] FUN-40…45 demuestran el panel del tutor de solo lectura con avance, calificaciones, asistencia, tareas y observaciones `family`.
 - [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
 - [x] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log; la prueba real restauró 41 tablas en staging el 22 nov 2026.
-- [x] OPS-40/41 demuestran qué migraciones están aplicadas (40/40 en staging) y que no hay `SECURITY DEFINER` sin `search_path`.
+- [x] OPS-40/41 demuestran qué migraciones están aplicadas (42/42 en staging; 40/40 en producción) y que no hay `SECURITY DEFINER` sin `search_path`.
+- [x] OPS-51/52 demuestran que `0041`/`0042` funcionan en staging, que el examen registra respuestas, puntaje y tiempos en servidor y que la clave correcta no es legible por el alumno. Falta la autorización para producción y para activar el flag.
+- [x] OPS-53/54 demuestran que la guía imprimible y el taller vocacional quedaron integrados en el build sin escribir en la base; falta la revisión visual E2E.
 - [x] P3-17 demuestra que el procesador de correo no entrega enlaces ni correo real en staging.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
 - [x] OPS-42…45 demuestran que el despliegue es reproducible y etiquetado sin `push -f`; la reversión documentada no se ejecutó.
@@ -865,3 +903,8 @@ Se considera que las pruebas pendientes están resueltas cuando:
 La auditoría encontró los problemas leyendo el código; las pruebas deben **demostrar que están cerrados**. La diferencia es importante: una política puede parecer correcta y fallar por una función `SECURITY DEFINER`, un `grant` olvidado o una vista que hereda permisos.
 
 La suite propuesta no es exhaustiva, pero cubre **todos los hallazgos, con énfasis en los de mayor riesgo**, y establece el hábito que hoy falta: probar la denegación, no solo el camino feliz. Ese hábito, más que cualquier migración, es lo que impide que `SEC-01` vuelva a ocurrir.
+
+El examen final, la guía y el taller vocacional ya tienen implementación y
+evidencia en staging, pero **no están activos en producción**: publicar el
+frontend, aplicar `0041`/`0042` y cambiar `final_exam_spanish_enabled` requieren
+autorizaciones separadas y explícitas.

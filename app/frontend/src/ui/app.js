@@ -1,5 +1,7 @@
 import { supabase, isConfigured, toStudentEmail, studentEmailDomain, appEnv } from '../lib/supabase.js';
 import { downloadReceiptPdf } from './receipt-pdf.js';
+import { fetchExamSummary, examDashboardCard, openFinalExam, EXAM_GUIDE_URL } from './final-exam.js';
+import { vocationalDashboardCard, openVocationalWorkshop } from './vocational.js';
 
 const roleLabels = {
   admin: 'Administrador',
@@ -1776,13 +1778,18 @@ async function fetchStudentDashboard(studentId) {
     };
   });
 
+  // Si la migración del examen aún no está aplicada, fetchExamSummary falla
+  // en silencio y el panel sigue funcionando con normalidad.
+  const exam = await fetchExamSummary();
+
   return {
     kind: 'student',
     student: studentRes.data,
     group: groupRes.data,
     profile: profileRes.data || {},
     units,
-    activeAssignments: units.length
+    activeAssignments: units.length,
+    exam
   };
 }
 
@@ -3484,8 +3491,12 @@ const paymentMethodLabels = {
   otro: 'Otro'
 };
 
+// Los pagos anulados siguen en el historial, pero no cuentan para saldos,
+// totales ni "último pago" (la vista SQL `student_billing_status` los excluye).
 function paymentsOf(studentId, payments) {
-  return (payments || []).filter((payment) => payment.student_id === studentId);
+  return (payments || []).filter(
+    (payment) => payment.student_id === studentId && payment.status !== 'voided'
+  );
 }
 
 function paymentsTotal(studentId, payments) {
@@ -3576,9 +3587,12 @@ function staffPaymentsTabMarkup(data) {
 
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const monthPayments = payments.filter((payment) => String(payment.paid_at || '').slice(0, 7) === monthKey);
+  // El historial conserva los anulados, pero el resumen financiero no los cuenta.
+  const activePayments = payments.filter((payment) => payment.status !== 'voided');
+  const voidedCount = payments.length - activePayments.length;
+  const monthPayments = activePayments.filter((payment) => String(payment.paid_at || '').slice(0, 7) === monthKey);
   const monthIncome = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const totalIncome = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalIncome = activePayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const withPlan = students.filter((student) => billing.has(student.id)).length;
 
   return `
@@ -3604,7 +3618,7 @@ function staffPaymentsTabMarkup(data) {
         <div>
           <span class="card-label">Ingresos totales</span>
           <h2>${money(totalIncome)}</h2>
-          <p class="muted">Todo lo registrado en la plataforma</p>
+          <p class="muted">${voidedCount ? `${voidedCount} ${voidedCount === 1 ? 'pago anulado excluido' : 'pagos anulados excluidos'}` : 'Todo lo registrado en la plataforma'}</p>
         </div>
       </article>
       <article class="card pay-stat pay-stat-blue">
@@ -3629,10 +3643,21 @@ function staffPaymentsTabMarkup(data) {
           ${students.map((student) => {
             const planRow = billing.get(student.id) || {};
             const statusRow = billingStatus.get(student.id) || {};
-            const plan = planRow.plan || 'mensual';
+            const plan = planRow.plan || statusRow.plan || 'mensual';
             const total = paymentsTotal(student.id, payments);
             const last = paymentsLast(student.id, payments);
             const initial = (student.full_name || 'A').trim().slice(0, 1).toUpperCase();
+            // La vista ya calcula el periodo y el saldo del periodo vigente;
+            // si no hay vista, se muestra el periodo natural del plan.
+            const period = statusRow.period_start
+              ? { start: statusRow.period_start, end: statusRow.period_end }
+              : billingPeriod(plan);
+            const balance = statusRow.balance != null ? Number(statusRow.balance) : null;
+            const balanceTone = balance == null ? 'is-none' : balance > 0 ? 'is-debt' : balance < 0 ? 'is-credit' : 'is-even';
+            const balanceLabel = balance == null ? 'Sin datos' : balance > 0 ? 'Por pagar' : balance < 0 ? 'A favor' : 'Al corriente';
+            const paidInPeriod = statusRow.paid != null ? Number(statusRow.paid) : null;
+            const lastDate = last ? String(last.paid_at).slice(0, 10) : statusRow.last_paid_at ? String(statusRow.last_paid_at).slice(0, 10) : null;
+            const fee = planRow.fee || statusRow.fee;
             return `
               <article class="pay-card">
                 <div class="pay-card-head">
@@ -3643,28 +3668,33 @@ function staffPaymentsTabMarkup(data) {
                   </div>
                   <span class="pill ${billing.has(student.id) ? '' : 'pill-amber'}">${billing.has(student.id) ? escapeHtml(paymentPlanLabels[plan] || plan) : 'Sin plan'}</span>
                 </div>
+                <p class="pay-card-period">📆 Periodo: ${period && period.start ? `${escapeHtml(formatDate(period.start))} – ${escapeHtml(formatDate(period.end))}` : 'Sin periodo definido'}</p>
+                <div class="pay-balance ${balanceTone}">
+                  <div>
+                    <span class="card-label">Saldo</span>
+                    <strong>${balance == null ? '—' : money(Math.abs(balance))}</strong>
+                  </div>
+                  <span class="pay-balance-tag">${balanceLabel}</span>
+                </div>
                 <div class="pay-card-body">
                   <div class="pay-metric">
                     <span class="card-label">Cuota</span>
-                    <strong>${planRow.fee ? money(planRow.fee) : '—'}</strong>
+                    <strong>${fee ? money(fee) : '—'}</strong>
                   </div>
                   <div class="pay-metric">
-                    <span class="card-label">Pagado</span>
-                    <strong class="${total > 0 ? 'pay-good' : ''}">${money(total)}</strong>
+                    <span class="card-label">${paidInPeriod != null ? 'Pagado en el periodo' : 'Pagado acumulado'}</span>
+                    <strong class="${(paidInPeriod != null ? paidInPeriod : total) > 0 ? 'pay-good' : ''}">${money(paidInPeriod != null ? paidInPeriod : total)}</strong>
                   </div>
                   <div class="pay-metric">
                     <span class="card-label">Estado</span>
                     <strong class="${statusRow.status === 'al corriente' || statusRow.status === 'beca' ? 'pay-good' : 'pay-last'}">${escapeHtml(billingStatusLabel(statusRow.status))}</strong>
                   </div>
                   <div class="pay-metric">
-                    <span class="card-label">Saldo</span>
-                    <strong class="${Number(statusRow.balance || 0) > 0 ? 'pay-last' : ''}">${statusRow.balance != null ? money(statusRow.balance) : '—'}</strong>
-                  </div>
-                  <div class="pay-metric">
                     <span class="card-label">Último pago</span>
-                    <strong class="pay-last">${last ? escapeHtml(formatDate(String(last.paid_at).slice(0, 10))) : '—'}</strong>
+                    <strong class="pay-last">${lastDate ? escapeHtml(formatDate(lastDate)) : '—'}</strong>
                   </div>
                 </div>
+                <p class="pay-card-history">Total histórico registrado: ${money(total)}</p>
                 <div class="pay-card-actions">
                   <button class="btn primary" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="payment">💵 Registrar pago</button>
                   <button class="btn ghost" data-open-pay-dialog="${escapeHtml(student.id)}" data-pay-mode="plan">⚙️ Plan</button>
@@ -4232,6 +4262,7 @@ function studentDashboardMarkup(data) {
       <div class="student-hero-actions">
         <span class="student-avatar" aria-hidden="true">${escapeHtml(initial)}</span>
         <a class="btn primary" href="./curso/">📚 Abrir curso completo</a>
+        <a class="btn ghost" href="${EXAM_GUIDE_URL}" target="_blank" rel="noopener">📖 Guía de examen</a>
       </div>
     </section>
 
@@ -4269,6 +4300,8 @@ function studentDashboardMarkup(data) {
       </div>
     ` : '<article class="card wide"><p class="empty-state">Tus unidades aparecerán aquí cuando el profesor las active. 🔒</p></article>'}
 
+    ${examDashboardCard(data.exam)}
+    ${vocationalDashboardCard()}
     ${studentTestsMarkup(data)}
   `;
 }
@@ -5080,6 +5113,8 @@ function guardianDashboardMarkup(data) {
 
     ${hasConsent ? guardianAcademicsMarkup(data) : ''}
 
+    ${hasConsent ? vocationalDashboardCard() : ''}
+
     ${hasConsent ? guardianPaymentsMarkup(data) : ''}
   `;
 }
@@ -5283,13 +5318,19 @@ function guardianPaymentsMarkup(data) {
       ${data.children.map((child) => {
         const planRow = billing.get(child.id) || {};
         const statusRow = billingStatus.get(child.id) || {};
-        const plan = planRow.plan || 'mensual';
+        const plan = planRow.plan || statusRow.plan || 'mensual';
         const total = paymentsTotal(child.id, data.payments);
         const last = paymentsLast(child.id, data.payments);
         const recent = paymentsOf(child.id, data.payments)
           .slice()
           .sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)))
           .slice(0, 3);
+        const period = statusRow.period_start
+          ? { start: statusRow.period_start, end: statusRow.period_end }
+          : billingPeriod(plan);
+        const balance = statusRow.balance != null ? Number(statusRow.balance) : null;
+        const balanceTone = balance == null ? 'is-none' : balance > 0 ? 'is-debt' : balance < 0 ? 'is-credit' : 'is-even';
+        const balanceLabel = balance == null ? 'Sin datos' : balance > 0 ? 'Por pagar' : balance < 0 ? 'A favor' : 'Al corriente';
 
         return `
           <div class="guardian-pay">
@@ -5305,9 +5346,15 @@ function guardianPaymentsMarkup(data) {
                 ${last ? `<span class="pill">Último pago: ${escapeHtml(formatDate(String(last.paid_at).slice(0, 10)))}</span>` : '<span class="pill">Sin pagos registrados</span>'}
               </div>
             </div>
-            ${statusRow.period_start ? `
-              <p class="muted"><small>Periodo actual: ${escapeHtml(formatDate(statusRow.period_start))} – ${escapeHtml(formatDate(statusRow.period_end))}${statusRow.balance != null && Number(statusRow.balance) > 0 ? ` · Saldo: ${money(statusRow.balance)}` : ''}</small></p>
-            ` : ''}
+            <p class="muted pay-card-period"><small>📆 Periodo: ${period && period.start ? `${escapeHtml(formatDate(period.start))} – ${escapeHtml(formatDate(period.end))}` : 'Sin periodo definido'}</small></p>
+            <div class="pay-balance pay-balance-compact ${balanceTone}">
+              <div>
+                <span class="card-label">Saldo del periodo</span>
+                <strong>${balance == null ? '—' : money(Math.abs(balance))}</strong>
+              </div>
+              <span class="pay-balance-tag">${balanceLabel}</span>
+            </div>
+            <p class="muted"><small>Total histórico registrado: ${money(total)} · Los pagos anulados no se contabilizan.</small></p>
             ${recent.length ? `
               <ul class="data-list">
                 ${recent.map((payment) => `
@@ -7466,6 +7513,26 @@ function renderDashboard() {
   appRoot.innerHTML = dashboardMarkup(state.profile);
 
   appRoot.querySelector('#logout-btn').addEventListener('click', signOut);
+
+  appRoot.querySelectorAll('[data-open-final-exam]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openFinalExam(appRoot, {
+        onClose: () => {
+          renderDashboard();
+          loadDashboard(state.profile);
+        }
+      });
+    });
+  });
+
+  appRoot.querySelectorAll('[data-open-vocational]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openVocationalWorkshop(appRoot, {
+        readOnly: state.profile?.role !== 'student',
+        onClose: renderDashboard
+      });
+    });
+  });
 
   appRoot.querySelectorAll('[data-open-unit]').forEach((button) => {
     button.addEventListener('click', () => openUnit(button.dataset.openUnit));

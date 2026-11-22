@@ -8,9 +8,10 @@ seguimiento a **OPS-09** (staging).
 
 La Fase 3 añade `0032`–`0038`. La ejecución real en staging añadió `0039` con
 tres correcciones detectadas por la suite (grants a `authenticated` y visibilidad
-de perfiles) y `0040` con las RPCs del procesador de `email_outbox`. Ninguna
-migración se ha aplicado a producción desde este repositorio: están preparadas
-como cambios versionados y reversibles.
+de perfiles) y `0040` con las RPCs del procesador de `email_outbox`. El 22 nov
+2026, con autorización explícita, se aplicaron `0023`–`0040` en producción tras
+un respaldo cifrado. Las migraciones `0041`/`0042` del examen final existen solo
+en staging: **no se aplicaron en producción**.
 
 En staging, después de `db push`:
 
@@ -25,10 +26,10 @@ El verificador es de solo lectura y comprueba:
 
 | Recurso | Umbral esperado | Observado en staging |
 |---|---|---|
-| Migraciones | 40 | 40 |
+| Migraciones | ≥ 38 | 42 (40 + `0041`/`0042`) |
 | Tablas | 41 | 41 |
-| Políticas RLS | 93 | 93 |
-| Funciones `SECURITY DEFINER` | ≥ 53 | 61 |
+| Políticas RLS | ≥ 93 | 96 |
+| Funciones `SECURITY DEFINER` | ≥ 53 | ver `staging-check.mjs` |
 
 Además verifica los objetos nuevos: índices únicos de asignación y XP,
 triggers de XP/política de quiz, `data_requests` con tres políticas, los cuatro
@@ -77,6 +78,16 @@ consultas del frontend que antes fallaban responden `200`; la vista
 permisos a `authenticated` (igual que en staging). Evidencia en
 `AUDITORIA_ECOEMS/evidencias/produccion-post-migraciones.json` y en
 `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.5.
+
+**Verificación actual de staging (22 nov 2026, tras `0041`/`0042`):**
+`verify-migrations.mjs` reporta 42 migraciones locales y 42 aplicadas, 96
+políticas, 115 funciones y 0 `SECURITY DEFINER` sin `search_path`. La prueba
+E2E `scripts/test-final-exam.mjs` confirma 13 secciones, 136 preguntas,
+respuestas y tiempos registrados, puntaje calculado en servidor, clave correcta
+no legible por el alumno y rollback sin residuos. La suite RLS sigue en
+**131 PASS · 0 FAIL · 0 SKIP**. El flag `final_exam_spanish_enabled` quedó en
+`false`. Detalle en
+`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.6.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

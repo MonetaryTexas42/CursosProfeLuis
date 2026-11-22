@@ -49,6 +49,14 @@ cifrado, se aplicaron las migraciones `0023`–`0040` en producción (40/40
 verificadas). Si se publica el frontend contra una BD atrasada, aparecerán
 errores `400` en `payments` y `404` en `student_billing_status`.
 
+Los cambios locales posteriores (cards, examen final, guía y taller vocacional)
+**aún no están publicados**. El examen y la guía usan `0041`/`0042`, aplicadas
+solo en staging (42/42); el flag `final_exam_spanish_enabled` sigue en `false`.
+No aplicar esas migraciones en producción ni publicar el frontend sin la
+autorización explícita correspondiente. El taller vocacional no necesita DDL
+nuevo: reutiliza el material legacy y guarda sus respuestas solo en
+`localStorage`.
+
 ```bash
 # Publicación normal: commit en main
 git push origin main
