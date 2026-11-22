@@ -48,15 +48,18 @@ usándose solo en local para respaldos y restauración.
 examen (`deploy-5207118`, run `45061693062`) y, por último, la vista previa del
 profesorado y la página propia del vocacional (`deploy-f4bc229`, run
 `45074991966`; build de Pages `45075032798`). Al final se añadió el acceso en
-el sidebar del staff (`deploy-a5630a9`, run `45076042391`; Pages `45076128140`).
-Todos los runs terminaron en SUCCESS.
+el sidebar del staff (`deploy-a5630a9`, run `45076042391`; Pages `45076128140`)
+y la ampliación del taller vocacional (`deploy-f83ebb9`, run `45084537069`;
+Pages `45084579025`). Todos los runs terminaron en SUCCESS.
 
 Producción y staging quedaron en **43/43 migraciones, 96 políticas, 116
 funciones y 0 `SECURITY DEFINER` sin `search_path`**. El examen final de Español
 sigue activo en producción con 13 secciones y 136 preguntas; la guía imprimible
 está siempre disponible en `/guia-examen-espanol.html`. El taller vocacional
-reutiliza el material legacy sin escribir en la base (RIASEC y checklist viven
-en `localStorage`).
+reutiliza el material legacy sin escribir en la base: ahora tiene 60 preguntas
+RIASEC, 8 de contexto, 47 escuelas (incluidas 3 militares), expos con fuentes
+citadas, colegiaturas de referencia y guía para decidir por ti y en familia.
+RIASEC, contexto y checklist viven en `localStorage`.
 
 En `/curso/` hay un menú lateral «Evaluación y orientación» y tarjetas en el
 inicio que abren `../#examen`, `../vocacional.html` y la guía imprimible. Los
@@ -73,11 +76,15 @@ sidebar del staff incluye el grupo **Orientación** con **🧭 Taller vocacional
 que abre `/vocacional.html` sin incrustar el taller en el panel.
 
 Verificación externa: `/`, `/vocacional.html`, `/curso/`,
-`guia-examen-espanol.html` y `privacidad.html` responden 200. Bundle actual
-`main-iJOzKbpb.js` (contiene la vista previa, «Orientación» y «Taller
-vocacional»), entrada `vocacional.html` y chunk `vocational-D_Y7809e.js`. Aviso `v3-2026` con hash `85d13859…f740b` y guía con
-hash `966fb846…d4094` sin cambios. Evidencia detallada en
-`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043`).
+`guia-examen-espanol.html` y `privacidad.html` responden 200. Bundles actuales
+`main-BtBvmvWS.js` (vista previa, «Orientación» y «Taller vocacional»),
+`vocacional-Dt1CGBmS.js` (gate de sesión), `vocational-DjbRL5rI.js`
+(«Mejores opciones para ti», «Expos y fechas», coincidencias, colegiaturas y
+decisión familiar) y `vocational-1XDN4CCT.css`. Aviso `v3-2026` con hash
+`85d13859…f740b` y guía con hash `966fb846…d4094` sin cambios. Evidencia
+detallada en `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`
+(§ `cierre_0043`, `sidebar_staff` y `taller_vocacional_v2`) y en
+`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.8 (OPS-68).
 
 ```bash
 # Publicación normal: commit en main

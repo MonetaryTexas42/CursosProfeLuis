@@ -775,6 +775,25 @@ tiene acceso propio en `/vocacional.html`, enlazado desde el sidebar del staff,
 desde el panel y desde `/curso/`. Queda pendiente solo la revisión visual con
 cuentas reales, ya registrada como no bloqueante en OPS-50.
 
+### 8.8. Ampliación del taller vocacional (22 nov 2026)
+
+El taller ampliado incorpora orientación militar, expos profesiográficas con
+fuentes citadas, colegiaturas de referencia, coincidencias calculadas desde
+«Descúbrete», decisión individual/familiar y un RIASEC más preciso. Todo sigue
+en `localStorage`: no se escribe en la base y no se sustituye el test oficial
+de la ficha del alumno.
+
+| # | Prueba | Resultado |
+|---|---|---|
+| OPS-68 | Taller vocacional v2 y publicación | `vocational-data.js` amplía el test a **60 RIASEC (10 por tipo) + 8 de contexto**, el catálogo a **47 escuelas** (3 militares), 12 instituciones, 5 expos con fuente, 9 fichas de colegiatura y la guía «Por ti / En familia / Con tu profesor»; checklist ampliado a 8 pasos. El Heroico Colegio Militar se presenta como **licenciatura que requiere bachillerato terminado, nunca como prepa**. Las fechas sin confirmar se muestran como «Por confirmar» con enlace oficial (IPN, SEDENA, UNAM, UAEMéx, UNITEC y Expansión); no se inventan fechas ni montos. `vocational.js` migra v1→v2 conservando las 30 respuestas antiguas, calcula resultado parcial, ordena el catálogo con `schoolAffinity()` («Mejores opciones para ti»), añade la pestaña «Expos y fechas» y los filtros `sector`/`costo`. Prueba temporal de lógica: migración 30/30, parcial 30/60, completo 60/60, contexto 8/8, top por afinidad y penalización de la opción militar al responder «no». `npm run build -- --base=/CursosProfeLuis/` SUCCESS y `git diff --check` OK. Commit `f83ebb9` sin `[skip ci]`; run `45084537069` de «CI y despliegue» en SUCCESS (20 pasos: 18 SUCCESS y 2 SKIP esperados — «Aviso si no hay staging» y «Exigir staging en main»); build de Pages `45084579025` en SUCCESS; etiqueta `deploy-f83ebb9`; `gh-pages` en `888ea85`. Verificación en vivo: `/`, `/vocacional.html`, `/curso/`, `/guia-examen-espanol.html` y `/privacidad.html` → 200; guía `966fb846…d4094` y aviso `85d13859…f740b` sin cambios. Bundles publicados `main-BtBvmvWS.js`, `vocacional-Dt1CGBmS.js`, `vocational-DjbRL5rI.js` y `vocational-1XDN4CCT.css`, con «Mejores opciones para ti», «Expos y fechas», «Por confirmar», `ecoems_vocational_riasec_v2`, `ecoems_vocational_context_v1`, `data-voc-filter="sector"` y las seis fuentes citadas. `/curso/` mantiene `?v=4` (2 referencias) y 2 enlaces a `../vocacional.html` en `curso/js/app.js`. Base sin cambios: 43/43 migraciones, 96 políticas, 116 funciones, 0 definers sin `search_path`; `final_exam_sessions=0`, `final_exam_answers=0`, `final_exam_questions=0` y `final_exam_key=0`; `student_profiles=2` y `audit_log=24`. |
+
+**Resultado:** el alumno que ya respondió «Descúbrete» ve arriba del catálogo
+las escuelas que encajan con cualquier respuesta, incluidas las opciones
+militares, con su colegiatura de referencia y consideraciones para decidir por
+su cuenta y en familia. El profesorado conserva la vista previa del examen y el
+acceso al taller desde el sidebar. Queda pendiente solo la revisión visual con
+cuentas reales, ya registrada como no bloqueante en OPS-50.
+
 ---
 
 ## 10. Matriz de cobertura

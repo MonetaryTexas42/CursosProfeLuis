@@ -164,6 +164,28 @@ sigue visible como emoji cuando el sidebar está plegado. `/curso/` mantuvo sus
 `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043` y
 `sidebar_staff`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.7 (OPS-67).
 
+**Ampliación del taller vocacional (22 nov 2026, OPS-68):** el commit `f83ebb9`
+amplió el test a 60 preguntas RIASEC (10 por tipo) y 8 de contexto, el catálogo
+a 47 escuelas (3 militares), 12 instituciones, 5 expos con fuente y 9 fichas de
+colegiatura de referencia. Las respuestas v1 se migran a v2 sin perder las 30
+respuestas antiguas; el catálogo muestra primero «Mejores opciones para ti»
+cuando el alumno ya respondió «Descúbrete», con filtros de sector y costo, y
+las fechas no confirmadas se muestran como «Por confirmar» con enlace oficial.
+El Heroico Colegio Militar se presenta como licenciatura que requiere
+bachillerato terminado, nunca como prepa. Se añadió la pestaña «Expos y fechas»
+y la guía «Por ti / En familia / Con tu profesor»; todo sigue en `localStorage`
+y el test oficial continúa en la ficha del alumno. Run `45084537069` en SUCCESS
+(18 pasos SUCCESS y 2 SKIP de staging), build de Pages `45084579025` en
+SUCCESS, etiqueta `deploy-f83ebb9`, `gh-pages` en `888ea85`. Bundles publicados:
+`main-BtBvmvWS.js`, `vocacional-Dt1CGBmS.js`, `vocational-DjbRL5rI.js` y
+`vocational-1XDN4CCT.css`. Verificación en vivo: las cinco rutas → 200, guía y
+aviso con hashes inalterados, `/curso/` con `?v=4` y 2 enlaces al vocacional.
+La base sigue sin escrituras del taller: 43/43 migraciones, 96 políticas, 116
+funciones, 0 definers sin `search_path`, 0 sesiones/respuestas/preguntas/claves
+de examen, 2 perfiles vocacionales y 24 entradas de auditoría. Detalle en
+`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§
+`taller_vocacional_v2`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.8.
+
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 
 Consultas de solo lectura para revisar la actividad reciente. Se ejecutan en

@@ -219,6 +219,100 @@
         "curso_recursos_versionados": "?v=4",
         "curso_enlaces_vocacional": 2
       }
+    },
+    "taller_vocacional_v2": {
+      "commit": "f83ebb9adc1393e134d5a17e97809eeff8bf8f2e",
+      "run_id": "45084537069",
+      "run_conclusion": "success",
+      "pasos": {
+        "total": 20,
+        "exitosos": 18,
+        "omitidos": [
+          "Aviso si no hay staging",
+          "Exigir staging en main"
+        ]
+      },
+      "pages_build_run_id": "45084579025",
+      "pages_build_conclusion": "success",
+      "tag": "deploy-f83ebb9",
+      "gh_pages_commit": "888ea85cbc2f672446157c39b25ecef3e6b2ac25",
+      "contenido": {
+        "riasec_preguntas": 60,
+        "riasec_por_tipo": 10,
+        "contexto_preguntas": 8,
+        "escuelas": 47,
+        "escuelas_militares": 3,
+        "instituciones": 12,
+        "expos_fuentes": 5,
+        "fichas_colegiatura": 9,
+        "checklist_pasos": 8,
+        "claves_localstorage": [
+          "ecoems_vocational_riasec_v2",
+          "ecoems_vocational_riasec_v2:result",
+          "ecoems_vocational_context_v1"
+        ],
+        "migracion_v1": "conserva las 30 respuestas antiguas y elimina las claves v1",
+        "heroico_colegio_militar": "licenciatura que requiere bachillerato terminado; no se presenta como prepa",
+        "fechas_sin_confirmar": "Por confirmar con enlace oficial",
+        "fuentes": [
+          "https://expoprofesiografica.ipn.mx/",
+          "https://www.gob.mx/defensa",
+          "https://case.unam.mx/ingreso",
+          "https://www.uaemex.mx/",
+          "https://www.generacionuniversitaria.com.mx/oferta-academica/inscribete-2026-guia-de-secundarias-y-preparatorias-en-edomex",
+          "https://expansion.mx/carrera/2026/08/19/prepa-cuesta-mas-de-500-000-pesos-las-mas-caras-de-mexico"
+        ]
+      },
+      "validacion_local": {
+        "build": "npm run build -- --base=/CursosProfeLuis/ SUCCESS",
+        "git_diff_check": "OK",
+        "migracion": "30/30 respuestas v1 conservadas en v2",
+        "resultado_parcial": "30/60 respondidas",
+        "resultado_completo": "60/60 respondidas",
+        "contexto": "8/8 respondidas",
+        "afinidad": "top ordenado por perfil; opción militar penalizada al responder «no»"
+      },
+      "bundles": {
+        "main": "main-BtBvmvWS.js",
+        "vocacional": "vocacional-Dt1CGBmS.js",
+        "vocational_chunk": "vocational-DjbRL5rI.js",
+        "css": "vocational-1XDN4CCT.css"
+      },
+      "verificacion_publica": {
+        "index": 200,
+        "vocacional": 200,
+        "curso": 200,
+        "guia": 200,
+        "privacidad": 200,
+        "marcadores": [
+          "Mejores opciones para ti",
+          "Expos y fechas",
+          "Por confirmar",
+          "Heroico Colegio Militar",
+          "ecoems_vocational_riasec_v2",
+          "ecoems_vocational_context_v1",
+          "data-voc-filter=\"sector\"",
+          "Por ti",
+          "En familia",
+          "Con tu profesor"
+        ],
+        "curso_recursos_versionados": "?v=4",
+        "curso_enlaces_vocacional": 2,
+        "hash_guia": "966fb84677c5d8d408de95026da953236f5dc3dde2bd17fb2b70a4693a2d4094",
+        "hash_aviso": "85d13859e9681bbbea548e67422fd069c9b91a5a1c51705062183c0e460f740b"
+      },
+      "base_sin_cambios": {
+        "migraciones": "43/43",
+        "politicas_public": 96,
+        "funciones_public": 116,
+        "security_definer_sin_search_path": 0,
+        "final_exam_sessions": 0,
+        "final_exam_answers": 0,
+        "final_exam_questions": 0,
+        "final_exam_key": 0,
+        "student_profiles": 2,
+        "audit_log": 24
+      }
     }
   }
 }
