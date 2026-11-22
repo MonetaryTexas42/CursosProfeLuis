@@ -501,14 +501,26 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 
 | # | Prueba | Esperado hoy | Esperado corregido |
 |---|---|---|---|
-| OPS-10 | Respaldo sin cifrar | archivo legible | AES-256-GCM; sin llave no se lee |
-| OPS-11 | Respaldo incluye `auth.users` | sí | no; `--include-auth` exige `ALLOW_AUTH_BACKUP=1` |
-| OPS-12 | Restore sin confirmación | ejecuta | **aborta** sin `--confirm=restore` |
-| OPS-13 | Restore con URL de producción | **ejecuta** | **aborta** salvo `--i-know` |
-| OPS-14 | Restore con archivo corrupto | falla a mitad | valida checksum, conteos y tablas antes de escribir |
-| OPS-15 | Restore deja log | no | `restore.log` con fecha, archivo, checksum y resultado |
-| OPS-16 | Respaldo previo automático | no | el restore genera un respaldo antes de truncar |
-| OPS-17 | Retención | manual | borra respaldos de más de 30 días y lo registra en `backup.log` |
+| OPS-10 | Respaldo sin cifrar | archivo legible | AES-256-GCM; sin llave no se lee (**obtenido**) |
+| OPS-11 | Respaldo incluye `auth.users` | sí | no; `--include-auth` exige `ALLOW_AUTH_BACKUP=1` (**obtenido**) |
+| OPS-12 | Restore sin confirmación | ejecuta | **aborta** sin `--confirm=restore` (**obtenido**) |
+| OPS-13 | Restore con URL de producción | **ejecuta** | **aborta** salvo `--i-know` (**obtenido**) |
+| OPS-14 | Restore con archivo corrupto | falla a mitad | valida checksum, conteos y tablas antes de escribir (**obtenido**) |
+| OPS-15 | Restore deja log | no | `restore.log` con fecha, archivo, checksum y resultado (**obtenido**) |
+| OPS-16 | Respaldo previo automático | no | el restore genera un respaldo antes de truncar (**obtenido**) |
+| OPS-17 | Retención | manual | borra respaldos de más de 30 días y lo registra en `backup.log` (parcial: se ejecutó, 0 archivos eliminados) |
+
+**Resultado real en staging (22 nov 2026):** respaldo cifrado
+`backup-2026-11-22-04-52-54.json.enc` (SHA-256 del archivo
+`13a5adb6…d27bce`). Se modificó `data_request_sla_days` de 20 a 999, se
+restauró con `--confirm=restore` y el valor volvió a 20. Las 41 tablas
+comparadas contra el respaldo quedaron sin diferencias; las 3 filas de
+`email_outbox` siguen en `captured` y `restore.log` registró archivo, destino,
+checksum y resultado. La primera ejecución falló en `settings` porque los
+valores `jsonb` escalares se insertaban como texto sin serializar; se corrigió
+`literalFor` en `restore-db.mjs` y la segunda ejecución terminó correctamente.
+Producción no se tocó: verificación posterior en solo lectura, 22 migraciones
+aplicadas.
 
 ### 8.2. Smoke E2E (OPS-03)
 
@@ -556,9 +568,10 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 | OPS-40 | `verify-migrations.mjs` contra staging | no existía | 40 migraciones aplicadas, sin faltantes ni sobrantes (**obtenido**) |
 | OPS-40b | `verify-migrations.mjs` contra producción (solo lectura) | no existía | **Ejecutado:** 22/38 aplicadas, 16 faltantes (`0023`–`0038`), 0 desconocidas, `exit 1` esperado; sin escrituras |
 | OPS-41 | `verify-migrations.mjs` detecta `SECURITY DEFINER` sin `search_path` | no existía | lista vacía o justificada (en producción: 0) |
-| OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` |
-| OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica |
-| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check |
+| OPS-42 | Push a `main` | `git push -f` manual | CI construye, valida el aviso y publica en `gh-pages` (**workflow listo; push no ejecutado**) |
+| OPS-43 | Fallo de build o de `privacy-doc --check` | se publicaba igual | el workflow se detiene y no publica (**configurado; no ejecutado en GitHub**) |
+| OPS-44 | Despliegue correcto | sin etiqueta | etiqueta `deploy-<sha>` y health check (**no ejecutado**) |
+| OPS-46 | CI en `main` sin `STAGING_DATABASE_URL` | publicaba igual | falla antes de publicar y deja `::error::` (**configurado; no ejecutado en GitHub**) |
 | OPS-45 | Rollback | manual y lento | volver a una etiqueta anterior en menos de 15 minutos |
 
 **Resultado real en staging (21 nov 2026):** la primera ejecución dio
@@ -623,9 +636,10 @@ son de solo lectura o transaccionales con `ROLLBACK`.
 | P3-16 | Correr `staging-check.mjs` y la suite RLS (W) | OPS-07 / OPS-09 | 40/41/93/≥53 y 0 FAIL en 135 verificaciones (**obtenido**) |
 | P3-17 | Correr `test-email-outbox.mjs` (W) | SEC-06 | sin token/Origen ajeno → 403, GET → 405, fila `captured`, auditoría sin enlace (**obtenido**) |
 
-**Estado:** ejecutado en staging el 21 nov 2026. Quedan la validación legal del
-aviso, la restauración de prueba y el despliegue en CI. El proveedor `log` evitó
-cualquier envío real durante P3-17.
+**Estado:** ejecutado en staging el 21 nov 2026; la restauración de prueba se
+añadió el 22 nov. Quedan la validación legal del aviso y el despliegue en CI
+(requiere autorización explícita porque publica en Pages). El proveedor `log`
+evitó cualquier envío real durante P3-17.
 
 ---
 
@@ -778,12 +792,12 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [x] FUN-30…39 y RLS-118…129 demuestran periodo, saldo, duplicados, anulación auditada y ausencia de `DELETE`; el recibo PDF quedó implementado y validado estructuralmente.
 - [ ] FUN-40…45 demuestran el panel del tutor de solo lectura con avance, calificaciones, asistencia, tareas y observaciones `family`.
 - [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
-- [ ] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log.
+- [x] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log; la prueba real restauró 41 tablas en staging el 22 nov 2026.
 - [x] OPS-40/41 demuestran qué migraciones están aplicadas (40/40 en staging) y que no hay `SECURITY DEFINER` sin `search_path`.
 - [x] P3-17 demuestra que el procesador de correo no entrega enlaces ni correo real en staging.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
 - [ ] OPS-42…45 demuestran que el despliegue es reproducible, etiquetado y reversible sin `push -f`.
-- [ ] La suite corre en CI y bloquea el despliegue si falla.
+- [ ] La suite corre en CI y bloquea el despliegue si falla (workflow configurado; no ejecutado en GitHub).
 - [ ] Cada prueba tiene evidencia registrada sin PII.
 
 ---

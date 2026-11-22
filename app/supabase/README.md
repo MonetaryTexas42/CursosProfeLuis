@@ -228,8 +228,10 @@ DATABASE_URL="$(cat .secrets/staging-database-url)" \
 Los respaldos viven en `.backups/` (ignorado por git) con permisos `600`; la
 llave en `.secrets/backup.key` (o `BACKUP_KEY`). Se conservan 30 días y cada
 archivo deja `.sha256` y una línea en `backup.log`. Restaurar contra producción
-exige además `--i-know` y deja rastro en `restore.log`. Incluir `auth.*` en un
-respaldo requiere `--include-auth` y `ALLOW_AUTH_BACKUP=1`.
+exige además `--i-know` y deja rastro en `restore.log` (fecha, archivo, destino,
+SHA-256 y resultado). Los valores `json`/`jsonb` se serializan con
+`JSON.stringify` antes de insertarse, incluso cuando son escalares. Incluir
+`auth.*` en un respaldo requiere `--include-auth` y `ALLOW_AUTH_BACKUP=1`.
 
 ## Verificación de migraciones (DB-07)
 

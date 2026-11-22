@@ -17,7 +17,10 @@
 > correcto. La primera ejecución en staging detectó 19 fallos; se corrigieron
 > con `0039_staging_rls_fixes.sql` y dos ajustes a la suite. `0040` añadió el
 > procesador de `email_outbox` con proveedor `log` (sin envío real) y el recibo
-> PDF de `FUN-02`, validado con `test-receipt-pdf.mjs`. Producción no fue
+> PDF de `FUN-02`, validado con `test-receipt-pdf.mjs`. El 22 nov se probó una
+> restauración cifrada en staging: dato modificado y recuperado, 41 tablas
+> comparadas sin diferencias y `restore.log` completo. El CI quedó reforzado
+> localmente, sin push (publicaría en Pages de producción). Producción no fue
 > modificada y solo se verificó en modo lectura. La auditoría original
 > queda como línea base; esta addenda documenta la validación posterior.
 

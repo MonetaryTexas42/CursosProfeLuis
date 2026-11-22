@@ -277,11 +277,12 @@ Para evitar confusiones en la revisión:
 > verificó en lectura y seguía con 22 migraciones aplicadas.
 >
 > Siguen pendientes funcionales: la validación legal del aviso `v3-2026` con el
-> correo de contacto de `PRIV-06`,
-> la restauración de prueba de respaldos y el despliegue en CI. `SEC-06` quedó
-> verificado en staging con el proveedor `log` (sin envío real); el cron
-> requiere secretos del repositorio. `DB-07` quedó cerrado en staging; el
-> borrado definitivo de `auth.users` queda como acción coordinada separada.
+> correo de contacto de `PRIV-06` y el despliegue en CI (el workflow está listo,
+> pero hacer push publicaría en Pages de producción). `SEC-06` quedó verificado
+> en staging con el proveedor `log` (sin envío real); el cron requiere secretos
+> del repositorio. `OPS-01`/`OPS-02` quedaron verificados con una restauración
+> real en staging el 22 nov 2026. `DB-07` quedó cerrado en staging; el borrado
+> definitivo de `auth.users` queda como acción coordinada separada.
 
 Para declarar que la plataforma puede operar con datos reales de menores, deben cumplirse **todos** estos:
 
@@ -292,9 +293,9 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [ ] `FUN-01` verificado en staging: el tutor ve avance, calificaciones, asistencia, tareas y observaciones `family` de sus hijos, sin poder editar.
 - [x] `FUN-02` verificado: periodo, saldo, duplicado y anulación auditada (RLS-118…129); recibo PDF implementado y validado por `test-receipt-pdf.mjs`.
 - [ ] `PRIV-03` verificado en staging: el tutor no lee `student_profiles` crudo ni notas internas; solo `student_guidance`.
-- [ ] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura, con una restauración de prueba exitosa.
+- [x] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura, con una restauración de prueba exitosa en staging (22 nov 2026).
 - [x] `OPS-03` y `OPS-09` resueltos: staging real creado, suites ejecutadas allí y producción intacta.
-- [ ] `OPS-04` verificado: CI publica sin `push -f`, etiqueta el commit y el rollback tarda menos de 15 minutos.
+- [ ] `OPS-04`: workflow local listo sin `push -f`, con etiqueta y health check; no ejecutado en GitHub porque el push publicaría en Pages de producción.
 - [ ] `COD-07` implementado: suite de RLS negativa en CI.
 - [x] `SEC-06` verificado en staging: cola drenada con token, reintentos y auditoría sin enlaces; sin correo real (proveedor `log`).
 - [x] `DB-07` cerrado: `verify-migrations.mjs` confirma 40/40 en staging y deja registrado el resultado de producción en solo lectura (22/38 en ese momento, sin escrituras).

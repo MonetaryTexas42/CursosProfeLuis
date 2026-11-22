@@ -536,6 +536,14 @@ salvo `--include-auth` con `ALLOW_AUTH_BACKUP=1`, permisos 600/700, retención d
 
 **Aceptación:** ejecutar sin bandera no hace nada; con la URL de producción y sin `--i-know` aborta; con confirmación, restaura y deja log.
 
+**Ejecutado en staging (22 nov 2026):** los tres controles negativos abortaron
+sin escribir (sin `--confirm`, URL de producción y checksum modificado). Se
+cambió `data_request_sla_days` de 20 a 999, se restauró desde
+`backup-2026-11-22-04-52-54.json.enc` y el valor volvió a 20. Las 41 tablas
+comparadas contra el JSON descifrado quedaron sin diferencias; `restore.log`
+registró SHA-256 y resultado. La primera ejecución reveló un fallo al insertar
+valores `jsonb` escalares, corregido en `literalFor` (`restore-db.mjs`).
+
 **Esfuerzo:** 4–6 h.
 
 ### 5.7. OPS-04 · CI/CD
@@ -544,6 +552,13 @@ salvo `--include-auth` con `ALLOW_AUTH_BACKUP=1`, permisos 600/700, retención d
 - Etiqueta de versión con el commit.
 - Health check post-deploy.
 - Rollback documentado (revertir commit y redesplegar, sin `-f`).
+
+**Estado del workflow (22 nov 2026):** `ci.yml` construye con `npm ci`, valida
+el aviso y el recibo PDF, exige `STAGING_DATABASE_URL` en `main`, verifica
+migraciones y corre la suite RLS antes de publicar; etiqueta el commit y hace
+health check. **No se hizo push**: publicaría en GitHub Pages de producción y
+esa autorización no fue dada. Tampoco se activó el cron del outbox (sin
+secretos del repositorio).
 
 **Aceptación:** un push a `main` genera un build verificable y publica; un fallo de prueba bloquea el despliegue; se puede volver a la versión anterior en menos de 15 minutos.
 
@@ -594,9 +609,9 @@ sigue intacta.
 | FUN-01 | Implementado | `frontend/src/ui/app.js`; `styles.css` | Panel del tutor con datos ficticios |
 | FUN-02 | Implementado con recibo PDF | `0029_payments_traceability.sql`; `src/ui/app.js`; `receipt-pdf.js` | Revisión visual del PDF; resto verificado con RLS y build |
 | PRIV-03 | Implementado | `0030_vocational_visibility.sql`; `privacidad.html` | Tutor no ve tabla cruda ni notas internas |
-| PRIV-05 / OPS-01 | Implementado | `scripts/backup-db.mjs` | Respaldo cifrado y restauración de prueba |
-| OPS-02 | Implementado | `scripts/restore-db.mjs` | Sin `--confirm` no escribe; producción exige `--i-know` |
-| OPS-04 | Implementado | `.github/workflows/ci.yml`; `docs/despliegue.md` | Primer push a `main` con secretos configurados |
+| PRIV-05 / OPS-01 | Implementado | `scripts/backup-db.mjs` | Respaldo cifrado y restauración de prueba (**obtenido**) |
+| OPS-02 | Implementado | `scripts/restore-db.mjs` | Controles negativos y restauración real en staging (**obtenido**) |
+| OPS-04 | Implementado | `.github/workflows/ci.yml` | Primer push a `main` con secretos configurados (**pendiente: publica en Pages de producción**) |
 | DB-07 | Verificado en staging y en producción (solo lectura) | `scripts/verify-migrations.mjs` | Cerrado: 40/40 en staging |
 
 La suite de RLS creció de **91 a 113 checks** (RLS-108…129) para cubrir

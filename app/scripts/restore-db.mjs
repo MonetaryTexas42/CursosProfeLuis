@@ -127,13 +127,13 @@ function readBackup(path) {
 
 const absoluteBackup = resolve(backupPath);
 
-// 1) Checksum lateral del archivo (si existe).
+// 1) Checksum lateral del archivo (si existe). Se guarda también en restore.log.
+const backupSha256 = createHash("sha256").update(readFileSync(absoluteBackup)).digest("hex");
 const sidecar = `${absoluteBackup}.sha256`;
 if (existsSync(sidecar)) {
   const expected = readFileSync(sidecar, "utf8").trim().split(/\s+/)[0];
-  const actual = createHash("sha256").update(readFileSync(absoluteBackup)).digest("hex");
-  if (expected !== actual) {
-    fail(`El checksum del archivo no coincide (esperado ${expected}, obtenido ${actual}).`);
+  if (expected !== backupSha256) {
+    fail(`El checksum del archivo no coincide (esperado ${expected}, obtenido ${backupSha256}).`);
   }
   console.log("Checksum del archivo: OK");
 }
@@ -248,6 +248,11 @@ try {
       if (value === null || value === undefined) return "NULL";
       const info = columnInfo.get(column);
       const udt = info?.udt_name ?? "";
+      // json/jsonb siempre se serializan con JSON.stringify: un valor escalar
+      // como "v3-2026" no es JSON válido si se inserta como texto plano.
+      if (udt === "jsonb" || udt === "json") {
+        return `'${JSON.stringify(value).replaceAll("'", "''")}'::${udt}`;
+      }
       if (typeof value === "object") {
         return `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
       }
@@ -280,6 +285,7 @@ try {
     resolve(logDir, "restore.log"),
     `${new Date().toISOString()}\t${absoluteBackup.split("/").pop()}\t` +
       `target=${target}\tby=${process.env.USER || "desconocido"}\t` +
+      `sha256=${backupSha256}\tresultado=ok\t` +
       `tables=${entries.length}\t` +
       `rows=${entries.reduce((sum, [, rows]) => sum + rows.length, 0)}\n`,
     { mode: 0o600 },

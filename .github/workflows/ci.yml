@@ -78,8 +78,26 @@ jobs:
         run: node scripts/run-rls-tests.mjs
 
       - name: Aviso si no hay staging
-        if: env.STAGING_DATABASE_URL == ''
+        if: github.ref != 'refs/heads/main' && env.STAGING_DATABASE_URL == ''
         run: echo "::warning::No hay STAGING_DATABASE_URL; la suite de RLS no se ejecutó."
+
+      # OPS-04: nunca publicar sin la red de seguridad de staging.
+      - name: Exigir staging en main
+        if: github.ref == 'refs/heads/main' && env.STAGING_DATABASE_URL == ''
+        run: |
+          echo "::error::Falta STAGING_DATABASE_URL; no se publicará sin la suite de RLS."
+          exit 1
+
+      - name: Verificar migraciones en staging
+        if: env.STAGING_DATABASE_URL != ''
+        working-directory: app
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: node scripts/verify-migrations.mjs
+
+      - name: Verificar recibo PDF (FUN-02)
+        working-directory: app
+        run: node scripts/test-receipt-pdf.mjs
 
       - name: Publicar artefacto del build
         uses: actions/upload-artifact@v4

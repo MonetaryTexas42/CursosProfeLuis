@@ -27,9 +27,12 @@ Base local de Fase 1. Proyecto Supabase: `ioikcrdxneuydylyhvwi` (staging por cre
 
 El despliegue ya **no** se hace con `git push -f`. El workflow
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) construye el
-frontend, valida el aviso de privacidad, corre la suite RLS contra staging
-(cuando `STAGING_DATABASE_URL` está configurada) y publica en `gh-pages`. Cada
-publicación deja la etiqueta `deploy-<sha>` y pasa un health check.
+frontend, valida el aviso de privacidad y el recibo PDF, verifica migraciones
+contra staging, corre la suite RLS y publica en `gh-pages`. En `main`, la falta
+de `STAGING_DATABASE_URL` detiene el workflow antes de publicar. Cada
+publicación deja la etiqueta `deploy-<sha>` y pasa un health check. **El push a
+`main` no se ejecutó durante la remediación**: publicaría en Pages de
+producción y requiere autorización explícita.
 
 ```bash
 # Publicación normal: commit en main
