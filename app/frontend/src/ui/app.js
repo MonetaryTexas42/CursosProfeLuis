@@ -50,6 +50,7 @@ const PAGE_SIZE = 20;
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
   alumnos: '👥 Alumnos',
+  examen: '🎓 Examen final',
   materias: '📚 Materias',
   asistencia: '📅 Asistencia',
   pagos: '💳 Pagos',
@@ -1305,7 +1306,7 @@ async function fetchAdminDashboard() {
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
     unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes, billingStatusRes,
-    auditRes, dataRequestsRes
+    auditRes, dataRequestsRes, examSessionsRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
@@ -1355,7 +1356,12 @@ async function fetchAdminDashboard() {
       .from('data_requests')
       .select('id,profile_id,student_id,kind,details,status,received_at,due_at,resolved_at,resolution')
       .order('received_at', { ascending: false })
-      .limit(200)
+      .limit(200),
+    supabase
+      .from('final_exam_sessions')
+      .select('id,student_id,subject_id,status,score,correct_answers,answered_questions,total_questions,duration_ms,started_at,finished_at')
+      .order('started_at', { ascending: false })
+      .limit(300)
   ]);
 
   assertNoError(yearRes.error);
@@ -1382,6 +1388,7 @@ async function fetchAdminDashboard() {
   assertNoError(billingStatusRes.error);
   assertNoError(auditRes.error);
   assertNoError(dataRequestsRes.error);
+  assertNoError(examSessionsRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -1425,6 +1432,7 @@ async function fetchAdminDashboard() {
   const teacherNames = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
 
   const studentCodes = new Map(students.map((student) => [student.id, student.student_code]));
+  const studentById = new Map(students.map((student) => [student.id, student]));
   const guardianLinks = new Map();
   for (const link of linksRes.data || []) {
     if (!guardianLinks.has(link.guardian_id)) guardianLinks.set(link.guardian_id, []);
@@ -1470,6 +1478,15 @@ async function fetchAdminDashboard() {
     ),
     auditLog: auditRes.data || [],
     dataRequests: dataRequestsRes.data || [],
+    examSessions: (examSessionsRes.data || []).map((session) => {
+      const student = studentById.get(session.student_id) || {};
+      return {
+        ...session,
+        student_name: profileNames.get(student.profile_id) || 'Alumno sin nombre',
+        student_code: studentCodes.get(session.student_id) || '—',
+        group_name: groupNames.get(student.group_id) || 'Sin grupo'
+      };
+    }),
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -1524,7 +1541,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes, billingStatusRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes, billingStatusRes, examSessionsRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -1582,6 +1599,14 @@ async function fetchTeacherDashboard(teacherId) {
           .from('student_billing_status')
           .select('*')
           .in('student_id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase
+          .from('final_exam_sessions')
+          .select('id,student_id,subject_id,status,score,correct_answers,answered_questions,total_questions,duration_ms,started_at,finished_at')
+          .in('student_id', studentIds)
+          .order('started_at', { ascending: false })
+          .limit(300)
       : Promise.resolve({ data: [], error: null })
   ]);
 
@@ -1602,8 +1627,11 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(billingRes.error);
   assertNoError(paymentsRes.error);
   assertNoError(billingStatusRes.error);
+  assertNoError(examSessionsRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
+  const studentById = new Map(students.map((student) => [student.id, student]));
+  const groupNames = new Map(groups.map((group) => [group.id, group.name]));
   const subjectMap = new Map((subjectsRes.data || []).map((subject) => [subject.id, subject.name]));
   const versionsByUnit = new Map();
 
@@ -1659,6 +1687,15 @@ async function fetchTeacherDashboard(teacherId) {
     billingStatusByStudent: new Map(
       (billingStatusRes.data || []).map((row) => [row.student_id, row])
     ),
+    examSessions: (examSessionsRes.data || []).map((session) => {
+      const student = studentById.get(session.student_id) || {};
+      return {
+        ...session,
+        student_name: names.get(student.profile_id) || 'Alumno sin nombre',
+        student_code: student.student_code || '—',
+        group_name: groupNames.get(student.group_id) || 'Sin grupo'
+      };
+    }),
     studentProfiles: new Map(
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
@@ -2944,8 +2981,8 @@ function staffShellMarkup(data) {
   const tab = state.staffTab || 'dashboard';
   const collapsed = Boolean(state.sidebarCollapsed);
 
-  const teacherTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
-  const adminTabs = ['dashboard', 'alumnos', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion'];
+  const teacherTabs = ['dashboard', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
+  const adminTabs = ['dashboard', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
   return `
@@ -3014,6 +3051,7 @@ function staffTabContentMarkup(data, tab) {
   }
 
   if (tab === 'alumnos') return staffStudentsTabMarkup(data);
+  if (tab === 'examen') return staffExamTabMarkup(data);
   if (tab === 'materias') return staffSubjectsTabMarkup(data);
   if (tab === 'asistencia') return staffAttendanceTabMarkup(data);
   if (tab === 'pagos') return staffPaymentsTabMarkup(data);
@@ -3205,6 +3243,101 @@ function staffStudentsTabMarkup(data) {
     </div>
 
     ${staffCreateStudentMarkup(data)}
+  `;
+}
+
+function staffExamTabMarkup(data) {
+  const sessions = Array.isArray(data.examSessions) ? data.examSessions : [];
+  const completed = sessions.filter((session) => session.status === 'completed');
+  const inProgress = sessions.filter((session) => session.status === 'in_progress');
+  const scored = completed.filter((session) => Number.isFinite(Number(session.score)));
+  const average = scored.length
+    ? (scored.reduce((sum, session) => sum + Number(session.score), 0) / scored.length).toFixed(2)
+    : '—';
+
+  const fmtDate = (value) => value
+    ? new Date(value).toLocaleString('es-MX', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      })
+    : '—';
+  const fmtDuration = (value) => {
+    const seconds = Math.max(0, Math.round(Number(value || 0) / 1000));
+    return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  };
+
+  return `
+    ${staffGreetingMarkup()}
+
+    <div class="section-title">
+      <div>
+        <span class="card-label">Evaluación</span>
+        <h2>Examen final de Español</h2>
+      </div>
+      <span class="pill ${completed.length ? 'success' : ''}">${completed.length} ${completed.length === 1 ? 'resultado' : 'resultados'}</span>
+    </div>
+
+    <div class="dash-grid">
+      <article class="card">
+        <span class="card-label">Sesiones</span>
+        <h2>${sessions.length}</h2>
+        <p class="muted">Incluye sesiones terminadas y en curso.</p>
+      </article>
+      <article class="card">
+        <span class="card-label">Terminadas</span>
+        <h2>${completed.length}</h2>
+        <p class="muted">Con puntaje calculado en el servidor.</p>
+      </article>
+      <article class="card">
+        <span class="card-label">Promedio</span>
+        <h2>${average}${average === '—' ? '' : ' %'}</h2>
+        <p class="muted">Solo alumnos que terminaron el examen.</p>
+      </article>
+      <article class="card">
+        <span class="card-label">En curso</span>
+        <h2>${inProgress.length}</h2>
+        <p class="muted">${sessions[0] ? `Última sesión: ${escapeHtml(fmtDate(sessions[0].started_at))}` : 'Todavía sin actividad.'}</p>
+      </article>
+    </div>
+
+    <article class="card wide">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Detalle</span>
+          <h2>Resultados por alumno</h2>
+        </div>
+      </div>
+      ${sessions.length ? `
+        <div class="feed-list">
+          ${sessions.map((session) => {
+            const done = session.status === 'completed';
+            const score = Number(session.score);
+            return `
+              <div class="feed-item">
+                <span class="feed-emoji">${done ? '🎓' : '⏳'}</span>
+                <div>
+                  <strong>${escapeHtml(session.student_name || 'Alumno')}</strong>
+                  <div>
+                    <small>
+                      ${escapeHtml(session.student_code || '—')} · ${escapeHtml(session.group_name || 'Sin grupo')}
+                      · ${done ? `${Number(session.correct_answers)}/${Number(session.total_questions)} aciertos` : `${Number(session.answered_questions || 0)} respondidas`}
+                      · ⏱ ${fmtDuration(session.duration_ms)}
+                      · ${escapeHtml(fmtDate(session.started_at))}
+                    </small>
+                  </div>
+                </div>
+                <span class="pill ${done ? 'success' : 'pill-amber'}">${done && Number.isFinite(score) ? `${score.toFixed(2)} %` : 'En curso'}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : '<p class="empty-state">Todavía no hay sesiones del examen. Cuando un alumno lo conteste, el resultado aparecerá aquí con aciertos, tiempo y puntaje.</p>'}
+    </article>
+
+    <article class="card wide">
+      <span class="card-label">Orientación vocacional</span>
+      <h2>Test oficial y taller ampliado</h2>
+      <p class="muted">El test vocacional oficial se consulta en la ficha de cada alumno, dentro de la pestaña <strong>Alumnos</strong>. El taller ampliado (RIASEC y checklist) permanece en el dispositivo del alumno; no se guarda en la base.</p>
+    </article>
   `;
 }
 
