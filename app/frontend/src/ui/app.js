@@ -3001,6 +3001,12 @@ function staffShellMarkup(data) {
               </button>
             `;
           }).join('')}
+
+          <span class="side-label">Orientación</span>
+          <a class="staff-tab-btn" href="./vocacional.html" title="Abrir taller vocacional">
+            <span class="nav-emoji" aria-hidden="true">🧭</span>
+            <span class="nav-text">Taller vocacional</span>
+          </a>
         </nav>
 
         <div class="staff-sidebar-footer">
