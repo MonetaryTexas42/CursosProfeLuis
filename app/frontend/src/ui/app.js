@@ -1004,6 +1004,7 @@ async function changePassword(event) {
     state.view = 'dashboard';
     renderDashboard();
     await loadDashboard(state.profile);
+    openDeepLink();
   } catch (error) {
     setError(error?.message || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
     renderChangePassword();
@@ -1238,7 +1239,8 @@ async function handleSession(session) {
   }
 
   renderDashboard();
-  loadDashboard(data);
+  await loadDashboard(data);
+  openDeepLink();
 }
 
 async function loadDashboard(profile) {
@@ -1255,6 +1257,36 @@ async function loadDashboard(profile) {
   }
 
   renderDashboard();
+}
+
+// Accesos directos desde el reproductor legacy (/curso/): ../#examen y
+// ../#vocacional abren las mismas vistas del panel sin recargar el material.
+function openDeepLink() {
+  const key = String(window.location.hash || '')
+    .replace(/^#\/?/, '')
+    .split('?')[0]
+    .toLowerCase();
+
+  if (!['examen', 'final-exam', 'vocacional', 'vocational'].includes(key)) return;
+  if (!state.session || !state.profile || state.view === 'change-password') return;
+
+  window.history.replaceState({}, '', window.location.pathname + window.location.search);
+
+  if (key === 'examen' || key === 'final-exam') {
+    if (state.profile.role !== 'student') return;
+    openFinalExam(appRoot, {
+      onClose: () => {
+        renderDashboard();
+        loadDashboard(state.profile);
+      }
+    });
+    return;
+  }
+
+  openVocationalWorkshop(appRoot, {
+    readOnly: state.profile.role !== 'student',
+    onClose: renderDashboard
+  });
 }
 
 function assertNoError(error) {
@@ -8667,6 +8699,8 @@ export function initApp(root) {
   document.addEventListener('click', (event) => {
     if (event.target.closest('#data-request-btn')) openDataRequest();
   });
+
+  window.addEventListener('hashchange', openDeepLink);
 
   supabase.auth.getSession().then(({ data }) => {
     if (data.session) handleSession(data.session);

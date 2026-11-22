@@ -1031,3 +1031,25 @@ body.sidebar-off #main{margin-left:0}
 .conc-tipo{display:block;font-size:9.5px;font-weight:800;letter-spacing:.01em;white-space:nowrap;margin-top:1px}
 .conc-legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .conc-leg{font-size:12px;font-weight:700;border:1.5px solid;border-radius:20px;padding:3px 11px;background:#fff}
+
+/* Evaluación y orientación · accesos desde el curso */
+.nav-label-tools{padding-top:12px}
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.tool-card{
+  display:flex;flex-direction:column;gap:8px;min-height:168px;
+  background:var(--card);border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-card);
+  color:var(--ink);text-decoration:none;transition:transform .18s,box-shadow .18s;
+}
+.tool-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-soft);color:var(--ink)}
+.tool-card:nth-child(2){border-top-color:var(--accent-2)}
+.tool-card:nth-child(3){border-top-color:var(--c-ambar)}
+.tool-card > b{font-size:15.5px;color:var(--navy)}
+.tool-card > span:not(.tool-icon):not(.tool-go){font-size:13px;color:var(--muted);flex:1}
+.tool-icon{
+  width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+  background:#EFF6FF;font-size:19px;flex:none;
+}
+.tool-go{font-size:12.5px;font-weight:800;color:var(--accent)}
+.tool-card:nth-child(2) .tool-go{color:var(--accent-2)}
+.tool-card:nth-child(3) .tool-go{color:var(--c-ambar)}

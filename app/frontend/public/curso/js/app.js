@@ -433,6 +433,24 @@ function renderNav() {
         "</a>" +
       "</div>" +
     "</div>" : "";
+  const toolsGroup =
+    '<div class="nav-group">' +
+      '<div class="nav-label nav-label-tools">Evaluación y orientación</div>' +
+      '<a class="nav-sub" href="../#examen">' +
+        '<span class="nav-icon">\u{1F4DD}</span>' +
+        '<span class="nav-name">Examen final de Español</span>' +
+        '<span class="nav-tag">nuevo</span>' +
+      "</a>" +
+      '<a class="nav-sub" href="../#vocacional">' +
+        '<span class="nav-icon">\u{1F9ED}</span>' +
+        '<span class="nav-name">Taller vocacional</span>' +
+        '<span class="nav-tag">nuevo</span>' +
+      "</a>" +
+      '<a class="nav-sub" href="../guia-examen-espanol.html" target="_blank" rel="noopener">' +
+        '<span class="nav-icon">\u{1F4D6}</span>' +
+        '<span class="nav-name">Guía imprimible</span>' +
+      "</a>" +
+    "</div>";
   const sistViews = ["asistencia", "pagos", "planificacion", "taller", "perfil", "concentrado", "catalogo"];
   const sistOpen = sistViews.indexOf(r.view) >= 0 || !!navOpen["sistema"];
   const sistLink = (view, href, label) =>
@@ -463,7 +481,7 @@ function renderNav() {
       "</a>" +
       '<div class="nav-units' + (open ? " open" : "") + '">' + units + "</div>" +
     "</div>";
-  }).join("") + mateGroup + sistGroup;
+  }).join("") + toolsGroup + mateGroup + sistGroup;
 }
 function setupNavToggles() {
   $("#side-nav").addEventListener("click", ev => {
@@ -1206,6 +1224,29 @@ function renderHome() {
     );
   }).join("");
 
+  const tools =
+    '<div class="section-title">\u{1F9ED} Evaluación y orientación</div>' +
+    '<div class="tool-grid">' +
+      '<a class="tool-card" href="../#examen">' +
+        '<span class="tool-icon">\u{1F4DD}</span>' +
+        "<b>Examen final de Español</b>" +
+        "<span>13 secciones y 136 preguntas. Tus respuestas y tiempos quedan registrados.</span>" +
+        '<span class="tool-go">Contestar examen \u2192</span>' +
+      "</a>" +
+      '<a class="tool-card" href="../#vocacional">' +
+        '<span class="tool-icon">\u{1F9ED}</span>' +
+        "<b>Taller vocacional completo</b>" +
+        "<span>Test RIASEC, escuelas, universidades y decisión informada.</span>" +
+        '<span class="tool-go">Abrir taller \u2192</span>' +
+      "</a>" +
+      '<a class="tool-card" href="../guia-examen-espanol.html" target="_blank" rel="noopener">' +
+        '<span class="tool-icon">\u{1F4D6}</span>' +
+        "<b>Guía de examen</b>" +
+        "<span>Estudia e imprime los 13 temas antes de contestar.</span>" +
+        '<span class="tool-go">Abrir guía \u2192</span>' +
+      "</a>" +
+    "</div>";
+
   breadcrumbs([{ label: "Inicio" }]);
   $("#view").innerHTML =
     '<section class="hero">' +
@@ -1215,6 +1256,7 @@ function renderHome() {
       '<div class="prog-track"><div class="prog-fill" style="width:' + pct + '%"></div></div></div>' +
     "</section>" +
     (cont ? '<div class="section-title">\uD83D\uDCD6 Tu pr\u00f3ximo paso</div>' + cont : "") +
+    tools +
     '<div class="section-title">\uD83D\uDCC2 Materias</div>' +
     '<div class="grid">' + cards + "</div>" +
     '<div class="section-title">\uD83C\uDFC6 Insignias</div>' +
