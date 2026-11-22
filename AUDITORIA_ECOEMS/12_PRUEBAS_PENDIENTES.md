@@ -419,7 +419,7 @@ desplegado.
 | FUN-36 | Borrar un pago por PostgREST | **lo borra** | **falla**: no hay política `DELETE` (RLS-119) |
 | FUN-37 | Reactivar un pago anulado por REST | no aplicaba | **falla**; hay que registrar uno nuevo |
 | FUN-38 | Anular por PostgREST (no por RPC) | no dejaba rastro | el trigger `app_payments_before_write` registra `payment.voided` en `audit_log` (RLS-123) |
-| FUN-39 | Descargar recibo | **no existe** | **pendiente**: el folio y el periodo ya están; falta el PDF |
+| FUN-39 | Descargar recibo | **no existía** | **obtenido**: PDF de una página con folio, periodo, importe y sello de anulación; sin `notes` (`test-receipt-pdf.mjs`) |
 
 ```sql
 -- FUN-32: estado de cuenta por alumno y periodo
@@ -775,7 +775,7 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [ ] RLS-98…107 y PRIV-10…13, PRIV-17/18, PRIV-20 demuestran el bloqueo, la evidencia, la revocación, la ausencia de inserción directa de consentimientos y el aviso `v3-2026`.
 - [ ] AUTH-10…15, OPS-37/38 y RLS-108/109 demuestran que el usuario desactivado no puede autenticarse y que queda rastro del actor y del motivo.
 - [ ] RLS-19/47, RLS-110…117 y PRIV-19 demuestran que la familia no lee `student_profiles` crudo ni las notas internas.
-- [ ] FUN-30…39 y RLS-118…129 demuestran periodo, saldo, duplicados, anulación auditada y ausencia de `DELETE`; el recibo PDF queda implementado.
+- [x] FUN-30…39 y RLS-118…129 demuestran periodo, saldo, duplicados, anulación auditada y ausencia de `DELETE`; el recibo PDF quedó implementado y validado estructuralmente.
 - [ ] FUN-40…45 demuestran el panel del tutor de solo lectura con avance, calificaciones, asistencia, tareas y observaciones `family`.
 - [ ] FUN-21/22 demuestran que no se puede completar en vacío ni inflar XP.
 - [ ] OPS-12…16 demuestran que el restore exige confirmación, respalda antes, valida el checksum y deja log.

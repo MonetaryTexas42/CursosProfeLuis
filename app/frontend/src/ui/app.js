@@ -1,4 +1,5 @@
 import { supabase, isConfigured, toStudentEmail, studentEmailDomain, appEnv } from '../lib/supabase.js';
+import { downloadReceiptPdf } from './receipt-pdf.js';
 
 const roleLabels = {
   admin: 'Administrador',
@@ -3695,6 +3696,7 @@ function staffPaymentsTabMarkup(data) {
                 </div>
                 <div class="pay-history-actions">
                   <span class="pill ${payment.status === 'voided' ? 'pill-amber' : 'success'}">${money(payment.amount)} · ${escapeHtml(paymentStatusLabel(payment.status))}</span>
+                  <button class="btn ghost" data-receipt-payment="${escapeHtml(payment.id)}" aria-label="Descargar recibo ${escapeHtml(payment.receipt_no || payment.id)}">Recibo</button>
                   ${payment.status !== 'voided' ? `<button class="btn ghost" data-void-payment="${escapeHtml(payment.id)}">Anular</button>` : ''}
                 </div>
               </li>
@@ -3892,6 +3894,41 @@ async function voidPayment(button) {
 
   setNotice('Pago anulado. El historial conserva el registro y el motivo.');
   await loadDashboard(state.profile);
+}
+
+// FUN-02: el recibo se arma en el cliente con los datos que RLS ya permitió
+// leer. No hay nueva consulta ni se expone `notes` (puede ser información
+// interna) en el PDF.
+function downloadPaymentReceipt(paymentId) {
+  const payment = (state.dashboard?.payments || []).find((item) => item.id === paymentId);
+  if (!payment) {
+    setError('No se encontró el pago para generar el recibo.');
+    return;
+  }
+
+  const student = (state.dashboard?.students || []).find((item) => item.id === payment.student_id);
+  const planRow = (state.dashboard?.billingByStudent || new Map()).get(payment.student_id) || {};
+
+  downloadReceiptPdf({
+    id: payment.id,
+    receipt_no: payment.receipt_no,
+    paid_at: formatDate(String(payment.paid_at || '').slice(0, 10)),
+    amount: money(payment.amount),
+    method: paymentMethodLabels[payment.method] || payment.method || '—',
+    period_start: payment.period_start ? formatDate(payment.period_start) : '',
+    period_end: payment.period_end ? formatDate(payment.period_end) : '',
+    period: payment.period,
+    status: payment.status,
+    student_name: student?.full_name || 'Alumno',
+    student_code: student?.student_code || '',
+    group_name: student?.group_name || '',
+    plan: paymentPlanLabels[planRow.plan] || planRow.plan || '',
+    void_reason: payment.void_reason || ''
+  });
+
+  setNotice(payment.status === 'voided'
+    ? 'Recibo descargado. El documento marca el pago como anulado.'
+    : 'Recibo descargado.');
 }
 
 async function savePayDialog(event, form) {  event.preventDefault();
@@ -5279,7 +5316,10 @@ function guardianPaymentsMarkup(data) {
                       <strong>${money(payment.amount)}${payment.receipt_no ? ` · ${escapeHtml(payment.receipt_no)}` : ''}</strong>
                       <small>${escapeHtml(formatDate(String(payment.paid_at).slice(0, 10)))} · ${escapeHtml(paymentMethodLabels[payment.method] || payment.method)}${payment.period_start ? ` · ${escapeHtml(formatDate(payment.period_start))}–${escapeHtml(formatDate(payment.period_end))}` : ''}${payment.status === 'voided' ? ' · Anulado' : ''}</small>
                     </div>
-                    <span class="pill ${payment.status === 'voided' ? 'pill-amber' : 'success'}">${escapeHtml(paymentStatusLabel(payment.status))}</span>
+                    <div class="pay-history-actions">
+                      <span class="pill ${payment.status === 'voided' ? 'pill-amber' : 'success'}">${escapeHtml(paymentStatusLabel(payment.status))}</span>
+                      <button class="btn ghost" data-receipt-payment="${escapeHtml(payment.id)}" aria-label="Descargar recibo ${escapeHtml(payment.receipt_no || payment.id)}">Recibo</button>
+                    </div>
                   </li>
                 `).join('')}
               </ul>
@@ -7621,6 +7661,10 @@ function renderDashboard() {
 
   appRoot.querySelectorAll('[data-void-payment]').forEach((button) => {
     button.addEventListener('click', () => voidPayment(button));
+  });
+
+  appRoot.querySelectorAll('[data-receipt-payment]').forEach((button) => {
+    button.addEventListener('click', () => downloadPaymentReceipt(button.dataset.receiptPayment));
   });
 
   const subjectsGroupSelect = appRoot.querySelector('[data-subjects-group]');

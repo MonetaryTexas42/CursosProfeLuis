@@ -123,7 +123,9 @@ app/
       `REC-<año>-<n>`, estado (`paid`/`partial`/`voided`), clave de
       idempotencia, detección de duplicados, estado de cuenta por alumno
       (`al corriente`/`parcial`/`pendiente`/`vencido`/`beca`) y anulación con
-      motivo y auditoría. El historial no se borra: se anula.
+      motivo y auditoría. El historial no se borra: se anula. El botón
+      **Recibo** descarga un PDF con folio, periodo e importe (sin notas
+      internas); los anulados llevan sello de anulación.
 - [x] Panel del tutor (`FUN-01`): avance, calificaciones, asistencia, tareas,
       observaciones `family` y estado de cuenta de sus hijos, todo en solo
       lectura y con estados vacíos.

@@ -276,8 +276,8 @@ Para evitar confusiones en la revisión:
 > PASS y build de staging correcto. Producción no fue tocada: el 20 nov solo se
 > verificó en lectura y seguía con 22 migraciones aplicadas.
 >
-> Siguen pendientes funcionales: el recibo descargable en PDF de `FUN-02`, la
-> validación legal del aviso `v3-2026` con el correo de contacto de `PRIV-06`,
+> Siguen pendientes funcionales: la validación legal del aviso `v3-2026` con el
+> correo de contacto de `PRIV-06`,
 > la restauración de prueba de respaldos y el despliegue en CI. `SEC-06` quedó
 > verificado en staging con el proveedor `log` (sin envío real); el cron
 > requiere secretos del repositorio. `DB-07` quedó cerrado en staging; el
@@ -290,7 +290,7 @@ Para declarar que la plataforma puede operar con datos reales de menores, deben 
 - [ ] `PRIV-01` implementado en código: aviso publicado, enlace, hash y bloqueo (falta verificación en staging).
 - [ ] `PRIV-02` y `DB-08` resueltos: notas internas fuera del alcance de la familia.
 - [ ] `FUN-01` verificado en staging: el tutor ve avance, calificaciones, asistencia, tareas y observaciones `family` de sus hijos, sin poder editar.
-- [ ] `FUN-02` verificado en staging: periodo, saldo, duplicado y anulación auditada; recibo descargable implementado.
+- [x] `FUN-02` verificado: periodo, saldo, duplicado y anulación auditada (RLS-118…129); recibo PDF implementado y validado por `test-receipt-pdf.mjs`.
 - [ ] `PRIV-03` verificado en staging: el tutor no lee `student_profiles` crudo ni notas internas; solo `student_guidance`.
 - [ ] `OPS-01` y `OPS-02` resueltos: respaldos cifrados y restauración segura, con una restauración de prueba exitosa.
 - [x] `OPS-03` y `OPS-09` resueltos: staging real creado, suites ejecutadas allí y producción intacta.

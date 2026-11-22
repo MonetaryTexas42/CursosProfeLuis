@@ -485,8 +485,12 @@ declarar la operación terminada.
 duplicados y auditoría de la anulación), vistas `student_billing_status` y
 `payment_duplicates`, RPC `app_void_payment`, políticas sin `DELETE` y panel
 del tutor/staff con periodo, estado, saldo, folio y botón “Anular”. El trigger
-registra en `audit_log` incluso si la anulación se hace por PostgREST. **Pendiente
-para cerrar el hallazgo:** recibo descargable (PDF) y verificación en staging.
+registra en `audit_log` incluso si la anulación se hace por PostgREST. El recibo
+PDF se genera en el cliente desde los datos visibles por RLS, sin dependencias:
+`frontend/src/ui/receipt-pdf.js`, botón “Recibo” en el historial de staff y
+tutores, y validación estructural con `scripts/test-receipt-pdf.mjs`. El PDF
+marca los pagos anulados y **no incluye `notes`**. Resta la revisión manual del
+diseño del documento antes del piloto real.
 
 **Aceptación:** se puede responder “¿cuánto debe y de qué periodo?” para cualquier alumno; un pago duplicado se detecta; una anulación deja rastro.
 
@@ -588,7 +592,7 @@ sigue intacta.
 |---|---|---|---|
 | SEC-04 | Implementado | `0028_offboarding.sql`; `functions/deactivate-user/index.ts` | Desactivar → login/refresh falla en Auth (staging) |
 | FUN-01 | Implementado | `frontend/src/ui/app.js`; `styles.css` | Panel del tutor con datos ficticios |
-| FUN-02 | Implementado salvo recibo PDF | `0029_payments_traceability.sql`; `app.js` | Periodo/saldo/duplicado/anulación en staging |
+| FUN-02 | Implementado con recibo PDF | `0029_payments_traceability.sql`; `src/ui/app.js`; `receipt-pdf.js` | Revisión visual del PDF; resto verificado con RLS y build |
 | PRIV-03 | Implementado | `0030_vocational_visibility.sql`; `privacidad.html` | Tutor no ve tabla cruda ni notas internas |
 | PRIV-05 / OPS-01 | Implementado | `scripts/backup-db.mjs` | Respaldo cifrado y restauración de prueba |
 | OPS-02 | Implementado | `scripts/restore-db.mjs` | Sin `--confirm` no escribe; producción exige `--i-know` |
