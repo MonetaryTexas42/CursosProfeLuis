@@ -42,6 +42,16 @@
     "run_id": "45059343395",
     "run_conclusion": "success",
     "pages_build_run_id": "45059381849",
+    "despliegue_curso": {
+      "commit": "0aeb7e7591c189eb04358b2b694b0b812abc6c8c",
+      "run_id": "45060761193",
+      "pages_build_run_id": "45060808981",
+      "tag": "deploy-0aeb7e7",
+      "gh_pages_commit": "3bb44845539997fc5a3429bc510170fbc5b8d367",
+      "js": "index-DOGMA5Xi.js",
+      "recursos_versionados": "?v=3",
+      "deep_links": ["../#examen", "../#vocacional"]
+    },
     "tag": "deploy-c3ef7c6",
     "gh_pages_commit": "9e5e9dbaf4a982b76b9a529dc941b274436dc1b3",
     "urls": {

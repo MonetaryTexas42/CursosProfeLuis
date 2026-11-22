@@ -715,6 +715,7 @@ producción, se activó el examen y se publicó el frontend en Pages.
 | OPS-56 | Activación del examen en producción | Actualización transaccional de `final_exam_spanish_enabled` a `true` (1 fila). `app_final_exam_status()` → `{"enabled":true,"subject":"espanol","sections":13,"questions":136,"questionsPerSection":0}`. Tablas del examen vacías; no se escribieron respuestas reales. |
 | OPS-57 | Publicación final | Commit `c3ef7c6` pusheado a `main` sin `[skip ci]`. Run `45059343395` de «CI y despliegue» terminó en SUCCESS; publicó `gh-pages` (`9e5e9db`) y la etiqueta `deploy-c3ef7c6`. El build automático de Pages `45059381849` también terminó en SUCCESS. Health check del workflow: portal y aviso `v3-2026` OK. |
 | OPS-58 | Verificación externa de Pages | `https://monetarytexas42.github.io/CursosProfeLuis/`, `/guia-examen-espanol.html` y `/privacidad.html` responden 200. Hash de la guía `966fb846…d4094`; hash del aviso `85d13859…f740b`; CSS `index-DfnxNZIF.css`; bundle publicado `index-D58IlHdW.js` (200, contiene examen, guía y vocación). Evidencia en `evidencias/produccion-cierre-final.json`. |
+| OPS-59 | Accesos desde `/curso/` | Tras confirmar que el reporte se originaba en el reproductor legacy, el commit `0aeb7e7` añadió el grupo «Evaluación y orientación» al menú lateral y tres tarjetas en el inicio: examen (`../#examen`), taller (`../#vocacional`) y guía. El SPA abre esos deep links después de cargar la sesión. Run `45060761193` en SUCCESS, tag `deploy-0aeb7e7`, build de Pages `45060808981` en SUCCESS. Verificación externa: `?v=3` en los recursos del curso, «Examen final de Español» en `curso/js/app.js?v=3`, `.tool-grid` en `curso/css/styles.css?v=3` y bundle `index-DOGMA5Xi.js` (200). |
 
 Comandos de verificación ejecutados sin credenciales en la salida:
 
@@ -803,7 +804,7 @@ registraron respuestas de alumnos ni sesiones del examen: las tablas
 | OPS-08 | Simulación de rotación | Manual |
 | OPS-09 | Existencia de staging | Manual |
 | OPS-10 | Rebuild reproducible | CI |
-| Cards / examen / guía / vocación | OPS-50…58 | Revisión, SQL (W), build, activación en producción y verificación de Pages |
+| Cards / examen / guía / vocación | OPS-50…59 | Revisión, SQL (W), build, activación en producción, accesos desde `/curso/` y verificación de Pages |
 
 ---
 
@@ -898,6 +899,7 @@ Se considera que las pruebas pendientes están resueltas cuando:
 - [x] OPS-53/54 demuestran que la guía imprimible y el taller vocacional quedaron integrados en el build sin escribir en la base.
 - [x] OPS-55/56 demuestran que las migraciones se aplicaron en producción tras respaldo cifrado y que el examen quedó activo (`enabled=true`).
 - [x] OPS-57/58 demuestran que el run `45059343395` publicó la etiqueta `deploy-c3ef7c6` y que Pages sirve el portal, la guía y el aviso `v3-2026` con los hashes esperados.
+- [x] OPS-59 demuestra que el examen y el taller también son visibles desde `/curso/` mediante el run `45060761193` (`deploy-0aeb7e7`).
 - [x] P3-17 demuestra que el procesador de correo no entrega enlaces ni correo real en staging.
 - [ ] OPS-20 demuestra que `TEST_WRITE=1` no escribe en producción.
 - [x] OPS-42…45 demuestran que el despliegue es reproducible y etiquetado sin `push -f`; la reversión documentada no se ejecutó.
@@ -917,5 +919,7 @@ staging al cierre en producción: con autorización explícita se aplicaron
 `0041`/`0042`, se activó `final_exam_spanish_enabled` y se publicó el frontend
 mediante el run `45059343395` (`deploy-c3ef7c6`). La verificación final confirma
 42/42 migraciones, base consistente, examen activo y Pages sirviendo los hashes
-esperados. Staging conserva el flag en `false` para pruebas; no se escribieron
-respuestas de alumnos durante el cierre.
+esperados. Una revisión del reporte mostró que los accesos solo estaban en el
+panel principal, así que se publicaron también dentro de `/curso/` con el run
+`45060761193` (`deploy-0aeb7e7`). Staging conserva el flag en `false` para
+pruebas; no se escribieron respuestas de alumnos durante el cierre.

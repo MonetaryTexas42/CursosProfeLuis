@@ -100,6 +100,17 @@ Verificación externa: `/`, `/guia-examen-espanol.html` y `/privacidad.html`
 responden 200; hashes `966fb846…d4094` (guía) y `85d13859…f740b` (aviso);
 bundle publicado `index-D58IlHdW.js`.
 
+**Ajuste de visibilidad en `/curso/` (22 nov 2026):** tras confirmar que el
+examen y el taller solo aparecían en el panel principal, el commit `0aeb7e7`
+añadió accesos en el menú lateral y en el inicio del reproductor legacy, con
+deep links `../#examen` y `../#vocacional`. El run `45060761193` terminó en
+SUCCESS y publicó `deploy-0aeb7e7` (`gh-pages` en `3bb4484`); el build de Pages
+`45060808981` también terminó en SUCCESS. Verificación externa:
+`/curso/index.html` sirve `css/styles.css?v=3` y `js/login-gate.js?v=3`;
+`/curso/js/app.js?v=3` contiene «Evaluación y orientación» y «Examen final de
+Español»; `/curso/css/styles.css?v=3` contiene `.tool-grid`; el bundle actual es
+`index-DOGMA5Xi.js` (200).
+
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 
 Consultas de solo lectura para revisar la actividad reciente. Se ejecutan en
