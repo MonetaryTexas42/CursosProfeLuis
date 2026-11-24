@@ -888,6 +888,185 @@ export const STUDY_PLAN_SELECTORS = [
 ];
 
 /* =====================================================================
+   SUPER CATÁLOGO DE CARRERAS
+   Qué se estudia, cuánto dura, qué harás, qué bachillerato conviene y
+   dónde puedes cursarla. Las instituciones enlazan a su catálogo oficial:
+   la oferta vigente, sedes y fechas deben verificarse ahí.
+   Fuentes consultadas el 23 de noviembre de 2026.
+   ===================================================================== */
+export const CAREER_AREAS = [
+  { id: "salud", nombre: "Salud y bienestar", icon: "🩺" },
+  { id: "ingenieria", nombre: "Ingeniería y tecnología", icon: "⚙️" },
+  { id: "ciencias", nombre: "Ciencias naturales y exactas", icon: "🔬" },
+  { id: "educacion", nombre: "Educación y humanidades", icon: "📚" },
+  { id: "sociales", nombre: "Ciencias sociales y derecho", icon: "⚖️" },
+  { id: "negocios", nombre: "Negocios y administración", icon: "📊" },
+  { id: "artes", nombre: "Artes, diseño y cultura", icon: "🎨" },
+  { id: "agro", nombre: "Agro, agua y ambiente", icon: "🌱" },
+  { id: "defensa", nombre: "Defensa y seguridad", icon: "🎖️" },
+  { id: "tecnica", nombre: "Carreras técnicas", icon: "🛠️" }
+];
+
+export const CAREER_PROVIDERS = {
+  UNAM: { nombre: "UNAM", url: "https://oferta.unam.mx/carreras.php", nota: "Catálogo oficial: 126 licenciaturas agrupadas por área." },
+  IPN: { nombre: "IPN", url: "https://www.ipn.mx/oferta-educativa/educacion-superior/", nota: "Oferta oficial de nivel superior por escuela y unidad." },
+  UAM: { nombre: "UAM", url: "https://www.uam.mx/licenciaturas/index.html", nota: "85 licenciaturas en 5 unidades; duración en trimestres." },
+  UAEMEX: { nombre: "UAEMéx", url: "http://denms.uaemex.mx/exporientavirtual/?course_level=licenciatura", nota: "Exporienta Virtual: oferta por región y duración." },
+  SEDENA: { nombre: "SEDENA / HCM", url: "https://www.gob.mx/defensa", nota: "Heroico Colegio Militar: licenciaturas que requieren bachillerato previo. Convocatoria por confirmar." },
+  CONALEP: { nombre: "CONALEP", url: "https://www.conalep.edu.mx/", nota: "Carreras técnicas con bachillerato técnico; verifica plantel y duración." },
+  CBTIS: { nombre: "DGETI (CBTIS)", url: "https://www.dgeti.mx/", nota: "Bachillerato técnico; verifica plantel y especialidad vigente." },
+  PRIVADAS: { nombre: "Instituciones privadas", url: "https://www.gob.mx/sep", nota: "Compara RVOE, colegiatura y becas en el sitio de cada institución." }
+};
+
+export const CAREER_NOTE = 'Este catálogo es una <b>guía de exploración</b>, no una lista definitiva: cada institución actualiza su oferta, sedes y requisitos. Abre el catálogo oficial de cada casa de estudios antes de elegir. Las licenciaturas del Heroico Colegio Militar <b>requieren bachillerato terminado</b>: no son preparatorias.';
+
+export const CAREER_FIELDS = ["id", "nombre", "area", "riasec", "duracion", "materias", "perfil", "salida", "prepa", "instituciones", "tags"];
+
+export const CAREER_ROWS = [
+  /* Salud y bienestar */
+  ["medico", "Médico cirujano", "salud", "IS", "6 años aprox.", "Anatomía · Fisiología · Bioquímica · Farmacología · Clínica", "Curiosidad científica, responsabilidad y resistencia al esfuerzo", "Consulta médica, hospitales, urgencias, investigación y salud pública", "Bachillerato general fuerte en biología y química", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Salud,Ciencias,Beca"],
+  ["enfermeria", "Enfermería", "salud", "SI", "4–5 años aprox.", "Cuidado general · Farmacología · Salud comunitaria · Práctica clínica", "Empatía, orden, trabajo en equipo y disposición para atender", "Hospitales, clínicas, consultorios, salud escolar y domiciliaria", "Bachillerato general o técnico en salud", "UNAM|IPN|UAM|UAEMEX|CONALEP|PRIVADAS", "Salud,Cuidado,Beca"],
+  ["odontologia", "Odontología", "salud", "IR", "4–5 años aprox.", "Anatomía bucal · Materiales · Operatoria · Cirugía menor", "Precisión manual, paciencia y comunicación con pacientes", "Consultorio privado, clínicas dentales y salud bucal comunitaria", "Bachillerato general con biología y química", "UNAM|IPN|UAM|PRIVADAS", "Salud,Técnico"],
+  ["psicologia", "Psicología", "salud", "SI", "4–5 años aprox.", "Psicología general · Desarrollo · Evaluación · Terapia · Investigación", "Escucha, curiosidad por las personas y criterio ético", "Consultoría psicológica, escuelas, empresas y salud mental", "Bachillerato general; útiles humanidades y biología", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Salud,Sociales,Humanidades"],
+  ["nutricion", "Nutrición", "salud", "IS", "4 años aprox.", "Bioquímica · Alimentos · Dietética · Salud pública · Antropología", "Interés por la ciencia y por acompañar hábitos de vida", "Consultoría nutricional, hospitales, escuelas e industria de alimentos", "Bachillerato general con ciencias naturales", "UNAM|IPN|UAM|PRIVADAS", "Salud,Ciencias"],
+  ["farmacia", "Farmacia / Química farmacéutica", "salud", "IC", "4–5 años aprox.", "Química · Farmacología · Formulación · Control de calidad · Legislación", "Rigor, precisión y gusto por el laboratorio", "Industria farmacéutica, farmacia hospitalaria, análisis y ventas técnicas", "Bachillerato general; química y biología sólidas", "UNAM|IPN|UAEMEX|PRIVADAS", "Salud,Ciencias,Tecnología"],
+  ["optometria", "Optometría", "salud", "IR", "4 años aprox.", "Óptica · Anatomía ocular · Refracción · Contactología · Baja visión", "Precisión, paciencia y atención al detalle", "Consultorios, ópticas, hospitales y salud visual escolar", "Bachillerato general con física y biología", "IPN|PRIVADAS", "Salud,Técnico"],
+  ["fisioterapia", "Fisioterapia / Rehabilitación", "salud", "SR", "4 años aprox.", "Anatomía · Biomecánica · Terapia manual · Rehabilitación · Ejercicio", "Empatía, disposición física y trabajo con personas", "Rehabilitación hospitalaria, consultorios, deporte y tercera edad", "Bachillerato general; conviene biología y educación física", "UAEMEX|PRIVADAS", "Salud,Cuidado"],
+  ["saludpublica", "Salud pública", "salud", "IS", "4–5 años aprox.", "Epidemiología · Estadística · Promoción de salud · Políticas · Ambiente", "Pensamiento analítico y compromiso social", "Secretarías de salud, organismos internacionales, vigilancia epidemiológica", "Bachillerato general; útiles matemáticas y ciencias", "UNAM|UAEMEX|PRIVADAS", "Salud,Sociales,Beca"],
+  ["trabajosocial", "Trabajo social", "salud", "SE", "4–5 años aprox.", "Política social · Comunidad · Familia · Derechos · Investigación", "Empatía, organización y disposición para trabajar en campo", "Instituciones públicas, ONG, escuelas, hospitales y comunidades", "Bachillerato general o técnico en servicios sociales", "UNAM|IPN|UAM|UAEMEX|CONALEP", "Salud,Sociales,Beca"],
+
+  /* Ingeniería y tecnología */
+  ["civil", "Ingeniería civil", "ingenieria", "IR", "4–5 años aprox.", "Matemáticas · Mecánica · Materiales · Estructuras · Topografía", "Gusto por construir, análisis espacial y trabajo de campo", "Obras públicas y privadas, consultoría, supervisión y construcción", "Bachillerato general o técnico; matemáticas y física fuertes", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Tecnología,Técnico,Beca"],
+  ["industrial", "Ingeniería industrial", "ingenieria", "IRC", "4–5 años aprox.", "Estadística · Procesos · Logística · Economía · Calidad", "Orden, análisis de procesos y liderazgo", "Fábricas, logística, consultoría, operaciones y mejora continua", "Bachillerato general o técnico con matemáticas", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Tecnología,Negocios,Beca"],
+  ["mecanica", "Ingeniería mecánica", "ingenieria", "IR", "4–5 años aprox.", "Termodinámica · Mecánica · Materiales · Diseño · Manufactura", "Manualidad técnica, lógica y gusto por las máquinas", "Industria manufacturera, energía, transporte y mantenimiento", "Bachillerato técnico o general con física y matemáticas", "UNAM|IPN|UAM|PRIVADAS", "Tecnología,Técnico"],
+  ["electrica", "Ingeniería eléctrica", "ingenieria", "IR", "4–5 años aprox.", "Circuitos · Electromagnetismo · Máquinas · Energía · Control", "Análisis, precisión y gusto por la electricidad", "Generación y distribución de energía, industria y redes", "Bachillerato general o técnico; física y matemáticas", "IPN|UAM|PRIVADAS", "Tecnología,Técnico,Beca"],
+  ["electronica", "Ingeniería electrónica", "ingenieria", "IR", "4–5 años aprox.", "Circuitos · Señales · Microcontroladores · Comunicaciones · Digital", "Paciencia, precisión y curiosidad por la tecnología", "Diseño de dispositivos, telecomunicaciones, electrónica industrial", "Bachillerato técnico o general con física", "IPN|UAM|PRIVADAS", "Tecnología,Técnico"],
+  ["computacion", "Ingeniería en computación / Informática", "ingenieria", "IC", "4–5 años aprox.", "Programación · Estructuras · Algoritmos · Bases de datos · Sistemas", "Lógica, abstracción y disposición a practicar código", "Desarrollo de software, sistemas, datos, ciberseguridad y startups", "Bachillerato general o técnico; matemáticas y lógica", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Tecnología,Beca"],
+  ["sistemas", "Ingeniería de sistemas computacionales", "ingenieria", "IC", "4–5 años aprox.", "Sistemas operativos · Redes · Arquitectura · Software · Base de datos", "Pensamiento sistémico, orden y resolución de problemas", "Infraestructura tecnológica, cloud, redes y desarrollo de sistemas", "Bachillerato general o técnico en informática", "IPN|UAM|PRIVADAS", "Tecnología,Beca"],
+  ["ia", "Ingeniería en inteligencia artificial", "ingenieria", "IC", "4–5 años aprox.", "Estadística · Aprendizaje automático · Datos · Programación · Ética", "Matemáticas, curiosidad y responsabilidad con el uso de datos", "Modelos de IA, análisis de datos, automatización e investigación", "Bachillerato general con matemáticas y programación", "IPN|UAEMEX|PRIVADAS", "Tecnología,Ciencias,Beca"],
+  ["datos", "Ciencia de datos", "ingenieria", "IC", "4 años aprox.", "Probabilidad · Estadística · Programación · Visualización · Modelos", "Gusto por números, código y preguntas bien planteadas", "Analítica, negocios, investigación, gobierno y tecnología", "Bachillerato general con matemáticas", "IPN|UAM|PRIVADAS", "Tecnología,Ciencias,Negocios"],
+  ["mecatronica", "Ingeniería mecatrónica", "ingenieria", "IR", "4–5 años aprox.", "Mecánica · Electrónica · Control · Programación · Robótica", "Gusto por integrar partes, lógica y trabajo en laboratorio", "Automatización industrial, robótica, mantenimiento y diseño", "Bachillerato técnico o general con física y matemáticas", "IPN|UAM|PRIVADAS", "Tecnología,Técnico"],
+  ["ambiental", "Ingeniería ambiental", "ingenieria", "IR", "4–5 años aprox.", "Química · Ecología · Tratamiento de aguas · Residuos · Normativa", "Conciencia ambiental, análisis y trabajo de campo", "Consultoría ambiental, tratamiento de agua, energía y cumplimiento normativo", "Bachillerato general con ciencias naturales", "IPN|UAM|PRIVADAS", "Tecnología,Medio ambiente,Beca"],
+  ["quimica", "Ingeniería química", "ingenieria", "IC", "4–5 años aprox.", "Química · Termodinámica · Procesos · Reacciones · Plantas", "Rigor experimental, paciencia y seguridad en el laboratorio", "Industria química, alimentos, farmacéutica, energía y procesos", "Bachillerato general con química y matemáticas", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Tecnología,Ciencias,Beca"],
+  ["biomedica", "Ingeniería biomédica", "ingenieria", "IR", "4–5 años aprox.", "Biología · Electrónica · Señales · Materiales · Dispositivos", "Curiosidad mixta: ciencia, tecnología y salud", "Equipos médicos, imágenes, sensores, hospitales e investigación", "Bachillerato general con biología, física y matemáticas", "IPN|UAM|PRIVADAS", "Tecnología,Salud,Ciencias"],
+  ["aeronautica", "Ingeniería aeronáutica", "ingenieria", "IR", "4–5 años aprox.", "Aerodinámica · Estructuras · Motores · Materiales · Vuelo", "Precisión, interés por la aviación y análisis", "Aviación comercial, mantenimiento, diseño y defensa", "Bachillerato general con física y matemáticas", "IPN|PRIVADAS", "Tecnología,Beca"],
+  ["automotriz", "Ingeniería en sistemas automotrices", "ingenieria", "IR", "4 años aprox.", "Motores · Electrónica · Transmisiones · Diagnóstico · Manufactura", "Gusto por autos, manejo de herramientas y electricidad", "Ensamble, mantenimiento, diagnóstico y diseño automotriz", "Bachillerato técnico o general con física", "IPN|PRIVADAS", "Tecnología,Técnico"],
+  ["telecom", "Ingeniería en comunicaciones y electrónica", "ingenieria", "IR", "4–5 años aprox.", "Señales · Redes · Antenas · Comunicaciones · Digital", "Análisis, precisión e interés por conectividad", "Redes, telecomunicaciones, broadcast e IoT", "Bachillerato general o técnico con física", "IPN|UAM|PRIVADAS", "Tecnología,Beca"],
+  ["energia", "Ingeniería en energía", "ingenieria", "IR", "4–5 años aprox.", "Energía · Termodinámica · Redes · Renovables · Economía", "Interés por la infraestructura y los retos energéticos", "Generación, distribución, eficiencia y energías renovables", "Bachillerato general con física y matemáticas", "IPN|UAM|PRIVADAS", "Tecnología,Medio ambiente"],
+  ["petroquimica", "Ingeniería petroquímica y petrolera", "ingenieria", "IR", "4–5 años aprox.", "Química · Yacimientos · Refinación · Procesos · Seguridad", "Rigor, gusto por la industria y disposición a rotar", "Petróleo, gas, refinación, petroquímica y energía", "Bachillerato general con química y matemáticas", "IPN|UAEMEX|PRIVADAS", "Tecnología,Beca"],
+
+  /* Ciencias naturales y exactas */
+  ["biologia", "Biología", "ciencias", "I", "4–5 años aprox.", "Genética · Ecología · Biología celular · Evolución · Laboratorio", "Curiosidad por lo vivo, observación y paciencia", "Investigación, educación, biotecnología, conservación y salud", "Bachillerato general con biología y química", "UNAM|IPN|UAM|PRIVADAS", "Ciencias,Beca"],
+  ["fisica", "Física", "ciencias", "I", "4–5 años aprox.", "Mecánica · Electromagnetismo · Termodinámica · Cuántica · Laboratorio", "Gusto por explicar el mundo con modelos y matemáticas", "Investigación, docencia, tecnología, energía y meteorología", "Bachillerato general con física y matemáticas avanzadas", "UNAM|IPN|UAM|PRIVADAS", "Ciencias,Beca"],
+  ["matematicas", "Matemáticas", "ciencias", "IC", "4–5 años aprox.", "Álgebra · Análisis · Geometría · Probabilidad · Lógica", "Abstracción, constancia y gusto por la demostración", "Investigación, docencia, actuaría, datos y tecnología", "Bachillerato general con matemáticas fuertes", "UNAM|IPN|UAM|PRIVADAS", "Ciencias,Beca"],
+  ["estadistica", "Estadística", "ciencias", "IC", "4–5 años aprox.", "Probabilidad · Inferencia · Regresión · Muestreo · Cómputo", "Gusto por datos, lógica y comunicación de resultados", "Análisis en mercado, salud, gobierno, financiero e investigación", "Bachillerato general con matemáticas", "UNAM|PRIVADAS", "Ciencias,Negocios"],
+  ["geologia", "Geología y geofísica", "ciencias", "IR", "4–5 años aprox.", "Mineralogía · Estratigrafía · Sismología · Geofísica · Campo", "Gusto por el terreno, observación y análisis", "Exploración, recursos naturales, riesgos geológicos e investigación", "Bachillerato general con química, física y geografía", "IPN|UAM|PRIVADAS", "Ciencias,Medio ambiente"],
+  ["cienciasambientales", "Ciencias ambientales", "ciencias", "IR", "4–5 años aprox.", "Ecología · Clima · Suelos · Biodiversidad · Política ambiental", "Curiosidad por la naturaleza y compromiso social", "Conservación, consultoría, gestión ambiental y educación", "Bachillerato general con ciencias naturales", "UAM|UAEMEX|PRIVADAS", "Ciencias,Medio ambiente"],
+  ["actuaria", "Actuaría", "ciencias", "IC", "4–5 años aprox.", "Probabilidad · Finanzas · Seguros · Modelos · Programación", "Matemáticas aplicadas, orden y visión de negocio", "Seguros, pensiones, banca, consultoría y gestión de riesgos", "Bachillerato general con matemáticas avanzadas", "UNAM|PRIVADAS", "Ciencias,Negocios,Beca"],
+  ["astronomia", "Astronomía / Ciencias atmosféricas", "ciencias", "I", "4–5 años aprox.", "Física · Matemáticas · Observación · Atmósfera · Datos", "Paciencia, curiosidad y gusto por la observación", "Observatorios, meteorología, investigación y divulgación", "Bachillerato general con física y matemáticas", "UAM|PRIVADAS", "Ciencias,Beca"],
+
+  /* Educación y humanidades */
+  ["pedagogia", "Pedagogía / Educación", "educacion", "SI", "4 años aprox.", "Aprendizaje · Didáctica · Evaluación · Psicología educativa · Práctica", "Gusto por enseñar, paciencia y escucha", "Docencia, diseño de materiales, formación y gestión escolar", "Bachillerato general; útiles humanidades y comunicación", "UNAM|UAM|UAEMEX|PRIVADAS", "Sociales,Humanidades,Beca"],
+  ["educacioninicial", "Educación inicial / preescolar", "educacion", "SI", "3–4 años aprox.", "Desarrollo infantil · Juego · Didáctica · Familia · Práctica", "Cariño, paciencia y disposición para trabajar con niños", "Preescolar, guarderías, escuelas primarias y orientación familiar", "Bachillerato general o técnico en educación", "UAM|UAEMEX|CONALEP|PRIVADAS", "Sociales,Humanidades,Cuidado"],
+  ["letras", "Letras hispánicas / Literatura", "educacion", "AI", "4 años aprox.", "Literatura · Lingüística · Redacción · Crítica · Historia", "Gusto por leer, escribir y analizar textos", "Docencia, edición, corrector, guionista y comunicación", "Bachillerato general con humanidades y español fuerte", "UNAM|UAM|UAEMEX|PRIVADAS", "Humanidades,Arte,Beca"],
+  ["historia", "Historia", "educacion", "AI", "4–5 años aprox.", "Historia de México · Universal · Fuentes · Metodología · Investigación", "Curiosidad por el pasado, lectura y análisis crítico", "Docencia, investigación, museos, patrimonio y divulgación", "Bachillerato general con humanidades", "UNAM|UAM|PRIVADAS", "Humanidades,Beca"],
+  ["filosofia", "Filosofía", "educacion", "AI", "4–5 años aprox.", "Lógica · Ética · Ontología · Filosofía política · Historia de la filosofía", "Gusto por preguntas profundas, argumentación y lectura", "Docencia, investigación, ética, periodismo de ideas y función pública", "Bachillerato general con humanidades", "UNAM|UAM|PRIVADAS", "Humanidades,Beca"],
+  ["linguistica", "Lingüística", "educacion", "AI", "4 años aprox.", "Fonología · Sintaxis · Semántica · Lenguas · Métodos", "Curiosidad por el lenguaje, precisión y análisis", "Enseñanza de idiomas, traducción, investigación y tecnología del lenguaje", "Bachillerato general con idiomas y humanidades", "UNAM|UAM|PRIVADAS", "Humanidades,Idiomas"],
+  ["ingles", "Enseñanza de inglés / Lenguas", "educacion", "AI", "4 años aprox.", "Inglés · Pedagogía · Gramática · Pronunciación · Práctica docente", "Gusto por idiomas, comunicación y enseñar", "Docencia de idiomas, traducción, turismo y comunicación corporativa", "Bachillerato general; recomendable nivel de inglés previo", "UNAM|UAM|PRIVADAS", "Humanidades,Idiomas"],
+  ["comunicacion", "Ciencias de la comunicación", "educacion", "AE", "4 años aprox.", "Teoría · Redacción · Medios · Producción · Cultura", "Gusto por contar historias, analizar medios y trabajar en equipo", "Medios, comunicación corporativa, contenido, producción y gestión cultural", "Bachillerato general con humanidades y redacción", "UNAM|UAM|UAEMEX|PRIVADAS", "Humanidades,Arte"],
+  ["periodismo", "Periodismo", "educacion", "AE", "4 años aprox.", "Reporteo · Entrevista · Redacción · Ética · Verificación", "Curiosidad, rigor, redacción y resistencia a entregar a tiempo", "Redacciones, medios digitales, reportería y comunicación pública", "Bachillerato general con español y humanidades fuertes", "UNAM|PRIVADAS", "Humanidades,Arte"],
+  ["humanidades", "Humanidades", "educacion", "AI", "4 años aprox.", "Cultura · Filosofía · Historia · Lenguaje · Interpretación", "Gusto por leer, discutir ideas y entender sociedades", "Docencia, investigación, gestión cultural y comunicación", "Bachillerato general con humanidades", "UAM|PRIVADAS", "Humanidades,Beca"],
+
+  /* Ciencias sociales y derecho */
+  ["derecho", "Derecho", "sociales", "E", "5 años aprox.", "Derecho civil · Penal · Constitucional · Procedimientos · Ética", "Argumentación, lectura constante y sentido de justicia", "Abogacía, juzgados, empresa, derecho público y consultoría", "Bachillerato general con humanidades y redacción", "UNAM|IPN|UAM|UAEMEX|PRIVADAS", "Sociales,Beca"],
+  ["economia", "Economía", "sociales", "IC", "4–5 años aprox.", "Micro · Macro · Matemáticas · Estadística · Política pública", "Gusto por datos, contexto social y análisis", "Banca, consultoría, sector público, investigación y negocios", "Bachillerato general con matemáticas", "UNAM|IPN|UAM|PRIVADAS", "Sociales,Negocios,Beca"],
+  ["sociologia", "Sociología", "sociales", "IS", "4 años aprox.", "Teoría social · Métodos · Encuestas · Cultura · Desigualdad", "Curiosidad por la sociedad, lectura y análisis", "Investigación, políticas públicas, educación y consultoría social", "Bachillerato general con humanidades y matemáticas básicas", "UNAM|UAM|PRIVADAS", "Sociales,Beca"],
+  ["cienciapolitica", "Ciencia política", "sociales", "IE", "4 años aprox.", "Instituciones · Elecciones · Política comparada · Derecho · Métodos", "Interés por lo público, análisis y debate", "Gobierno, partidos, organismos internacionales, consultoría y análisis", "Bachillerato general con humanidades", "UNAM|IPN|UAM|PRIVADAS", "Sociales,Beca"],
+  ["relaciones", "Relaciones internacionales", "sociales", "IE", "4–5 años aprox.", "Política internacional · Derecho · Economía · Idiomas · Negociación", "Gusto por el mundo, idiomas y diplomacia", "Diplomacia, organismos internacionales, comercio y análisis geopolítico", "Bachillerato general con idiomas y humanidades", "UNAM|PRIVADAS", "Sociales,Idiomas"],
+  ["administracionpublica", "Administración pública", "sociales", "EC", "4 años aprox.", "Política pública · Gestión · Finanzas · Derecho · Evaluación", "Orden, interés por lo público y trabajo con equipos", "Gobierno, dependencias, gestión de proyectos y políticas", "Bachillerato general", "UNAM|UAEMEX|PRIVADAS", "Sociales,Beca"],
+  ["criminologia", "Criminología / Seguridad ciudadana", "sociales", "IS", "4 años aprox.", "Criminología · Derecho · Psicología · Investigación · Políticas", "Análisis, interés por la justicia y trabajo en campo", "Prevención, investigación, sistema penitenciario y consultoría", "Bachillerato general con humanidades", "UAEMEX|PRIVADAS", "Sociales,Seguridad"],
+  ["geografia", "Geografía humana", "sociales", "IS", "4 años aprox.", "Territorio · Población · Cartografía · Urbanismo · SIG", "Gusto por mapas, sociedad y ambiente", "Planeación urbana, investigación, SIG y gestión territorial", "Bachillerato general con geografía", "UAM|PRIVADAS", "Sociales,Medio ambiente"],
+  ["archivonomia", "Archivonomía y biblioteconomía", "sociales", "IC", "4 años aprox.", "Archivos · Organización de información · Documentación · Bases de datos", "Orden, precisión y gusto por organizar información", "Archivos históricos, bibliotecas, transparencia y gestión documental", "Bachillerato general", "IPN|PRIVADAS", "Sociales,Cultura"],
+
+  /* Negocios y administración */
+  ["administracion", "Administración", "negocios", "EC", "4–5 años aprox.", "Contabilidad · Finanzas · Marketing · Operaciones · Recursos humanos", "Liderazgo, organización y gusto por los negocios", "Empresas, consultoría, emprendimiento y sector público", "Bachillerato general o técnico en administración", "UNAM|IPN|UAM|PRIVADAS", "Negocios,Beca"],
+  ["contaduria", "Contaduría pública", "negocios", "IC", "4–5 años aprox.", "Contabilidad · Auditoría · Finanzas · Impuestos · Normativa", "Orden, precisión y responsabilidad con cifras", "Contabilidad, auditoría, fiscal, consultoría y empresa", "Bachillerato general o técnico en contabilidad", "UNAM|IPN|PRIVADAS", "Negocios,Beca"],
+  ["finanzas", "Finanzas", "negocios", "IC", "4–5 años aprox.", "Mercados · Inversión · Riesgos · Valoración · Economía", "Disciplina, análisis numérico y visión de largo plazo", "Banca, inversión, seguros, tesorería y análisis financiero", "Bachillerato general con matemáticas", "UNAM|PRIVADAS", "Negocios"],
+  ["mercadotecnia", "Mercadotecnia y mercadotecnia digital", "negocios", "EA", "4 años aprox.", "Investigación de mercado · Marca · Publicidad · Datos · Contenido", "Creatividad, análisis de audiencias y comunicación", "Marketing digital, agencias, e-commerce, marca y ventas", "Bachillerato general o técnico en marketing", "IPN|PRIVADAS", "Negocios,Arte"],
+  ["negociosint", "Negocios internacionales y comercio", "negocios", "EC", "4–5 años aprox.", "Comercio exterior · Logística · Negociación · Idiomas · Normativa", "Gusto por otras culturas, idiomas y negociación", "Comercio exterior, exportación, logística y empresas globales", "Bachillerato general con inglés", "IPN|PRIVADAS", "Negocios,Idiomas"],
+  ["comercioelectronico", "Negocios digitales y comercio electrónico", "negocios", "EC", "4 años aprox.", "Plataformas · Analítica · Pago digital · Logística · Marketing", "Gusto por tecnología y ventas, mentalidad de prueba", "Tiendas en línea, marketplaces, startups y consultoría digital", "Bachillerato general o técnico en informática", "IPN|PRIVADAS", "Negocios,Tecnología"],
+  ["turismo", "Turismo y turismo sustentable", "negocios", "ES", "4 años aprox.", "Turismo · Hospitalidad · Cultura · Gestión · Sustentabilidad", "Gusto por viajar, atender personas y organizar experiencias", "Hotelería, agencias, destinos, eventos y turismo alternativo", "Bachillerato general o técnico en turismo", "IPN|UAEMEX|CONALEP|PRIVADAS", "Negocios,Sociales"],
+  ["rh", "Gestión de recursos humanos", "negocios", "ES", "4 años aprox.", "Selección · Capacitación · Relaciones laborales · Derecho · Organización", "Empatía, orden y habilidad para trabajar con equipos", "Reclutamiento, capacitación, clima laboral y consultoría", "Bachillerato general o técnico en administración", "PRIVADAS", "Negocios,Sociales"],
+  ["emprendimiento", "Emprendimiento e innovación", "negocios", "EA", "4 años aprox.", "Modelo de negocio · Finanzas · Marketing · Innovación · Liderazgo", "Iniciativa, tolerancia al riesgo y gusto por crear", "Creación de empresas, incubadoras, consultoría e intraemprendimiento", "Bachillerato general; útil cualquier técnica", "PRIVADAS", "Negocios,Liderazgo"],
+  ["negociosenergeticos", "Negocios energéticos sustentables", "negocios", "EC", "4 años aprox.", "Energía · Economía · Regulación · Proyectos · Sustentabilidad", "Interés por energía, análisis y gestión de proyectos", "Empresas energéticas, consultoría y proyectos sustentables", "Bachillerato general con matemáticas", "IPN|PRIVADAS", "Negocios,Medio ambiente"],
+
+  /* Artes, diseño y cultura */
+  ["arquitectura", "Arquitectura", "artes", "AR", "5 años aprox.", "Diseño · Teoría · Estructuras · Urbanismo · Taller", "Creatividad, sensibilidad espacial y precisión técnica", "Estudio de arquitectura, construcción, urbanismo y diseño", "Bachillerato general o técnico en construcción; dibujo útil", "UNAM|IPN|UAM|PRIVADAS", "Arte,Técnico"],
+  ["disenografico", "Diseño gráfico / de la comunicación", "artes", "AR", "4 años aprox.", "Tipografía · Composición · Color · Ilustración · Diseño digital", "Gusto por comunicar visualmente, ojo para el detalle", "Agencias, estudio de diseño, marcas, editorial y redes", "Bachillerato general o técnico en diseño", "UAM|PRIVADAS|CONALEP", "Arte,Tecnología"],
+  ["disenoindustrial", "Diseño industrial", "artes", "AR", "4 años aprox.", "Forma · Materiales · Ergonomía · Producto · Producción", "Creatividad aplicada, observación y gusto por objetos", "Diseño de productos, manufactura, mueble, transporte y consultoría", "Bachillerato general o técnico; dibujo y tecnología", "UAM|PRIVADAS", "Arte,Técnico"],
+  ["disenomoda", "Diseño de modas", "artes", "AR", "3–4 años aprox.", "Diseño de vestuario · Textiles · Costura · Tendencias · Producción", "Creatividad, paciencia manual y sentido estético", "Industria textil, marcas de moda, vestuario y emprendimiento", "Bachillerato general o técnico en costura o diseño", "PRIVADAS|CONALEP", "Arte,Técnico"],
+  ["musica", "Música", "artes", "A", "4–5 años aprox.", "Instrumento · Teoría · Armonía · Composición · Ensamble", "Disciplina de práctica, oído y sensibilidad", "Interpretación, enseñanza, producción musical y dirección", "Bachillerato general; experiencia musical previa recomendable", "UNAM|UAEMEX|PRIVADAS", "Arte,Liderazgo"],
+  ["danza", "Danza", "artes", "A", "4–5 años aprox.", "Técnica · Coreografía · Historia · Anatomía · Interpretación", "Disciplina corporal, constancia y expresión", "Compañías, enseñanza, coreografía y gestión cultural", "Bachillerato general; entrenamiento previo recomendable", "UNAM|UAEMEX|PRIVADAS", "Arte,Liderazgo"],
+  ["teatro", "Teatro / Artes dramáticas", "artes", "A", "4 años aprox.", "Actuación · Dirección · Guion · Voz · Historia del teatro", "Expresión, trabajo en equipo y disposición a ensayar", "Teatro, televisión, cine, dirección y enseñanza", "Bachillerato general con humanidades", "UNAM|PRIVADAS", "Arte,Liderazgo"],
+  ["cine", "Estudios cinematográficos y audiovisuales", "artes", "AR", "4 años aprox.", "Guion · Cámara · Edición · Sonido · Producción", "Gusto por contar historias, paciencia y trabajo en equipo", "Cine, televisión, publicidad, video y plataformas digitales", "Bachillerato general con humanidades", "UNAM|UAEMEX|PRIVADAS", "Arte,Tecnología"],
+  ["artesplasticas", "Artes plásticas y visuales", "artes", "A", "4 años aprox.", "Dibujo · Pintura · Escultura · Historia del arte · Taller", "Sensibilidad, constancia y curiosidad estética", "Producción artística, museos, galerías y enseñanza", "Bachillerato general con humanidades", "UNAM|PRIVADAS", "Arte,Cultura"],
+
+  /* Agro, agua y ambiente */
+  ["agronomia", "Ingeniería agronómica", "agro", "IR", "4–5 años aprox.", "Suelos · Cultivos · Genética · Maquinaria · Producción", "Gusto por la naturaleza, campo y resolver problemas", "Producción agrícola, consultoría, agroindustria y desarrollo rural", "Bachillerato técnico agropecuario o general con biología", "UNAM|UAM|UAEMEX|PRIVADAS", "Medio ambiente,Técnico,Beca"],
+  ["veterinaria", "Medicina veterinaria y zootecnia", "agro", "IS", "5 años aprox.", "Anatomía animal · Clínica · Nutrición · Reproducción · Zootecnia", "Empatía con los animales, rigor y trabajo de campo", "Clínica veterinaria, producción animal, salud pública e investigación", "Bachillerato general con biología y química", "UNAM|UAEMEX|PRIVADAS", "Salud,Medio ambiente"],
+  ["hidrobiologia", "Hidrobiología / Ciencias del agua", "agro", "IR", "4–5 años aprox.", "Ecología acuática · Química · Limnología · Peces · Laboratorio", "Curiosidad por el agua, observación y trabajo de campo", "Gestión hídrica, consultoría, investigación y conservación", "Bachillerato general con biología y química", "UAM|PRIVADAS", "Ciencias,Medio ambiente"],
+  ["agroindustrial", "Ingeniería agroindustrial y de alimentos", "agro", "IR", "4–5 años aprox.", "Alimentos · Procesos · Calidad · Microbiología · Maquinaria", "Gusto por la industria, la ciencia y el campo", "Procesamiento de alimentos, control de calidad e innovación", "Bachillerato técnico o general con ciencias", "IPN|UAM|UAEMEX|PRIVADAS", "Tecnología,Medio ambiente"],
+  ["forestal", "Ingeniería forestal y silvicultura", "agro", "IR", "4 años aprox.", "Bosques · Suelos · Ecología · Manejo · Restauración", "Gusto por el campo, la conservación y el trabajo físico", "Gestión forestal, restauración, consultoría y parques", "Bachillerato técnico agropecuario o general", "UAEMEX|PRIVADAS", "Medio ambiente,Técnico"],
+  ["clima", "Ciencias atmosféricas y meteorología", "agro", "I", "4–5 años aprox.", "Física · Atmósfera · Clima · Modelos · Datos", "Curiosidad científica, gusto por datos y observación", "Meteorología, pronósticos, cambio climático e investigación", "Bachillerato general con física y matemáticas", "IPN|UAM|PRIVADAS", "Ciencias,Medio ambiente"],
+
+  /* Defensa y seguridad */
+  ["admilitar", "Licenciatura en Administración Militar (HCM)", "defensa", "ER", "4 años, internado", "Administración · Logística · Derecho militar · Defensa · Liderazgo", "Disciplina, liderazgo, resistencia física y sentido del servicio", "Oficial del Ejército: logística, administración y mando", "Requiere bachillerato terminado con promedio mínimo 7.0; NO es preparatoria", "SEDENA", "Militar,Liderazgo,Beca"],
+  ["seguridadpublica", "Licenciatura en Seguridad Pública (HCM)", "defensa", "ER", "4 años, internado", "Seguridad · Derecho · Inteligencia · Mando · Defensa", "Disciplina, responsabilidad, liderazgo y resistencia", "Oficial del Ejército en seguridad pública y protección ciudadana", "Requiere bachillerato terminado con promedio mínimo 7.0; NO es preparatoria", "SEDENA", "Militar,Liderazgo,Beca"],
+  ["seguridadciudadana", "Seguridad ciudadana y prevención", "defensa", "ES", "4 años aprox.", "Prevención · Políticas · Comunidad · Derecho · Análisis", "Interés por la convivencia, análisis y trabajo social", "Policía municipal/estatal, prevención, gestiones de riesgo y consultoría", "Bachillerato general con humanidades", "UAEMEX|PRIVADAS", "Seguridad,Sociales"],
+  ["inteligencia", "Análisis de inteligencia y ciberseguridad", "defensa", "IC", "4 años aprox.", "Datos · Redes · Criptografía · Análisis · Derecho", "Rigor, discreción, lógica y gusto por la tecnología", "Ciberseguridad, análisis de riesgos, defensa y sector financiero", "Bachillerato general con matemáticas y computación", "IPN|PRIVADAS", "Seguridad,Tecnología"],
+
+  /* Carreras técnicas (puente rápido al trabajo) */
+  ["tecprogramacion", "Técnico en programación", "tecnica", "IC", "3 años de prepa técnica", "Programación · Bases de datos · Páginas web · Soporte", "Lógica, práctica constante y gusto por resolver", "Desarrollo junior, soporte técnico, contenido web y continuidad a ingeniería", "Bachillerato técnico; después puedes continuar a licenciatura", "CBTIS|CONALEP|IPN", "Técnico,Tecnología,Beca"],
+  ["tecelectronica", "Técnico en electrónica", "tecnica", "IR", "3 años de prepa técnica", "Circuitos · Soldadura · Electrónica digital · Mantenimiento", "Manualidad, precisión y paciencia", "Mantenimiento, instalaciones, reparación y continuidad a ingeniería", "Bachillerato técnico con física básica", "CBTIS|CONALEP", "Técnico,Tecnología"],
+  ["tecenfermeria", "Técnico en enfermería", "tecnica", "SR", "3 años de prepa técnica", "Cuidado básico · Farmacología · Primeros auxilios · Práctica", "Empatía, responsabilidad y disposición para atender", "Hospitales, clínicas, consultorios y continuidad a enfermería", "Bachillerato técnico en salud", "CONALEP|CBTIS|PRIVADAS", "Técnico,Salud"],
+  ["tecconta", "Técnico en contabilidad", "tecnica", "IC", "3 años de prepa técnica", "Contabilidad · Nómina · Impuestos · Excel · Facturación", "Orden, precisión y responsabilidad", "Despachos contables, área financiera y continuidad a contaduría", "Bachillerato técnico en administración", "CONALEP|CBTIS", "Técnico,Negocios"],
+  ["tecturismo", "Técnico en turismo y hospitalidad", "tecnica", "ES", "3 años de prepa técnica", "Atención al cliente · Guianza · Reservaciones · Eventos", "Gusto por tratar con personas e idiomas", "Hoteles, agencias, eventos y guías turísticos", "Bachillerato técnico en turismo", "CONALEP|CBTIS", "Técnico,Negocios"],
+  ["tecautomotriz", "Técnico en mantenimiento automotriz", "tecnica", "IR", "3 años de prepa técnica", "Motores · Frenos · Electricidad · Diagnóstico · Herramientas", "Manualidad, fuerza y gusto por resolver fallas", "Talleres, agencias, flotillas y continuidad a ingeniería automotriz", "Bachillerato técnico automotriz", "CONALEP|CBTIS", "Técnico,Tecnología"],
+  ["teccocina", "Técnico en cocina y gastronomía", "tecnica", "R", "3 años de prepa técnica", "Cocina · Higiene · Repostería · Costos · Servicio", "Paciencia, precisión, trabajo en equipo y resistencia", "Restaurantes, hoteles, catering y emprendimiento gastronómico", "Bachillerato técnico en gastronomía", "CONALEP|PRIVADAS", "Técnico,Negocios"],
+  ["tecdiseno", "Técnico en diseño digital y multimedia", "tecnica", "AR", "3 años de prepa técnica", "Diseño vectorial · Edición · Video · Redes · Portafolio", "Creatividad, ojo visual y disposición a aprender herramientas", "Agencias, redes sociales, impresión y continuidad a diseño", "Bachillerato técnico en diseño o comunicación", "CONALEP|CBTIS|PRIVADAS", "Técnico,Arte,Tecnología"]
+];
+
+export const CAREERS = CAREER_ROWS.map((row, index) => {
+  const item = Object.fromEntries(CAREER_FIELDS.map((key, i) => [key, row[i] || ""]));
+  item._i = index;
+  item.riasecList = (item.riasec || "").split("").filter(Boolean);
+  item.instList = (item.instituciones || "").split("|").filter(Boolean);
+  item.tagList = (item.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+  return item;
+});
+
+export const CAREER_BY_ID = Object.fromEntries(CAREERS.map((career) => [career.id, career]));
+
+export const CAREER_SORT = [
+  ["afinidad", "Mejor afinidad con mi perfil"],
+  ["az", "Alfabético"],
+  ["duracion", "Duración (más corta primero)"],
+  ["area", "Por área"]
+];
+
+/* Puente pedagógico: cada habilidad del curso se conecta con carreras reales. */
+export const COURSE_BRIDGE_NOTE = 'El examen de Español no es solo un requisito: cada unidad fortalece competencias que usarás al estudiar una carrera, presentar un examen de admisión o defender un proyecto. Elige una habilidad y abre las carreras donde más te servirá.';
+
+export const COURSE_BRIDGE = [
+  { icon: '📖', skill: 'Comprensión lectora', use: 'Entender consignas, problemas y textos largos sin perder la idea central.', careers: ['derecho', 'periodismo', 'psicologia', 'cienciapolitica'] },
+  { icon: '✍️', skill: 'Redacción y argumentación', use: 'Escribir ensayos, reportes, solicitudes y defender una postura con razones.', careers: ['letras', 'comunicacion', 'derecho', 'humanidades'] },
+  { icon: '🔤', skill: 'Ortografía y gramática', use: 'Comunicarte con claridad en correos, informes, clases y entrevistas.', careers: ['ingles', 'pedagogia', 'administracion', 'periodismo'] },
+  { icon: '🔎', skill: 'Análisis de información', use: 'Contrastar fuentes, detectar sesgos y sacar conclusiones de los datos.', careers: ['datos', 'economia', 'estadistica', 'sociologia'] },
+  { icon: '🧠', skill: 'Vocabulario y lenguaje técnico', use: 'Leer manuales, fichas clínicas y documentos especializados.', careers: ['medico', 'civil', 'biomedica', 'tecprogramacion'] },
+  { icon: '🗣️', skill: 'Expresión oral y debate', use: 'Explicar ideas, participar en entrevistas y presentar proyectos.', careers: ['negocios', 'relaciones', 'teatro', 'educacioninicial'] }
+];
+
+/* =====================================================================
    Agrupación única para consumo desde la app nueva.
    Procedencia: sistema2.js (legacy).
    ===================================================================== */
@@ -933,5 +1112,13 @@ export const VOCATIONAL_CATALOG = {
   careerGuideHtml: CAREER_GUIDE_HTML,
   studyPlans: STUDY_PLANS,
   studyPlanSelectors: STUDY_PLAN_SELECTORS,
-  technicianPrograms: TECHNICIAN_PROGRAMS
+  technicianPrograms: TECHNICIAN_PROGRAMS,
+  careerAreas: CAREER_AREAS,
+  careerProviders: CAREER_PROVIDERS,
+  careerNote: CAREER_NOTE,
+  careers: CAREERS,
+  careerById: CAREER_BY_ID,
+  careerSort: CAREER_SORT,
+  courseBridge: COURSE_BRIDGE,
+  courseBridgeNote: COURSE_BRIDGE_NOTE
 };

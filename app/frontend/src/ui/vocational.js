@@ -17,11 +17,14 @@ const RESULTS_KEY = 'ecoems_vocational_riasec_v2';
 const RESULT_KEY = RESULTS_KEY + ':result';
 const CONTEXT_KEY = 'ecoems_vocational_context_v1';
 const CHECKLIST_KEY = 'ecoems_vocational_checklist_v1';
+const CAREER_SAVED_KEY = 'ecoems_vocational_careers_v1';
+const CAREER_COMPARE_KEY = 'ecoems_vocational_compare_v1';
 
 const TABS = [
   { id: 'inicio', label: 'Inicio', icon: '🏠' },
   { id: 'test', label: 'Descúbrete', icon: '🧭' },
-  { id: 'escuelas', label: 'Escuelas y carreras', icon: '🎓' },
+  { id: 'escuelas', label: 'Escuelas', icon: '🎓' },
+  { id: 'carreras', label: 'Super catálogo de carreras', icon: '🧩' },
   { id: 'expos', label: 'Expos y fechas', icon: '📅' },
   { id: 'universidades', label: 'Universidades', icon: '🏛️' },
   { id: 'planes', label: 'Planes y técnicas', icon: '📘' },
@@ -84,6 +87,10 @@ function unique(items) {
   return [...new Set((items || []).filter(Boolean))];
 }
 
+function norm(value) {
+  return String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function countTechnicianPrograms() {
   return Object.values(V.technicianPrograms).reduce(
     (sum, institution) => sum + (institution.carreras?.length || 0),
@@ -139,6 +146,9 @@ export function openVocationalWorkshop(root, { onClose, readOnly = false, standa
     standalone,
     tab: 'inicio',
     filters: { q: '', inst: '', tipo: '', tag: '', dist: 'todas', sector: '', costo: '' },
+    careerFilters: { q: '', area: '', inst: '', sort: 'afinidad', affinity: false, saved: false },
+    savedCareers: readStorage(CAREER_SAVED_KEY, []) || [],
+    compareCareers: readStorage(CAREER_COMPARE_KEY, []) || [],
     plan: 'UNAM_ENP',
     techInst: 'IPN',
     answers: loadAnswers(),
@@ -319,6 +329,240 @@ function rankedSchools(list, result, ctx) {
     .sort((a, b) => b.affinity.score - a.affinity.score || (a.school._i ?? 0) - (b.school._i ?? 0));
 }
 
+/* ---------- Super catálogo de carreras ---------- */
+
+function careerAffinity(career, result, ctx) {
+  const reasons = [];
+  let score = 0;
+
+  (result?.top || []).slice(0, 3).forEach((item, index) => {
+    if (!career.riasecList.includes(item.id) || item.value <= 0) return;
+    const type = V.riasecById[item.id];
+    score += [5, 3, 2][index];
+    reasons.push(`${type.icon} ${type.nombre}: coincide con tu perfil`);
+  });
+
+  ctx.tags.forEach((tag) => {
+    if (!career.tagList.includes(tag)) return;
+    score += 2;
+    reasons.push(`Coincide con tu respuesta: ${tag}`);
+  });
+
+  if (ctx.values.modalidad === 'tecnico' && career.area === 'tecnica') {
+    score += 3;
+    reasons.push('Opción técnica que pediste explorar');
+  }
+  if (ctx.values.modalidad === 'general' && career.area !== 'tecnica') {
+    score += 2;
+    reasons.push('Licenciatura flexible desde bachillerato general');
+  }
+
+  const militar = ctx.values.militar;
+  const esMilitar = career.instList.includes('SEDENA');
+  if (esMilitar && ['si', 'informarme', 'nose'].includes(militar)) {
+    score += 4;
+    reasons.push('Opción militar que pediste explorar');
+  } else if (esMilitar && militar === 'no') {
+    score -= 6;
+  }
+
+  return { score, reasons: unique(reasons).slice(0, 3) };
+}
+
+function rankedCareers(list, result, ctx) {
+  return list
+    .map((career) => ({ career, affinity: careerAffinity(career, result, ctx) }))
+    .sort((a, b) => b.affinity.score - a.affinity.score || a.career._i - b.career._i);
+}
+
+function filteredCareers(result, ctx) {
+  const f = workshop.careerFilters;
+  const query = norm(f.q).trim();
+  let items = rankedCareers(V.careers, result, ctx);
+
+  items = items.filter(({ career, affinity }) => {
+    if (query && !norm(`${career.nombre} ${career.materias} ${career.perfil} ${career.salida} ${career.tagList.join(' ')}`).includes(query)) return false;
+    if (f.area && career.area !== f.area) return false;
+    if (f.inst && !career.instList.includes(f.inst)) return false;
+    if (f.saved && !workshop.savedCareers.includes(career.id)) return false;
+    if (f.affinity && affinity.score <= 0) return false;
+    return true;
+  });
+
+  const sorters = {
+    afinidad: (a, b) => b.affinity.score - a.affinity.score || a.career._i - b.career._i,
+    az: (a, b) => a.career.nombre.localeCompare(b.career.nombre, 'es'),
+    duracion: (a, b) => (parseInt(a.career.duracion, 10) || 9) - (parseInt(b.career.duracion, 10) || 9),
+    area: (a, b) => a.career.area.localeCompare(b.career.area, 'es') || a.career.nombre.localeCompare(b.career.nombre, 'es')
+  };
+  return items.sort(sorters[f.sort] || sorters.afinidad);
+}
+
+function careerCodeMarkup(career) {
+  return career.riasecList.map((id) => {
+    const type = V.riasecById[id];
+    if (!type) return '';
+    return `<span class="voc-career-code" style="--code:${type.color}" title="${esc(type.nombre)}">${esc(id)}</span>`;
+  }).join('');
+}
+
+function careerProvidersMarkup(career) {
+  return career.instList.map((code) => {
+    const provider = V.careerProviders[code];
+    if (!provider) return '';
+    return `<a class="pill voc-provider" href="${esc(provider.url)}" target="_blank" rel="noopener" title="${esc(provider.nota)}">${esc(provider.nombre)} ↗</a>`;
+  }).join('');
+}
+
+function careerCardMarkup(item) {
+  const career = item.career;
+  const area = V.careerAreas.find((entry) => entry.id === career.area) || { icon: '🎯', nombre: career.area };
+  const saved = workshop.savedCareers.includes(career.id);
+  const compared = workshop.compareCareers.includes(career.id);
+
+  return `
+    <article class="voc-career-card">
+      <header>
+        <span class="pill">${area.icon} ${esc(area.nombre)}</span>
+        <h3>${esc(career.nombre)}</h3>
+        <p class="voc-career-meta">⏱ ${esc(career.duracion)} <span class="voc-career-codes">${careerCodeMarkup(career)}</span></p>
+      </header>
+      ${item.affinity.reasons.length ? `<div class="voc-career-why">${item.affinity.reasons.map((reason) => `<span>✓ ${esc(reason)}</span>`).join('')}</div>` : ''}
+      <dl class="voc-career-facts">
+        <dt>Qué se estudia</dt><dd>${esc(career.materias)}</dd>
+        <dt>Perfil</dt><dd>${esc(career.perfil)}</dd>
+        <dt>Qué harás</dt><dd>${esc(career.salida)}</dd>
+        <dt>Bachillerato recomendado</dt><dd>${esc(career.prepa)}</dd>
+      </dl>
+      <div class="voc-career-providers">
+        <strong>Dónde estudiarla</strong>
+        <div class="row">${careerProvidersMarkup(career)}</div>
+        ${career.instList.includes('SEDENA') ? '<p class="voc-warn">🎖️ Es una licenciatura militar: requiere bachillerato terminado. No es una preparatoria.</p>' : ''}
+      </div>
+      <div class="row voc-career-actions">
+        <button class="btn ghost" data-voc-action="career-save" data-id="${esc(career.id)}" aria-pressed="${saved}">${saved ? '★ Guardada' : '☆ Guardar en mi lista'}</button>
+        <button class="btn ghost" data-voc-action="career-compare" data-id="${esc(career.id)}" aria-pressed="${compared}">${compared ? '✓ En comparador' : '＋ Comparar'}</button>
+        <button class="btn ghost" data-voc-action="filter-inst-career" data-inst="${esc(career.instList[0] || '')}">Ver más de ${esc(V.careerProviders[career.instList[0]]?.nombre || 'esta institución')}</button>
+      </div>
+    </article>
+  `;
+}
+
+function careerCompareMarkup() {
+  const selected = workshop.compareCareers.map((id) => V.careerById[id]).filter(Boolean);
+  if (!selected.length) {
+    return '<div class="voc-note"><strong>Mi comparador.</strong> Agrega hasta 3 carreras con el botón «Comparar» para verlas lado a lado.</div>';
+  }
+  const fields = [
+    ['Área', (c) => V.careerAreas.find((a) => a.id === c.area)?.nombre || c.area],
+    ['Duración', (c) => c.duracion],
+    ['RIASEC', (c) => c.riasecList.map((id) => V.riasecById[id]?.nombre || id).join(', ')],
+    ['Qué se estudia', (c) => c.materias],
+    ['Perfil', (c) => c.perfil],
+    ['Qué harás', (c) => c.salida],
+    ['Bachillerato recomendado', (c) => c.prepa],
+    ['Dónde estudiarla', (c) => c.instList.map((code) => V.careerProviders[code]?.nombre || code).join(', ')]
+  ];
+  return `
+    <div class="voc-compare-scroll">
+      <table class="voc-compare-table">
+        <thead><tr><th>Aspecto</th>${selected.map((c) => `<th>${esc(c.nombre)} <button class="voc-remove" data-voc-action="career-uncompare" data-id="${esc(c.id)}" aria-label="Quitar ${esc(c.nombre)} del comparador">×</button></th>`).join('')}</tr></thead>
+        <tbody>${fields.map(([label, get]) => `<tr><th>${esc(label)}</th>${selected.map((c) => `<td>${esc(get(c))}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function careersPanel() {
+  const result = currentResult();
+  const ctx = contextProfile();
+  const top = rankedCareers(V.careers, result, ctx).filter((item) => item.affinity.score > 0).slice(0, 6);
+  const items = filteredCareers(result, ctx);
+  const f = workshop.careerFilters;
+
+  return `
+    <article class="card wide voc-panel">
+      <div class="card-heading">
+        <div>
+          <span class="card-label">Explora a fondo</span>
+          <h2>Super catálogo de carreras</h2>
+        </div>
+        <span class="pill">${V.careers.length} carreras · ${V.careerAreas.length} áreas · ${Object.keys(V.careerProviders).length} fuentes</span>
+      </div>
+      <div class="voc-note rich">${rich(V.careerNote)}</div>
+
+      ${top.length ? `
+        <section class="voc-subsection">
+          <div class="voc-subhead">
+            <h3>Mejores coincidencias para ti</h3>
+            <span class="pill success">Según tu Descúbrete</span>
+          </div>
+          <p class="muted">Ordenadas por afinidad con tus respuestas. Puedes explorarlas todas más abajo.</p>
+          <div class="voc-career-matches">
+            ${top.map((item, index) => `
+              <button class="voc-career-match" data-voc-action="career-focus" data-id="${esc(item.career.id)}">
+                <span class="voc-match-rank">${index + 1}</span>
+                <strong>${esc(item.career.nombre)}</strong>
+                <small>${esc(item.affinity.reasons[0] || 'Carrera afín a tu perfil')}</small>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+      ` : '<div class="voc-note">Responde «Descúbrete» para ver aquí tus mejores coincidencias. Mientras tanto puedes explorar y filtrar todo el catálogo.</div>'}
+
+      <section class="voc-subsection">
+        <div class="voc-subhead"><h3>Busca y filtra</h3><span class="pill">${items.length} resultados</span></div>
+        <div class="voc-career-filters">
+          <label><span>Buscar</span><input id="career-q" data-career-filter="q" value="${esc(f.q)}" placeholder="Ej. salud, datos, derecho, técnico"></label>
+          <label><span>Área</span><select data-career-filter="area">
+            <option value="">Todas las áreas</option>
+            ${V.careerAreas.map((area) => `<option value="${esc(area.id)}" ${f.area === area.id ? 'selected' : ''}>${area.icon} ${esc(area.nombre)}</option>`).join('')}
+          </select></label>
+          <label><span>Institución</span><select data-career-filter="inst">
+            <option value="">Todas</option>
+            ${Object.entries(V.careerProviders).map(([code, provider]) => `<option value="${esc(code)}" ${f.inst === code ? 'selected' : ''}>${esc(provider.nombre)}</option>`).join('')}
+          </select></label>
+          <label><span>Ordenar</span><select data-career-filter="sort">
+            ${V.careerSort.map(([value, label]) => `<option value="${esc(value)}" ${f.sort === value ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+          </select></label>
+          <label class="voc-check-label"><input type="checkbox" data-career-filter="affinity" ${f.affinity ? 'checked' : ''}> Solo afines a mi perfil</label>
+          <label class="voc-check-label"><input type="checkbox" data-career-filter="saved" ${f.saved ? 'checked' : ''}> Solo mis guardadas (${workshop.savedCareers.length})</label>
+          <button class="btn ghost" data-voc-action="reset-career-filters">Limpiar filtros</button>
+        </div>
+      </section>
+
+      <section class="voc-subsection">
+        <h3>Carreras</h3>
+        <div class="voc-career-grid">
+          ${items.length ? items.map(careerCardMarkup).join('') : '<div class="voc-note">No hay carreras con esos filtros. Prueba con otra palabra o limpia los filtros.</div>'}
+        </div>
+      </section>
+
+      <section class="voc-subsection">
+        <div class="voc-subhead">
+          <h3>Mi comparador</h3>
+          <span class="pill">${workshop.compareCareers.length}/3 seleccionadas</span>
+        </div>
+        ${careerCompareMarkup()}
+      </section>
+
+      <section class="voc-subsection">
+        <h3>Fuentes oficiales</h3>
+        <p class="muted">Abre el catálogo de cada institución para confirmar oferta vigente, sede, duración y fechas. No inventes requisitos ni montos: verifícalos en la fuente.</p>
+        <div class="voc-source-list">
+          ${Object.values(V.careerProviders).map((provider) => `
+            <a href="${esc(provider.url)}" target="_blank" rel="noopener"><strong>${esc(provider.nombre)} ↗</strong><small>${esc(provider.nota)}</small></a>
+          `).join('')}
+        </div>
+        <div class="row voc-dashboard-actions">
+          <button class="btn ghost" data-voc-go="universidades">Comparar instituciones →</button>
+          <button class="btn ghost" data-voc-go="escuelas">Ver escuelas y bachilleratos →</button>
+        </div>
+      </section>
+    </article>
+  `;
+}
+
 function render() {
   if (!workshop) return;
 
@@ -383,6 +627,7 @@ function panelMarkup() {
   switch (workshop.tab) {
     case 'test': return testPanel();
     case 'escuelas': return schoolsPanel();
+    case 'carreras': return careersPanel();
     case 'expos': return exposPanel();
     case 'universidades': return universitiesPanel();
     case 'planes': return plansPanel();
@@ -403,6 +648,10 @@ function homePanel() {
         <button class="voc-home-tile" data-voc-go="escuelas">
           <span>🎓</span><strong>Compara escuelas</strong>
           <small>Públicas, privadas y militares. Si ya respondiste Descúbrete, verás arriba las que mejor encajan contigo.</small>
+        </button>
+        <button class="voc-home-tile" data-voc-go="carreras">
+          <span>🧩</span><strong>Super catálogo de carreras</strong>
+          <small>${V.careers.length} carreras: qué se estudia, duración, salidas, bachillerato recomendado y dónde cursarlas con fuentes oficiales.</small>
         </button>
         <button class="voc-home-tile" data-voc-go="expos">
           <span>📅</span><strong>Expos y fechas</strong>
@@ -451,7 +700,8 @@ function testPanel() {
       <div class="row voc-test-actions">
         <button class="btn ghost" data-voc-action="clear-riasec" ${answered ? '' : 'disabled'}>Borrar respuestas RIASEC</button>
         <button class="btn ghost" data-voc-action="clear-context" ${ctx.answered ? '' : 'disabled'}>Borrar contexto</button>
-        ${(result || ctx.answered) ? '<button class="btn primary" data-voc-action="go-matches">Ver mis mejores opciones →</button>' : ''}
+        ${(result || ctx.answered) ? '<button class="btn primary" data-voc-action="go-matches">Ver mis mejores escuelas →</button>' : ''}
+        ${(result || ctx.answered) ? '<button class="btn primary" data-voc-action="go-career-matches">Ver carreras para mí →</button>' : ''}
       </div>
       <p class="hint">${workshop.readOnly ? 'Estás explorando en modo invitado.' : 'Tus respuestas se guardan automáticamente en este dispositivo.'} No se modifican tus calificaciones ni tu ficha.</p>
 
@@ -990,6 +1240,28 @@ function decisionPanel() {
       </section>
 
       <section class="voc-subsection">
+        <div class="voc-subhead">
+          <h3>Lo que aprendes en el curso te abre puertas</h3>
+          <span class="pill">Curso ↔ carreras</span>
+        </div>
+        <p class="muted">${esc(V.courseBridgeNote)}</p>
+        <div class="voc-bridge-grid">
+          ${V.courseBridge.map((bridge) => `
+            <article class="voc-bridge-card">
+              <header><span aria-hidden="true">${bridge.icon}</span><h4>${esc(bridge.skill)}</h4></header>
+              <p>${esc(bridge.use)}</p>
+              <div class="row voc-bridge-careers">
+                ${bridge.careers.map((id) => {
+                  const career = V.careerById[id];
+                  return career ? `<button class="pill" data-voc-action="career-focus" data-id="${esc(id)}">${esc(career.nombre)} →</button>` : '';
+                }).join('')}
+              </div>
+            </article>
+          `).join('')}
+        </div>
+      </section>
+
+      <section class="voc-subsection">
         <h3>Preparación para el futuro</h3>
         <div class="voc-note rich">${rich(V.careerGuide.examPreparation)}</div>
         <div class="row voc-dashboard-actions">
@@ -1049,6 +1321,16 @@ function bindPanel() {
     field.addEventListener(eventName, () => {
       workshop.filters[key] = field.value;
       if (field.tagName === 'INPUT') workshop.focusSearch = true;
+      refreshPanel();
+    });
+  });
+
+  panel.querySelectorAll('[data-career-filter]').forEach((field) => {
+    const key = field.dataset.careerFilter;
+    const eventName = field.type === 'checkbox' ? 'change' : (field.tagName === 'INPUT' ? 'input' : 'change');
+    field.addEventListener(eventName, () => {
+      workshop.careerFilters[key] = field.type === 'checkbox' ? field.checked : field.value;
+      if (field.tagName === 'INPUT' && field.type !== 'checkbox') workshop.focusSearch = true;
       refreshPanel();
     });
   });
@@ -1113,7 +1395,7 @@ function refreshPanel() {
   panel.innerHTML = panelMarkup();
   bindPanel();
   if (workshop.focusSearch) {
-    const input = panel.querySelector('#voc-q');
+    const input = panel.querySelector(workshop.tab === 'carreras' ? '#career-q' : '#voc-q');
     if (input) {
       input.focus();
       input.setSelectionRange(input.value.length, input.value.length);
@@ -1144,6 +1426,61 @@ function handleAction(action, dataset) {
 
   if (action === 'go-matches') {
     workshop.tab = 'escuelas';
+    render();
+    return;
+  }
+
+  if (action === 'go-career-matches') {
+    workshop.tab = 'carreras';
+    render();
+    return;
+  }
+
+  if (action === 'career-focus') {
+    workshop.careerFilters = { q: '', area: '', inst: '', sort: 'afinidad', affinity: false, saved: false };
+    const career = V.careerById[dataset.id];
+    if (career) workshop.careerFilters.q = career.nombre;
+    workshop.tab = 'carreras';
+    render();
+    return;
+  }
+
+  if (action === 'career-save') {
+    const set = new Set(workshop.savedCareers);
+    if (set.has(dataset.id)) set.delete(dataset.id);
+    else set.add(dataset.id);
+    workshop.savedCareers = [...set];
+    writeStorage(CAREER_SAVED_KEY, workshop.savedCareers);
+    refreshPanel();
+    return;
+  }
+
+  if (action === 'career-compare') {
+    const set = new Set(workshop.compareCareers);
+    if (set.has(dataset.id)) set.delete(dataset.id);
+    else if (set.size < 3) set.add(dataset.id);
+    workshop.compareCareers = [...set];
+    writeStorage(CAREER_COMPARE_KEY, workshop.compareCareers);
+    refreshPanel();
+    return;
+  }
+
+  if (action === 'career-uncompare') {
+    workshop.compareCareers = workshop.compareCareers.filter((id) => id !== dataset.id);
+    writeStorage(CAREER_COMPARE_KEY, workshop.compareCareers);
+    refreshPanel();
+    return;
+  }
+
+  if (action === 'reset-career-filters') {
+    workshop.careerFilters = { q: '', area: '', inst: '', sort: 'afinidad', affinity: false, saved: false };
+    refreshPanel();
+    return;
+  }
+
+  if (action === 'filter-inst-career') {
+    workshop.careerFilters = { q: '', area: '', inst: dataset.inst || '', sort: 'afinidad', affinity: false, saved: false };
+    workshop.tab = 'carreras';
     render();
     return;
   }

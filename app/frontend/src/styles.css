@@ -5447,7 +5447,253 @@ body.unit-assign-open {
   margin: 4px 0;
 }
 
+/* ---------------- Super catálogo de carreras ---------------- */
+.voc-career-matches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 9px;
+}
+
+.voc-career-match {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  align-items: start;
+  padding: 11px 12px;
+  border: 1px solid var(--brand);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.voc-career-match:hover { background: var(--focus-ring); }
+.voc-career-match strong { font-size: 13px; }
+.voc-career-match small { grid-column: 2; color: var(--muted); font-size: 11px; }
+
+.voc-match-rank {
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.voc-career-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.voc-career-filters label > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.voc-check-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.voc-check-label input { accent-color: var(--brand); }
+
+.voc-career-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.voc-career-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--panel-2);
+}
+
+.voc-career-card > header { display: grid; gap: 7px; }
+.voc-career-card > header > .pill { justify-self: start; }
+.voc-career-card h3 { margin: 0; font-size: 15px; line-height: 1.3; }
+
+.voc-career-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.voc-career-codes { display: inline-flex; gap: 4px; }
+
+.voc-career-code {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--code, var(--brand));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.voc-career-why {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 9px;
+  border: 1px dashed var(--brand);
+  border-radius: 10px;
+  background: var(--focus-ring);
+}
+
+.voc-career-why span { font-size: 11px; font-weight: 700; }
+
+.voc-career-facts {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.voc-career-facts dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.voc-career-facts dd { margin: 0; line-height: 1.45; }
+
+.voc-career-providers {
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.voc-career-providers > strong { font-size: 12px; }
+.voc-provider { text-decoration: none; }
+.voc-warn { margin: 0; color: #B45309; font-size: 11px; font-weight: 700; }
+.voc-career-actions { flex-wrap: wrap; }
+.voc-career-actions .btn { padding: 7px 10px; font-size: 11.5px; }
+
+.voc-compare-scroll { overflow-x: auto; margin-top: 12px; }
+
+.voc-compare-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.voc-compare-table th,
+.voc-compare-table td {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.voc-compare-table thead th { background: var(--brand); color: #fff; }
+.voc-compare-table tbody th { width: 150px; color: var(--muted); font-size: 11px; }
+.voc-compare-table td { background: var(--panel); line-height: 1.45; }
+
+.voc-remove {
+  margin-left: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 20%);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+}
+
+.voc-source-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 9px;
+  margin: 12px 0;
+}
+
+.voc-source-list a {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.voc-source-list a:hover { border-color: var(--brand); }
+.voc-source-list small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+.voc-bridge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.voc-bridge-card {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel-2);
+}
+
+.voc-bridge-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voc-bridge-card > header > span { font-size: 20px; }
+.voc-bridge-card h4 { margin: 0; font-size: 13.5px; }
+.voc-bridge-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.voc-bridge-careers { flex-wrap: wrap; }
+.voc-bridge-careers .pill { border: 0; cursor: pointer; font-size: 10.5px; }
+.voc-bridge-careers .pill:hover { background: var(--brand); color: #fff; }
+
 @media (max-width: 980px) {
+  .voc-career-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .voc-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .voc-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .voc-match-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -5462,7 +5708,12 @@ body.unit-assign-open {
   .voc-expo-grid,
   .voc-fair-grid,
   .voc-decision-grid,
-  .voc-match-grid { grid-template-columns: 1fr; }
+  .voc-match-grid,
+  .voc-career-matches,
+  .voc-career-grid,
+  .voc-career-filters,
+  .voc-source-list,
+  .voc-bridge-grid { grid-template-columns: 1fr; }
   .voc-scale { grid-template-columns: repeat(5, minmax(42px, 1fr)); overflow-x: auto; }
   .voc-tab { padding: 8px 11px; font-size: 12px; }
 }
