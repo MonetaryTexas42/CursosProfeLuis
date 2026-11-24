@@ -1063,7 +1063,7 @@ export const COURSE_BRIDGE = [
   { icon: '🔤', skill: 'Ortografía y gramática', use: 'Comunicarte con claridad en correos, informes, clases y entrevistas.', careers: ['ingles', 'pedagogia', 'administracion', 'periodismo'] },
   { icon: '🔎', skill: 'Análisis de información', use: 'Contrastar fuentes, detectar sesgos y sacar conclusiones de los datos.', careers: ['datos', 'economia', 'estadistica', 'sociologia'] },
   { icon: '🧠', skill: 'Vocabulario y lenguaje técnico', use: 'Leer manuales, fichas clínicas y documentos especializados.', careers: ['medico', 'civil', 'biomedica', 'tecprogramacion'] },
-  { icon: '🗣️', skill: 'Expresión oral y debate', use: 'Explicar ideas, participar en entrevistas y presentar proyectos.', careers: ['negocios', 'relaciones', 'teatro', 'educacioninicial'] }
+  { icon: '🗣️', skill: 'Expresión oral y debate', use: 'Explicar ideas, participar en entrevistas y presentar proyectos.', careers: ['administracion', 'relaciones', 'teatro', 'educacioninicial'] }
 ];
 
 /* =====================================================================
