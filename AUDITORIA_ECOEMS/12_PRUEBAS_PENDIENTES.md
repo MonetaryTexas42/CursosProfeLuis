@@ -794,6 +794,14 @@ su cuenta y en familia. El profesorado conserva la vista previa del examen y el
 acceso al taller desde el sidebar. Queda pendiente solo la revisión visual con
 cuentas reales, ya registrada como no bloqueante en OPS-50.
 
+### 8.9. Super catálogo de carreras y puente curso-carrera (23 nov 2026)
+
+| # | Prueba | Resultado |
+|---|---|---|
+| OPS-69 | Catálogo de carreras, dónde estudiarlas y pedagogía del curso | `vocational-data.js` añade **92 carreras en 10 áreas**, 8 proveedores con catálogo oficial (UNAM, IPN, UAM, UAEMéx, SEDENA, CONALEP, CBTIS, privadas), duración aproximada, materias representativas, perfil, salidas, bachillerato recomendado y etiquetas por cada carrera. `vocational.js` añade la pestaña «Super catálogo de carreras», coincidencias desde «Descúbrete», filtros por texto/área/institución/afinidad/guardadas, orden, lista persistida en `localStorage` (`ecoems_vocational_careers_v1`), comparador de hasta 3 carreras (`ecoems_vocational_compare_v1`) y enlaces a cada fuente oficial. Las dos licenciaturas del Heroico Colegio Militar conservan la advertencia «requiere bachillerato terminado; no es preparatoria». Se agregó el puente «Lo que aprendes en el curso te abre puertas»: 6 competencias de Español conectadas con 24 carreras reales del catálogo. Validación local: build SUCCESS, `git diff --check` OK, 92 filas válidas, IDs únicos, 6/6 puentes sin referencias rotas, búsqueda y afinidad probadas. Commit `5461ed5` (y `7168a15` con la corrección de una referencia), sin `[skip ci]`; run `45319437703` y Pages `45319529446` en SUCCESS; run final `45319661526` y Pages `45319727318` en SUCCESS (18 pasos SUCCESS y 2 SKIP de staging); etiqueta `deploy-7168a15`; `gh-pages` en `82454a8`. Verificación en vivo: las cinco rutas → 200; bundles `main-s4UyFzJI.js`, `vocacional-WALiri_e.js`, `vocational-BmP6VPRR.js` y `vocational-Cm1bKQAC.css` con los marcadores del catálogo, comparador y puente; guía `966fb846…d4094` y aviso `85d13859…f740b` inalterados. Base sin cambios: 43/43 migraciones, 96 políticas, 116 funciones, 0 definers sin `search_path`. |
+
+**Resultado:** el estudiante puede pasar de «me gusta esto» a «existe esta carrera, se estudia esto, dura esto y puedo cursarla aquí», guardar y comparar opciones, y entender para qué le sirve lo que está viendo en el curso. Sigue sin escribirse en la base y sin sustituir el test vocacional oficial. La revisión visual con cuentas reales permanece como OPS-50, no bloqueante.
+
 ---
 
 ## 10. Matriz de cobertura

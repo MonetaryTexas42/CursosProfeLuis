@@ -50,7 +50,10 @@ profesorado y la página propia del vocacional (`deploy-f4bc229`, run
 `45074991966`; build de Pages `45075032798`). Al final se añadió el acceso en
 el sidebar del staff (`deploy-a5630a9`, run `45076042391`; Pages `45076128140`)
 y la ampliación del taller vocacional (`deploy-f83ebb9`, run `45084537069`;
-Pages `45084579025`). Todos los runs terminaron en SUCCESS.
+Pages `45084579025`). El 23 nov 2026 se publicó el super catálogo de carreras
+(`deploy-5461ed5`, run `45319437703`; Pages `45319529446`) y su corrección de una
+referencia (`deploy-7168a15`, run `45319661526`; Pages `45319727318`). Todos los
+runs terminaron en SUCCESS.
 
 Producción y staging quedaron en **43/43 migraciones, 96 políticas, 116
 funciones y 0 `SECURITY DEFINER` sin `search_path`**. El examen final de Español
@@ -58,8 +61,13 @@ sigue activo en producción con 13 secciones y 136 preguntas; la guía imprimibl
 está siempre disponible en `/guia-examen-espanol.html`. El taller vocacional
 reutiliza el material legacy sin escribir en la base: ahora tiene 60 preguntas
 RIASEC, 8 de contexto, 47 escuelas (incluidas 3 militares), expos con fuentes
-citadas, colegiaturas de referencia y guía para decidir por ti y en familia.
-RIASEC, contexto y checklist viven en `localStorage`.
+citadas, colegiaturas de referencia y guía para decidir por ti y en familia. La
+pestaña «Super catálogo de carreras» reúne 92 carreras en 10 áreas con duración,
+materias, perfil, salidas, bachillerato recomendado y enlace al catálogo oficial
+de cada institución; permite filtrar por afinidad con «Descúbrete», guardar
+opciones y comparar hasta 3. El bloque «Lo que aprendes en el curso te abre
+puertas» conecta 6 competencias de Español con 24 carreras del catálogo. RIASEC,
+contexto, checklist, guardadas y comparador viven en `localStorage`.
 
 En `/curso/` hay un menú lateral «Evaluación y orientación» y tarjetas en el
 inicio que abren `../#examen`, `../vocacional.html` y la guía imprimible. Los
@@ -77,14 +85,15 @@ que abre `/vocacional.html` sin incrustar el taller en el panel.
 
 Verificación externa: `/`, `/vocacional.html`, `/curso/`,
 `guia-examen-espanol.html` y `privacidad.html` responden 200. Bundles actuales
-`main-BtBvmvWS.js` (vista previa, «Orientación» y «Taller vocacional»),
-`vocacional-Dt1CGBmS.js` (gate de sesión), `vocational-DjbRL5rI.js`
-(«Mejores opciones para ti», «Expos y fechas», coincidencias, colegiaturas y
-decisión familiar) y `vocational-1XDN4CCT.css`. Aviso `v3-2026` con hash
-`85d13859…f740b` y guía con hash `966fb846…d4094` sin cambios. Evidencia
-detallada en `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`
-(§ `cierre_0043`, `sidebar_staff` y `taller_vocacional_v2`) y en
-`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.8 (OPS-68).
+`main-s4UyFzJI.js` (vista previa, «Orientación» y «Taller vocacional»),
+`vocacional-WALiri_e.js` (gate de sesión), `vocational-BmP6VPRR.js`
+(«Mejores opciones para ti», «Expos y fechas», «Super catálogo de carreras»,
+comparador, puente curso-carrera, colegiaturas y decisión familiar) y
+`vocational-Cm1bKQAC.css`. Aviso `v3-2026` con hash `85d13859…f740b` y guía con
+hash `966fb846…d4094` sin cambios. Evidencia detallada en
+`AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043`,
+`sidebar_staff`, `taller_vocacional_v2` y `super_catalogo_carreras`) y en
+`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §§8.8 y 8.9 (OPS-68 y OPS-69).
 
 ```bash
 # Publicación normal: commit en main

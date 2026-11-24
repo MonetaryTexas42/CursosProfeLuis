@@ -186,6 +186,24 @@ de examen, 2 perfiles vocacionales y 24 entradas de auditoría. Detalle en
 `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§
 `taller_vocacional_v2`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.8.
 
+**Super catálogo de carreras (23 nov 2026, OPS-69):** el taller incorpora una
+pestaña con 92 carreras en 10 áreas, duración aproximada, materias, perfil,
+salidas y bachillerato recomendado. Cada ficha enlaza al catálogo oficial de
+UNAM, IPN, UAM, UAEMéx, SEDENA, CONALEP, CBTIS o instituciones privadas; la
+oferta vigente debe verificarse en esas fuentes. Hay coincidencias calculadas
+desde «Descúbrete», filtros por área/institución/afinidad, lista guardada y
+comparador de hasta 3 carreras, todo en `localStorage` (`ecoems_vocational_careers_v1`
+y `ecoems_vocational_compare_v1`). El bloque «Lo que aprendes en el curso te abre
+puertas» conecta 6 competencias del curso con 24 carreras. Las licenciaturas del
+Heroico Colegio Militar siguen marcadas como posteriores al bachillerato, nunca
+como prepa. Run final `45319661526` y Pages `45319727318` en SUCCESS, etiqueta
+`deploy-7168a15`, `gh-pages` en `82454a8`. Bundles: `main-s4UyFzJI.js`,
+`vocacional-WALiri_e.js`, `vocational-BmP6VPRR.js` y `vocational-Cm1bKQAC.css`.
+Verificación en vivo: cinco rutas → 200, guía y aviso con hashes inalterados;
+base sin cambios (43/43 migraciones, 96 políticas, 116 funciones, 0 definers sin
+`search_path`). Detalle en `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`
+(§ `super_catalogo_carreras`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.9.
+
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 
 Consultas de solo lectura para revisar la actividad reciente. Se ejecutan en
