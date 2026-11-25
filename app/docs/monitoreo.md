@@ -11,8 +11,10 @@ tres correcciones detectadas por la suite (grants a `authenticated` y visibilida
 de perfiles) y `0040` con las RPCs del procesador de `email_outbox`. El 22 nov
 2026, con autorización explícita y tras respaldos cifrados, se aplicaron en
 producción `0023`–`0040`, después `0041`/`0042` del examen final y, al cierre,
-`0043` de la vista previa del profesorado. Staging y producción quedaron
-alineados en 43/43 migraciones.
+`0043` de la vista previa del profesorado. El 25 nov 2026, con autorización
+explícita, se aplicó `0044` de grupos configurables y examen por grupo en
+staging y producción (con respaldo cifrado previo en producción). Staging y
+producción quedaron alineados en 44/44 migraciones.
 
 En staging, después de `db push`:
 
@@ -27,9 +29,9 @@ El verificador es de solo lectura y comprueba:
 
 | Recurso | Umbral esperado | Observado en staging |
 |---|---|---|
-| Migraciones | ≥ 38 | 43 (40 + `0041`/`0042` + `0043`) |
-| Tablas | 41 | 41 |
-| Políticas RLS | ≥ 93 | 96 |
+| Migraciones | ≥ 38 | 44 (40 + `0041`/`0042` + `0043` + `0044`) |
+| Tablas | ≥ 41 | ver `staging-check.mjs` (incluye `group_exam_config`) |
+| Políticas RLS | ≥ 93 | 97 |
 | Funciones `SECURITY DEFINER` | ≥ 53 | ver `staging-check.mjs` |
 
 Además verifica los objetos nuevos: índices únicos de asignación y XP,
@@ -203,6 +205,27 @@ Verificación en vivo: cinco rutas → 200, guía y aviso con hashes inalterados
 base sin cambios (43/43 migraciones, 96 políticas, 116 funciones, 0 definers sin
 `search_path`). Detalle en `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json`
 (§ `super_catalogo_carreras`) y en `AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §8.9.
+
+**Grupos y examen por grupo (25 nov 2026, OPS-70):** la pestaña «🏫 Grupos»
+permite crear grupos, guardar horario con días de la semana y rangos de hora, y
+activar o desactivar el examen de Español por grupo. `0044` añadió
+`group_exam_config`, `schedule_days`, `schedule_start`, `schedule_end` y las
+RPCs `app_group_exam_enabled`, `app_effective_final_exam_status`,
+`app_upsert_group_exam_config` y `app_set_group_schedule`. `app_start_final_exam()`
+exige flag global **y** activación del grupo. Los grupos activos existentes se
+respaldaron con `exam_enabled=true` para mantener el examen vigente; los nuevos
+quedan apagados hasta su configuración. Respaldo cifrado previo en producción:
+`backup-2026-11-25-00-37-07.json.enc`. Commit `3eab7d4`, run `45519747203` y
+Pages `45519915837` en SUCCESS, `gh-pages` en `9396b2e`. Bundles actuales:
+`main-BQ6YZzVN.js`, `vocacional-pt2Cg4fY.js`, `vocational-BmP6VPRR.js` y
+`vocational-ByFyH7b6.css`; recursos de `/curso/` en `?v=5`. Verificación en vivo:
+cinco rutas → 200, guía y aviso con hashes inalterados. Staging y producción:
+44/44 migraciones, 97 políticas, 120 funciones, 0 definers sin `search_path`;
+suite RLS 135 PASS · 0 FAIL · 0 SKIP (RLS-149…152). El flag global sigue en
+`true` en producción, el grupo existente conservó `exam_enabled=true` y hay 0
+sesiones/respuestas del examen. Prueba funcional en staging dentro de una
+transacción revertida: grupo A con 136 preguntas, grupo B bloqueado; horario
+`Lun, Mié, Vie 16:00–18:00` guardado y otro profesor recibió 42501.
 
 ## 2. Trazabilidad de acciones sensibles (OPS-06)
 

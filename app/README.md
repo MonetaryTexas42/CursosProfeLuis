@@ -52,10 +52,11 @@ el sidebar del staff (`deploy-a5630a9`, run `45076042391`; Pages `45076128140`)
 y la ampliación del taller vocacional (`deploy-f83ebb9`, run `45084537069`;
 Pages `45084579025`). El 23 nov 2026 se publicó el super catálogo de carreras
 (`deploy-5461ed5`, run `45319437703`; Pages `45319529446`) y su corrección de una
-referencia (`deploy-7168a15`, run `45319661526`; Pages `45319727318`). Todos los
-runs terminaron en SUCCESS.
+referencia (`deploy-7168a15`, run `45319661526`; Pages `45319727318`). El 25 nov 2026 se
+publicó la configuración de grupos (`deploy-3eab7d4`, run `45519747203`; Pages
+`45519915837`) con la migración `0044`. Todos los runs terminaron en SUCCESS.
 
-Producción y staging quedaron en **43/43 migraciones, 96 políticas, 116
+Producción y staging quedaron en **44/44 migraciones, 97 políticas, 120
 funciones y 0 `SECURITY DEFINER` sin `search_path`**. El examen final de Español
 sigue activo en producción con 13 secciones y 136 preguntas; la guía imprimible
 está siempre disponible en `/guia-examen-espanol.html`. El taller vocacional
@@ -71,7 +72,10 @@ contexto, checklist, guardadas y comparador viven en `localStorage`.
 
 En `/curso/` hay un menú lateral «Evaluación y orientación» y tarjetas en el
 inicio que abren `../#examen`, `../vocacional.html` y la guía imprimible. Los
-recursos estáticos del curso se versionaron con `?v=4` para evitar caché.
+recursos estáticos del curso se versionaron con `?v=5` para evitar caché. Cuando
+el examen está activo para el grupo del alumno, aparece también como una unidad
+más dentro de Español en el menú lateral, en la vista de la materia y en el
+inicio de `/curso/`; abre `../#examen`.
 
 En el panel del staff (profesor y administrador) hay una pestaña **🎓 Examen
 final** con sesiones, estado, aciertos, tiempo, puntaje y promedio, y el botón
@@ -85,15 +89,31 @@ que abre `/vocacional.html` sin incrustar el taller en el panel.
 
 Verificación externa: `/`, `/vocacional.html`, `/curso/`,
 `guia-examen-espanol.html` y `privacidad.html` responden 200. Bundles actuales
-`main-s4UyFzJI.js` (vista previa, «Orientación» y «Taller vocacional»),
-`vocacional-WALiri_e.js` (gate de sesión), `vocational-BmP6VPRR.js`
-(«Mejores opciones para ti», «Expos y fechas», «Super catálogo de carreras»,
-comparador, puente curso-carrera, colegiaturas y decisión familiar) y
-`vocational-Cm1bKQAC.css`. Aviso `v3-2026` con hash `85d13859…f740b` y guía con
-hash `966fb846…d4094` sin cambios. Evidencia detallada en
+`main-BQ6YZzVN.js` (pestaña «Grupos», horario por días/horas, examen por grupo y
+unidad de examen en el curso), `vocacional-pt2Cg4fY.js` (gate de sesión),
+`vocational-BmP6VPRR.js` (catálogo y comparador) y `vocational-ByFyH7b6.css`.
+Aviso `v3-2026` con hash `85d13859…f740b` y guía con hash `966fb846…d4094` sin
+cambios. Evidencia detallada en
 `AUDITORIA_ECOEMS/evidencias/produccion-cierre-final.json` (§ `cierre_0043`,
 `sidebar_staff`, `taller_vocacional_v2` y `super_catalogo_carreras`) y en
-`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §§8.8 y 8.9 (OPS-68 y OPS-69).
+`AUDITORIA_ECOEMS/12_PRUEBAS_PENDIENTES.md` §§8.8, 8.9 y 8.10 (OPS-68, OPS-69 y
+OPS-70).
+
+**Grupos y examen por grupo (25 nov 2026, OPS-70):** el panel del staff tiene
+una pestaña **🏫 Grupos** donde se crean grupos, se guarda el horario con días
+de la semana y rangos de hora, y se activa o desactiva el examen de Español por
+grupo. `0044` añadió `group_exam_config`, las columnas `schedule_days`,
+`schedule_start` y `schedule_end`, las RPCs `app_group_exam_enabled`,
+`app_effective_final_exam_status`, `app_upsert_group_exam_config` y
+`app_set_group_schedule`, y la doble validación en `app_start_final_exam()`:
+flag global **y** activación del grupo. Los grupos activos existentes se
+respaldaron con `exam_enabled=true` para no apagar el examen vigente; los
+nuevos quedan apagados hasta configurarlos. Se hizo un respaldo cifrado antes
+de migrar (`backup-2026-11-25-00-37-07.json.enc`). Producción y staging: 44/44
+migraciones, 97 políticas, 120 funciones y 0 definers sin `search_path`. La
+suite RLS quedó en 135 PASS. En staging, con el flag global encendido dentro de
+una transacción revertida, el grupo A devolvió 136 preguntas y el grupo B quedó
+bloqueado; `final_exam_sessions=0` y `final_exam_answers=0` en producción.
 
 ```bash
 # Publicación normal: commit en main
