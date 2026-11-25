@@ -50,6 +50,7 @@ const PAGE_SIZE = 20;
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
   grupos: '🏫 Grupos',
+  grupos: '🏫 Grupos',
   alumnos: '👥 Alumnos',
   examen: '🎓 Examen final',
   materias: '📚 Materias',
