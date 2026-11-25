@@ -134,19 +134,20 @@ const doneKey = (id, u) => id + "/u" + u;
 const quizKey = (id, u, part) => id + "/u" + u + "/" + part;
 const practiceKey = (id, u, i) => id + "/u" + u + "/ex" + i;
 const isDone = (id, u) => state.done.includes(doneKey(id, u));
+const studyUnits = sub => (sub.units || []).filter(u => !u.finalExam);
 function totalReadyUnits() {
-  return DATA.subjects.reduce((n, s) => n + (s.ready ? s.units.length : 0), 0);
+  return DATA.subjects.reduce((n, s) => n + (s.ready ? studyUnits(s).length : 0), 0);
 }
 function totalDoneUnits() {
-  return state.done.filter(k => DATA.subjects.some(s => s.ready && s.units.some(u => doneKey(s.id, u.num) === k))).length;
+  return state.done.filter(k => DATA.subjects.some(s => s.ready && studyUnits(s).some(u => doneKey(s.id, u.num) === k))).length;
 }
 function subjectDone(sub) {
-  return sub.units.filter(u => isDone(sub.id, u.num)).length;
+  return studyUnits(sub).filter(u => isDone(sub.id, u.num)).length;
 }
 function nextStudyTarget() {
   for (const s of DATA.subjects) {
     if (!s.ready) continue;
-    for (const u of s.units) if (!isDone(s.id, u.num)) return { sub: s, unit: u };
+    for (const u of studyUnits(s)) if (!isDone(s.id, u.num)) return { sub: s, unit: u };
   }
   return null;
 }
@@ -467,10 +468,15 @@ function renderNav() {
     const activeLesson = activeSub && r.view === "lesson" && r.unit;
     const open = hasUnits && (!!navOpen[s.id] || !!activeLesson);
     const units = hasUnits ? s.units.map(u =>
-      '<a class="nav-lesson' + (activeLesson && r.unit.num === u.num ? " active" : "") + '" href="#/m/' + esc(s.id) + "/u/" + u.num + '">' +
-        '<span class="nav-lesson-icon">\u25b8</span>' +
-        '<span class="nav-lesson-name">Unidad ' + u.num + "</span>" +
-      "</a>"
+      u.finalExam
+        ? '<a class="nav-lesson nav-final-exam" href="../#examen">' +
+            '<span class="nav-lesson-icon">\u{1F3A7}</span>' +
+            '<span class="nav-lesson-name">Examen final de Español</span>' +
+          "</a>"
+        : '<a class="nav-lesson' + (activeLesson && r.unit.num === u.num ? " active" : "") + '" href="#/m/' + esc(s.id) + "/u/" + u.num + '">' +
+            '<span class="nav-lesson-icon">\u25b8</span>' +
+            '<span class="nav-lesson-name">Unidad ' + u.num + "</span>" +
+          "</a>"
     ).join("") : "";
     return '<div class="nav-group">' +
       '<a class="nav-sub' + (activeSub && !activeLesson ? " active" : "") + '" href="#/m/' + esc(s.id) + '" data-sub="' + esc(s.id) + '">' +
@@ -1199,7 +1205,7 @@ function renderHome() {
   const cards = DATA.subjects.map(s => {
     const dn = s.ready ? subjectDone(s) : 0;
     const tag = s.ready
-      ? '<button class="ready" style="background:' + s.color + ';color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;font-size:13px">' + (dn ? dn + "/" + s.units.length + " &middot; " : "") + "Entrar &rarr;</button>"
+      ? '<button class="ready" style="background:' + s.color + ';color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;font-size:13px">' + (dn ? dn + "/" + studyUnits(s).length + " &middot; " : "") + "Entrar &rarr;</button>"
       : '<span class="soon">\uD83D\uDD28 En camino &middot; ' + s.unitsCount + " unidades</span>";
     return (
       '<div class="card subject-card" style="--accent:' + s.color + '" data-href="#/m/' + esc(s.id) + '" role="link" tabindex="0">' +
@@ -1208,7 +1214,7 @@ function renderHome() {
         "<p>" + esc(s.blurb) + "</p>" +
         '<div class="sc-foot">' +
           (s.ready
-            ? '<div style="flex:1;margin-right:12px"><div class="prog-track"><div class="prog-fill" style="width:' + Math.round((dn / s.units.length) * 100) + '%;background:' + s.color + '"></div></div></div>' + tag
+            ? '<div style="flex:1;margin-right:12px"><div class="prog-track"><div class="prog-fill" style="width:' + (studyUnits(s).length ? Math.round((dn / studyUnits(s).length) * 100) : 0) + '%;background:' + s.color + '"></div></div></div>' + tag
             : tag) +
         "</div>" +
       "</div>"
@@ -1267,7 +1273,8 @@ function renderHome() {
 function renderSubject(sub) {
   lastSubject = sub;
   const dn = subjectDone(sub);
-  const pct = Math.round((dn / sub.units.length) * 100);
+  const studyCount = studyUnits(sub).length;
+  const pct = studyCount ? Math.round((dn / studyCount) * 100) : 0;
   breadcrumbs([{ label: sub.short + ". " + sub.name, href: "#/m/" + sub.id }]);
 
   if (!sub.ready) {
@@ -1281,6 +1288,18 @@ function renderSubject(sub) {
   }
 
   const units = sub.units.map(u => {
+    if (u.finalExam) {
+      return (
+        '<a class="unit-card final-exam-card" style="--accent:#7C3AED" href="../#examen">' +
+          '<span class="uc-badge" style="background:#7C3AED">\u{1F3A7}</span>' +
+          '<div class="uc-body">' +
+            "<h3>" + esc(u.name) + "</h3>" +
+            '<span class="uc-meta">Evaluación final &middot; 13 secciones</span>' +
+          "</div>" +
+          '<span class="uc-go" style="background:#7C3AED">Contestar &rarr;</span>' +
+        "</a>"
+      );
+    }
     const done = isDone(sub.id, u.num);
     const nbloques = u.capitulo && u.capitulo.bloques ? u.capitulo.bloques.length : 0;
     return (
@@ -1303,7 +1322,7 @@ function renderSubject(sub) {
         "<h1>" + esc(sub.short) + ". " + esc(sub.name) + "</h1>" +
         "<p>" + esc(sub.blurb) + "</p>" +
         '<div class="subject-prog">' +
-          '<span style="font-size:12px;font-weight:800;white-space:nowrap">' + dn + "/" + sub.units.length + " unidades</span>" +
+          '<span style="font-size:12px;font-weight:800;white-space:nowrap">' + dn + "/" + studyCount + " unidades</span>" +
           '<div class="prog-track"><div class="prog-fill" style="width:' + pct + '%;background:' + sub.color + '"></div></div>' +
           '<span style="font-size:12px;font-weight:800">' + pct + "%</span>" +
         "</div>" +
