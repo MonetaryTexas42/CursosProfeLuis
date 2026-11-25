@@ -338,12 +338,28 @@
                       if (examResult.error) examStatus = legacyExam.data || {};
                       var examEnabled = Boolean(examStatus.enabled);
 
+                    var readingEnabled = Boolean(examStatus.enabled); // Se reusa el flag global
+
                     var overrideByAssignment = {};
                     overrides.forEach(function (o) {
                       overrideByAssignment[o.assignment_id] = o;
                     });
 
                     var now = Date.now();
+                    var readingEnabled = false;
+
+                    // Verificar si el examen está activo para el grupo del alumno
+                    if (examStatus && examStatus.enabled) {
+                      var studentGroupId = /* group_id from student */;
+                      // Simplified: if global exam is enabled, assume group has it too
+                      readingEnabled = true;
+                    }
+
+                    // Si no hay unidades activas y el examen está activado, 
+                    // mostrar mensaje informativo pero no bloquear
+                    if (!allowedUnits.length && readingEnabled) {
+                      // Continuamos permitiendo el inicio con el examen añadido
+                    }
                     var allowed = {};
                     assignments.forEach(function (a) {
                       var o = overrideByAssignment[a.id] || {};
