@@ -1032,6 +1032,64 @@ export const checks = [
     { requires: ["admin"] },
   ),
 
+  // --------------------------------------------------- grupos y examen (0044)
+  yes(
+    "RLS-149",
+    "admin",
+    "group_exam_config tiene RLS y política de lectura (0044)",
+    `select (
+       c.relrowsecurity
+       and exists (
+         select 1 from pg_policies p
+          where p.schemaname = 'public'
+            and p.tablename = 'group_exam_config'
+            and p.cmd = 'SELECT'
+            and p.roles::text like '%authenticated%'
+       )
+     ) as ok
+       from pg_class c
+       join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'group_exam_config'`,
+    { requires: ["admin"] },
+  ),
+  yes(
+    "RLS-150",
+    "admin",
+    "app_upsert_group_exam_config valida rol y fija search_path (0044)",
+    `select (
+       p.prosecdef
+       and pg_get_functiondef(p.oid) like '%app_is_teacher_of_group%'
+       and exists (
+         select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) as c
+          where c like 'search_path=%'
+       )
+     ) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_upsert_group_exam_config'`,
+    { requires: ["admin"] },
+  ),
+  zero(
+    "RLS-151",
+    "student1",
+    "El alumno no puede activar el examen de un grupo (0044)",
+    `select (public.app_upsert_group_exam_config($1::uuid, true) is not null)::int as ok`,
+    { requires: ["student1", "student1_group"], params: (f) => [f.student1_group], denyIsPass: true },
+  ),
+  yes(
+    "RLS-152",
+    "admin",
+    "app_start_final_exam exige flag global y activación por grupo (0044)",
+    `select (
+       pg_get_functiondef(p.oid) like '%app_group_exam_enabled%'
+       and pg_get_functiondef(p.oid) like '%final_exam_spanish_enabled%'
+     ) as ok
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'app_start_final_exam'`,
+    { requires: ["admin"] },
+  ),
+
   // ----------------------------------------------------------- administrador
   yes("RLS-75", "admin", "El admin ve alumnos", "select (count(*) > 0) as ok from public.students", { requires: ["admin"] }),
   yes("RLS-76", "admin", "El admin ve unidades", "select (count(*) > 0) as ok from public.units", { requires: ["admin"] }),

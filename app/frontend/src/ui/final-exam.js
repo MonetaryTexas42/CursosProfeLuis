@@ -43,14 +43,19 @@ export async function fetchExamSummary() {
   if (!supabase) return { available: false, enabled: false, last: null, status: null };
   try {
     const [statusRes, sessionsRes] = await Promise.all([
-      supabase.rpc('app_final_exam_status'),
+      supabase.rpc('app_effective_final_exam_status'),
       supabase
         .from('final_exam_sessions')
         .select('id,started_at,finished_at,status,score,correct_answers,total_questions')
         .order('started_at', { ascending: false })
         .limit(1)
     ]);
-    if (statusRes.error) throw statusRes.error;
+    // Entornos todavía sin la migración 0044 conservan el flag global.
+    if (statusRes.error) {
+      const legacyRes = await supabase.rpc('app_final_exam_status');
+      if (legacyRes.error) throw legacyRes.error;
+      statusRes.data = legacyRes.data;
+    }
     if (sessionsRes.error) throw sessionsRes.error;
     return {
       available: true,

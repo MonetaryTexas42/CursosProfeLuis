@@ -42,13 +42,14 @@ const PRIVACY_DOCUMENT_VERSION = 'v3-2026';
 
 // Etiqueta de versión visible en la cabecera: sirve para confirmar que el
 // navegador cargó el build más reciente (no una versión en caché).
-const APP_BUILD = 'v8-pulido';
+const APP_BUILD = 'v9-grupos';
 
 // FUN-09: tamaño de página compartido por los listados paginados.
 const PAGE_SIZE = 20;
 
 const staffTabLabels = {
   dashboard: '📊 Dashboard',
+  grupos: '🏫 Grupos',
   alumnos: '👥 Alumnos',
   examen: '🎓 Examen final',
   materias: '📚 Materias',
@@ -1303,14 +1304,14 @@ async function fetchAdminDashboard() {
     yearRes, groupsRes, profilesRes, studentsRes, guardiansRes, linksRes,
     settingsRes, statsRes, unitsRes, overviewRes, boardRes, studentProfilesRes, termsRes, assignmentsRes,
     unitVersionsRes, overridesRes, tasksRes, activityRes, externalAccountsRes, billingRes, paymentsRes, billingStatusRes,
-    auditRes, dataRequestsRes, examSessionsRes
+    auditRes, dataRequestsRes, examSessionsRes, groupExamConfigRes, activeYearRes
   ] = await Promise.all([
     supabase
       .from('academic_years')
       .select('name,starts_on,ends_on')
       .eq('is_active', true)
       .maybeSingle(),
-    supabase.from('groups').select('id,name,level,schedule,teacher_id').order('name'),
+    supabase.from('groups').select('id,name,level,schedule,schedule_days,schedule_start,schedule_end,active,teacher_id').order('name'),
     supabase
       .from('profiles')
       .select('id,role,full_name,email,username,active,phone,created_at')
@@ -1358,7 +1359,9 @@ async function fetchAdminDashboard() {
       .from('final_exam_sessions')
       .select('id,student_id,subject_id,status,score,correct_answers,answered_questions,total_questions,duration_ms,started_at,finished_at')
       .order('started_at', { ascending: false })
-      .limit(300)
+      .limit(300),
+    supabase.from('group_exam_config').select('group_id,exam_enabled'),
+    supabase.from('academic_years').select('id,name').eq('is_active', true).maybeSingle()
   ]);
 
   assertNoError(yearRes.error);
@@ -1386,6 +1389,8 @@ async function fetchAdminDashboard() {
   assertNoError(auditRes.error);
   assertNoError(dataRequestsRes.error);
   assertNoError(examSessionsRes.error);
+  assertNoError(groupExamConfigRes.error);
+  assertNoError(activeYearRes.error);
 
   const profiles = profilesRes.data || [];
   const students = studentsRes.data || [];
@@ -1439,8 +1444,12 @@ async function fetchAdminDashboard() {
   return {
     kind: 'admin',
     year: yearRes.data,
+    activeYear: activeYearRes.data,
     groups: groups.map((group) => ({
       ...group,
+      exam_enabled: Boolean(
+        (groupExamConfigRes.data || []).find((config) => config.group_id === group.id)?.exam_enabled
+      ),
       teacher_name: teacherNames.get(group.teacher_id) || 'Sin profesor'
     })),
     profiles,
@@ -1502,7 +1511,7 @@ async function fetchAdminDashboard() {
 async function fetchTeacherDashboard(teacherId) {
   const groupsRes = await supabase
     .from('groups')
-    .select('id,name,level,schedule')
+    .select('id,name,level,schedule,schedule_days,schedule_start,schedule_end,active')
     .eq('teacher_id', teacherId)
     .order('name');
 
@@ -1538,7 +1547,7 @@ async function fetchTeacherDashboard(teacherId) {
     profiles = profilesRes.data || [];
   }
 
-  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes, billingStatusRes, examSessionsRes] = await Promise.all([
+  const [unitsRes, versionsRes, assignmentsRes, overridesRes, subjectsRes, overviewRes, statsRes, linksRes, guardiansRes, boardRes, studentProfilesRes, termsRes, tasksRes, activityRes, billingRes, paymentsRes, billingStatusRes, examSessionsRes, groupExamConfigRes, activeYearRes] = await Promise.all([
     supabase
       .from('units')
       .select('id,title,subject_id,estimated_minutes')
@@ -1604,7 +1613,11 @@ async function fetchTeacherDashboard(teacherId) {
           .in('student_id', studentIds)
           .order('started_at', { ascending: false })
           .limit(300)
-      : Promise.resolve({ data: [], error: null })
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase.from('group_exam_config').select('group_id,exam_enabled').in('group_id', groupIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('academic_years').select('id,name').eq('is_active', true).maybeSingle()
   ]);
 
   assertNoError(unitsRes.error);
@@ -1625,6 +1638,8 @@ async function fetchTeacherDashboard(teacherId) {
   assertNoError(paymentsRes.error);
   assertNoError(billingStatusRes.error);
   assertNoError(examSessionsRes.error);
+  assertNoError(groupExamConfigRes.error);
+  assertNoError(activeYearRes.error);
 
   const names = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const studentById = new Map(students.map((student) => [student.id, student]));
@@ -1697,8 +1712,12 @@ async function fetchTeacherDashboard(teacherId) {
       (studentProfilesRes.data || []).map((profile) => [profile.student_id, profile])
     ),
     terms: termsRes.data || [],
+    activeYear: activeYearRes.data,
     groups: groups.map((group) => ({
       ...group,
+      exam_enabled: Boolean(
+        (groupExamConfigRes.data || []).find((config) => config.group_id === group.id)?.exam_enabled
+      ),
       students: students
         .filter((student) => student.group_id === group.id)
         .map((student) => ({
@@ -2978,8 +2997,8 @@ function staffShellMarkup(data) {
   const tab = state.staffTab || 'dashboard';
   const collapsed = Boolean(state.sidebarCollapsed);
 
-  const teacherTabs = ['dashboard', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
-  const adminTabs = ['dashboard', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion'];
+  const teacherTabs = ['dashboard', 'grupos', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
+  const adminTabs = ['dashboard', 'grupos', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
   return `
@@ -3053,6 +3072,7 @@ function staffTabContentMarkup(data, tab) {
     `;
   }
 
+  if (tab === 'grupos') return staffGroupsTabMarkup(data);
   if (tab === 'alumnos') return staffStudentsTabMarkup(data);
   if (tab === 'examen') return staffExamTabMarkup(data);
   if (tab === 'materias') return staffSubjectsTabMarkup(data);
@@ -3195,6 +3215,134 @@ function nextUnitMissing(data, studentId) {
     }
   }
   return null;
+}
+
+const WEEKDAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+function scheduleLabel(group) {
+  if (group.schedule) return String(group.schedule);
+  const days = Array.isArray(group.schedule_days) ? group.schedule_days : [];
+  const parts = days.map((day) => WEEKDAY_LABELS[day]).filter(Boolean);
+  const time = group.schedule_start
+    ? `${String(group.schedule_start).slice(0, 5)}–${String(group.schedule_end || group.schedule_start).slice(0, 5)}`
+    : '';
+  return [parts.join(', '), time].filter(Boolean).join(' ') || 'Sin horario';
+}
+
+function staffGroupsTabMarkup(data) {
+  const isAdmin = data.kind === 'admin';
+  const groups = data.groups || [];
+  const globalExamEnabled = Boolean(
+    (data.settings || []).find((setting) => setting.key === 'final_exam_spanish_enabled')?.value
+  );
+  const teachers = (data.profiles || []).filter((profile) => profile.role === 'teacher');
+
+  return `
+    ${staffGreetingMarkup()}
+
+    <div class="section-title">
+      <div>
+        <span class="card-label">Configuración</span>
+        <h2>Grupos y horarios</h2>
+      </div>
+      <span class="pill ${globalExamEnabled ? 'success' : ''}">
+        Examen global: ${globalExamEnabled ? 'activo' : 'inactivo'}
+      </span>
+    </div>
+
+    ${isAdmin ? `
+      <article class="card wide">
+        <div class="card-heading">
+          <div><span class="card-label">Alta</span><h2>Nuevo grupo</h2></div>
+        </div>
+        <form class="form" id="create-group-form">
+          <label class="field">
+            <span>Nombre del grupo</span>
+            <input name="name" autocomplete="off" placeholder="Ej. Grupo C" required>
+          </label>
+          <label class="field">
+            <span>Nivel (opcional)</span>
+            <input name="level" autocomplete="off" placeholder="Ej. 1º de bachillerato">
+          </label>
+          <label class="field">
+            <span>Profesor</span>
+            <select name="teacher_id" required>
+              <option value="">Selecciona un profesor…</option>
+              ${teachers.map((teacher) => `
+                <option value="${escapeHtml(teacher.id)}">${escapeHtml(teacher.full_name)}</option>
+              `).join('')}
+            </select>
+          </label>
+          <label class="field">
+            <span>Año escolar</span>
+            <input value="${escapeHtml(data.activeYear?.name || data.year?.name || 'Activo')}" disabled>
+          </label>
+          <div class="row">
+            <button class="btn primary" type="submit">Crear grupo</button>
+          </div>
+        </form>
+      </article>
+    ` : ''}
+
+    ${groups.length ? groups.map((group) => `
+      <article class="card wide" data-group-id="${escapeHtml(group.id)}">
+        <div class="card-heading">
+          <div>
+            <span class="card-label">Grupo</span>
+            <h2>${escapeHtml(group.name)}</h2>
+            <small>${escapeHtml([group.level, group.teacher_name].filter(Boolean).join(' · ') || 'Sin nivel asignado')}</small>
+          </div>
+          <span class="pill ${group.active === false ? '' : 'success'}">${group.active === false ? 'Inactivo' : 'Activo'}</span>
+        </div>
+
+        <div class="group-config-grid">
+          <form class="form group-schedule-form" data-group-schedule-form="${escapeHtml(group.id)}">
+            <span class="card-label">Horario</span>
+            <div class="weekday-picker" role="group" aria-label="Días de la semana">
+              ${WEEKDAY_LABELS.map((label, index) => {
+                const checked = Array.isArray(group.schedule_days) && group.schedule_days.includes(index);
+                return `
+                  <label class="weekday-chip">
+                    <input type="checkbox" name="days" value="${index}" ${checked ? 'checked' : ''}>
+                    <span>${label}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+            <div class="row">
+              <label class="field">
+                <span>Desde</span>
+                <input name="start" type="time" value="${escapeHtml(String(group.schedule_start || '').slice(0, 5))}">
+              </label>
+              <label class="field">
+                <span>Hasta</span>
+                <input name="end" type="time" value="${escapeHtml(String(group.schedule_end || '').slice(0, 5))}">
+              </label>
+            </div>
+            <button class="btn primary" type="submit">Guardar horario</button>
+          </form>
+
+          <div class="group-exam-box">
+            <span class="card-label">Examen final</span>
+            <h3>Español</h3>
+            <p class="muted">${globalExamEnabled
+              ? 'El interruptor global está activo. Puedes permitir o bloquear el examen para este grupo.'
+              : 'El interruptor global está inactivo: aunque actives el grupo, el examen seguirá cerrado.'}</p>
+            <button class="btn ${group.exam_enabled ? 'ghost' : 'primary'}" data-toggle-group-exam="${escapeHtml(group.id)}" data-enabled="${group.exam_enabled ? '1' : '0'}">
+              ${group.exam_enabled ? 'Desactivar para este grupo' : 'Activar para este grupo'}
+            </button>
+          </div>
+        </div>
+
+        <div class="group-meta">
+          <span><strong>${(group.students || []).length}</strong> ${(group.students || []).length === 1 ? 'alumna' : 'alumnos'}</span>
+          <span>Horario: ${escapeHtml(scheduleLabel(group))}</span>
+        </div>
+      </article>
+    `).join('') : `
+      <article class="card wide"><p class="empty-state">Todavía no hay grupos. Crea el primero para iniciar el piloto.</p></article>
+    `}
+  `;
 }
 
 function staffStudentsTabMarkup(data) {
@@ -7787,6 +7935,17 @@ function renderDashboard() {
   const createTeacherForm = appRoot.querySelector('#create-teacher-form');
   if (createTeacherForm) createTeacherForm.addEventListener('submit', createTeacher);
 
+  const createGroupForm = appRoot.querySelector('#create-group-form');
+  if (createGroupForm) createGroupForm.addEventListener('submit', createGroup);
+
+  appRoot.querySelectorAll('[data-group-schedule-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => saveGroupSchedule(event, form.dataset.groupScheduleForm));
+  });
+
+  appRoot.querySelectorAll('[data-toggle-group-exam]').forEach((button) => {
+    button.addEventListener('click', () => toggleGroupExam(button));
+  });
+
   appRoot.querySelectorAll('[data-invite-student-form]').forEach((form) => {
     form.addEventListener('submit', (event) => {
       const select = form.querySelector('[data-invite-groups]');
@@ -7978,6 +8137,121 @@ function renderDashboard() {
   });
 
   wireThemeToggle();
+}
+
+async function createGroup(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+
+  const name = String(data.get('name') || '').trim();
+  const level = String(data.get('level') || '').trim();
+  const teacherId = String(data.get('teacher_id') || '').trim();
+  const yearId = state.dashboard?.activeYear?.id || state.dashboard?.year?.id;
+
+  if (!name || !teacherId || !yearId) {
+    setError('Completa el nombre, el profesor y asegúrate de tener un año escolar activo.');
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Creando…';
+  }
+
+  state.error = '';
+  state.notice = '';
+
+  try {
+    const { error } = await supabase.from('groups').insert({
+      academic_year_id: yearId,
+      name,
+      level: level || null,
+      teacher_id: teacherId,
+      active: true
+    });
+
+    if (error) throw error;
+
+    setNotice(`Grupo ${name} creado. Ahora puedes configurar su horario y examen.`);
+    form.reset();
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo crear el grupo.');
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Crear grupo';
+    }
+  }
+}
+
+async function saveGroupSchedule(event, groupId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const days = [...form.querySelectorAll('input[name="days"]:checked')]
+    .map((input) => Number(input.value))
+    .sort((a, b) => a - b);
+  const start = form.querySelector('input[name="start"]')?.value || null;
+  const end = form.querySelector('input[name="end"]')?.value || null;
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Guardando…';
+  }
+
+  state.error = '';
+  state.notice = '';
+
+  try {
+    const { error } = await supabase.rpc('app_set_group_schedule', {
+      p_group_id: groupId,
+      p_schedule_days: days,
+      p_schedule_start: start,
+      p_schedule_end: end
+    });
+
+    if (error) throw error;
+
+    setNotice('Horario del grupo guardado.');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo guardar el horario.');
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Guardar horario';
+    }
+  }
+}
+
+async function toggleGroupExam(button) {
+  const groupId = button.dataset.toggleGroupExam;
+  const enabled = button.dataset.enabled !== '1';
+  if (!groupId || button.disabled) return;
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+
+  try {
+    const { error } = await supabase.rpc('app_upsert_group_exam_config', {
+      p_group_id: groupId,
+      p_exam_enabled: enabled
+    });
+
+    if (error) throw error;
+
+    setNotice(enabled
+      ? 'Examen activado para este grupo.'
+      : 'Examen desactivado para este grupo.');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudo actualizar el examen del grupo.');
+    button.disabled = false;
+    button.textContent = enabled ? 'Activar para este grupo' : 'Desactivar para este grupo';
+  }
 }
 
 async function createTeacher(event) {

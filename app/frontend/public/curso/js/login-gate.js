@@ -124,6 +124,50 @@
     topbar.insertBefore(out, topbar.firstChild);
   }
 
+  function addFinalExamUnit(data, examStatus) {
+    if (!examStatus || !examStatus.enabled) return;
+
+    var examUnit = {
+      num: 14,
+      name: "Examen final de Español",
+      hook: "",
+      objetivo: [],
+      teoria: [],
+      truco: "",
+      guia: [],
+      ejemplos: [],
+      errores: [],
+      ejercicios: [],
+      tipo: { enc: "", ops: [], correct: 0, expl: "" },
+      reto: { enc: "", ops: [], correct: 0, expl: "" },
+      capitulo: null,
+      finalExam: true
+    };
+
+    var spanol = data.subjects.find(function (s) { return s.id === "espanol"; });
+    if (!spanol) {
+      spanol = {
+        id: "espanol",
+        num: 99,
+        short: "Esp.",
+        name: "Español",
+        icon: "\u{1F4D6}",
+        badge: "examen",
+        blurb: "Evaluación final del curso.",
+        color: "#7C3AED",
+        ready: true,
+        unitsCount: 0,
+        units: []
+      };
+      data.subjects.push(spanol);
+    }
+
+    spanol.units.push(examUnit);
+    spanol.units.sort(function (a, b) { return a.num - b.num; });
+    spanol.unitsCount = spanol.units.length;
+    spanol.ready = true;
+  }
+
   function startPlayer(profile, supabase, sessionToken) {
     paintSessionBadge(profile, supabase);
     var syncNow = setupProgressSync(supabase, sessionToken);
@@ -276,13 +320,23 @@
                       .eq("visible", true),
                     supabase.from("student_unit_overrides")
                       .select("assignment_id,status,opens_at,closes_at")
-                      .eq("student_id", student.id)
+                      .eq("student_id", student.id),
+                    supabase.rpc("app_effective_final_exam_status")
                   ]).then(function (results) {
                     var allSubjects = results[0].data || [];
                     var allUnits = results[1].data || [];
                     var versions = results[2].data || [];
                     var assignments = results[3].data || [];
                     var overrides = results[4].data || [];
+                    var examResult = results[5] || {};
+                    var examStatus = examResult.data || {};
+                    var examLookup = examResult.error
+                      ? supabase.rpc("app_final_exam_status")
+                      : Promise.resolve({ data: examStatus, error: null });
+
+                    return examLookup.then(function (legacyExam) {
+                      if (examResult.error) examStatus = legacyExam.data || {};
+                      var examEnabled = Boolean(examStatus.enabled);
 
                     var overrideByAssignment = {};
                     overrides.forEach(function (o) {
@@ -314,7 +368,7 @@
                       return allowedSubjectIds[s.id] === true;
                     });
 
-                    if (!allowedUnits.length) {
+                    if (!allowedUnits.length && !examEnabled) {
                       // SEC-01: sin asignación activa la base devuelve 0 filas.
                       // No arrancamos el reproductor vacío.
                       renderMessage(
@@ -325,8 +379,11 @@
                     }
 
                     window.DATA = buildData(visibleSubjects, allowedUnits, versions);
+                    addFinalExamUnit(window.DATA, examStatus);
                     window.ECOEMS_STUDENT = { id: profile.id, name: profile.full_name };
+                    window.ECOEMS_FINAL_EXAM_ENABLED = examEnabled;
                     startPlayer(profile, supabase, sessionToken);
+                    });
                   });
                 })
                 .catch(fail);
