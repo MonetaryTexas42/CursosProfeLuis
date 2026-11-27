@@ -4684,7 +4684,12 @@ function studentDashboardMarkup(data) {
           `;
         }).join('')}
       </div>
-    ` : '<article class="card wide"><p class="empty-state">Tus unidades aparecerán aquí cuando el profesor las active. 🔒</p></article>'}
+    ` : `<article class="card wide">
+        <p class="empty-state empty-state-students">
+          <strong>Tu ruta está por comenzar</strong>
+          <small>Tus unidades aparecerán aquí en cuanto tu profesor las active. Mientras tanto, puedes explorar la guía de examen y el taller vocacional.</small>
+        </p>
+      </article>`}
 
     ${examDashboardCard(data.exam)}
     ${vocationalDashboardCard()}

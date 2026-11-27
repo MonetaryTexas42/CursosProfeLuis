@@ -694,12 +694,55 @@ pre code {
 }
 
 .empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   margin: 12px 0 0;
-  padding: 14px;
+  padding: 22px 18px;
   border: 1px dashed var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel-2) 60%, transparent);
   color: var(--muted);
   font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.empty-state::before {
+  content: '📭';
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+/* Empty state especial del alumno cuando no hay unidades activas */
+.empty-state.empty-state-students {
+  flex-direction: column;
+  gap: 8px;
+  padding: 36px 24px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+  background:
+    radial-gradient(300px 160px at 50% 0%, var(--glow-1), transparent 70%),
+    var(--panel-2);
+}
+
+.empty-state.empty-state-students::before {
+  content: '🔒';
+  font-size: 36px;
+  filter: saturate(0.8);
+}
+
+.empty-state.empty-state-students strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.empty-state.empty-state-students small {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .teacher-group {
@@ -3961,60 +4004,87 @@ body.unit-assign-open {
 
 .student-unit-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .student-unit-card {
-  display: grid;
-  gap: 10px;
-  align-content: start;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 180px;
+  padding: 20px;
   border: 1px solid var(--line);
-  border-left: 4px solid var(--accent, var(--brand));
-  border-radius: 16px;
-  background: var(--panel);
+  border-top: 3px solid var(--accent, var(--brand));
+  border-radius: 18px;
+  background:
+    radial-gradient(220px 90px at 100% 0%, color-mix(in srgb, var(--accent, var(--brand)) 9%, transparent), transparent 65%),
+    var(--panel);
   box-shadow: var(--shadow-soft);
-  transition: transform 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .student-unit-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent, var(--brand));
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
 }
 
 .student-unit-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .student-unit-subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--accent, var(--brand));
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 850;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.student-unit-subject::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, var(--brand));
 }
 
 .student-unit-card h3 {
   margin: 0;
-  font-size: 15.5px;
-  line-height: 1.3;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.35;
+  flex: 1;
 }
 
 .student-unit-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  min-height: 8px;
+  min-height: 28px;
+}
+
+.student-unit-stats:empty {
+  min-height: 0;
+}
+
+.student-unit-stats .hero-chip {
+  font-size: 11.5px;
+  padding: 4px 10px;
 }
 
 .student-unit-card .btn {
-  width: auto;
-  justify-self: start;
+  align-self: stretch;
+  width: 100%;
+  justify-content: center;
+  min-height: 40px;
 }
 
 /* ---------------- Finanzas mejoradas ---------------- */
