@@ -2998,8 +2998,8 @@ function staffShellMarkup(data) {
   const tab = state.staffTab || 'dashboard';
   const collapsed = Boolean(state.sidebarCollapsed);
 
-  const teacherTabs = ['dashboard', 'grupos', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores'];
-  const adminTabs = ['dashboard', 'grupos', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion'];
+  const teacherTabs = ['dashboard', 'grupos', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'tutores', 'vocacional'];
+  const adminTabs = ['dashboard', 'grupos', 'alumnos', 'examen', 'materias', 'asistencia', 'pagos', 'tareas', 'actividad', 'usuarios', 'contenido', 'auditoria', 'configuracion', 'vocacional'];
   const tabs = isAdmin ? adminTabs : teacherTabs;
 
   return `
@@ -3023,7 +3023,7 @@ function staffShellMarkup(data) {
           }).join('')}
 
           <span class="side-label">Orientación</span>
-          <a class="staff-tab-btn" href="./vocacional.html" title="Abrir taller vocacional">
+          <a class="staff-tab-btn" href="#" data-staff-tab="vocacional" title="Abrir taller vocacional">
             <span class="nav-emoji" aria-hidden="true">🧭</span>
             <span class="nav-text">Taller vocacional</span>
           </a>
@@ -3081,6 +3081,7 @@ function staffTabContentMarkup(data, tab) {
   if (tab === 'pagos') return staffPaymentsTabMarkup(data);
   if (tab === 'tareas') return staffTasksTabMarkup(data);
   if (tab === 'actividad') return staffActivityTabMarkup(data);
+  if (tab === 'vocacional') return staffVocacionalTabMarkup(data);
   if (tab === 'tutores') return staffTutoresTabMarkup(data);
   if (tab === 'usuarios') return adminUsersMarkup(data);
   if (tab === 'contenido') return adminContentMarkup(data);
@@ -4495,6 +4496,71 @@ function staffActivityTabMarkup(data) {
   `;
 }
 
+
+function staffVocacionalTabMarkup(data) {
+  const profile = state.profile;
+  const isAdmin = profile && profile.role === 'admin';
+  const vocational = testResultFor(profile, 'vocational');
+  const vocationalDone = Boolean(vocational?.completed_at);
+  const personalityDone = vocational?.personality_result ? 1 : 0;
+
+  return `
+    ${staffGreetingMarkup()}
+
+    <div class="section-title">
+      <div>
+        <span class="card-label">Orientación</span>
+        <h2>Taller vocacional</h2>
+      </div>
+    </div>
+
+    ${isAdmin ? `
+      <article class="card wide">
+        <div class="card-heading">
+          <div><span class="card-label">Test</span><h2>Realizar test vocacional</h2></div>
+        </div>
+        <form class="form" id="vocational-test-form">
+          <label class="field">
+            <span>Selecciona un test</span>
+            <select name="test-type" required>
+              <option value="">Elige un test...</option>
+              <option value="riasec">Test RIASEC</option>
+              <option value="checklist">Checklist de habilidades</option>
+            </select>
+          </label>
+          <div class="row">
+            <button class="btn primary" type="submit">Iniciar test</button>
+          </div>
+        </form>
+      </article>
+    ` : ''}
+
+    ${vocational ? `
+      <article class="card wide">
+        <div class="card-heading">
+          <div>
+            <span class="card-label">Resultado</span>
+            <h2>Test completado</h2>
+          </div>
+          <small>${escapeHtml(vocational.completed_at || '')}</small>
+        </div>
+
+        <div class="personality-summary">
+          <div class="personality-circle ${personalityDone >= 1 ? 'done' : ''}" title="Personalidad completada"></div>
+          <span class="pill">${personalityDone >= 1 ? 'Completado' : 'Pendiente'}</span>
+        </div>
+
+        <div class="vocational-results">
+          ${personalityDone ? `
+            <p>${escapeHtml(vocational.personality_result || 'Sin resultado')}</p>` : ''}
+          </div>
+        </div>
+      </article>
+    ` : `
+      <article class="card wide"><p class="empty-state">Realiza el test vocacional para ver tus resultados aquí.</p></article>
+    `}
+  `;
+}
 function staffTutoresTabMarkup(data) {
   const students = data.students || [];
 
