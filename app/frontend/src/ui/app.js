@@ -5846,7 +5846,9 @@ function dashboardMarkup(profile) {
             <p>${escapeHtml(roleCopy[profile.role] || '')}</p>
             <span class="pill">${escapeHtml(profile.role)}</span>
           </article>
+        </div>
 
+        <div class="dashboard-data">
           ${dashboardDataMarkup(profile)}
         </div>
 

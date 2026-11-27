@@ -556,6 +556,13 @@ pre code {
   padding: 20px 0 64px;
 }
 
+/* El contenido del panel (hero, unidades, exámenes, tests) va a ancho completo,
+   fuera del grid de 2 columnas de las tarjetas de conexión/rol. */
+.dashboard-data {
+  margin-top: 20px;
+  display: block;
+}
+
 .welcome {
   display: flex;
   flex-wrap: wrap;
