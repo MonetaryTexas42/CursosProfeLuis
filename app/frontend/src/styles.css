@@ -4004,87 +4004,95 @@ body.unit-assign-open {
 
 .student-unit-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   margin-bottom: 24px;
+}
+
+@media (min-width: 560px) {
+  .student-unit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 900px) {
+  .student-unit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .student-unit-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .student-unit-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 180px;
-  padding: 20px;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
   border: 1px solid var(--line);
-  border-top: 3px solid var(--accent, var(--brand));
-  border-radius: 18px;
-  background:
-    radial-gradient(220px 90px at 100% 0%, color-mix(in srgb, var(--accent, var(--brand)) 9%, transparent), transparent 65%),
-    var(--panel);
+  border-radius: 16px;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .student-unit-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
 }
 
 .student-unit-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .student-unit-subject {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   color: var(--accent, var(--brand));
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: 0.1em;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.student-unit-subject::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent, var(--brand));
+.student-unit-top .pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 3px 8px;
 }
 
 .student-unit-card h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 750;
+  font-size: 14.5px;
+  font-weight: 700;
   line-height: 1.35;
-  flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .student-unit-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  min-height: 28px;
-}
-
-.student-unit-stats:empty {
-  min-height: 0;
+  gap: 5px;
 }
 
 .student-unit-stats .hero-chip {
-  font-size: 11.5px;
-  padding: 4px 10px;
+  font-size: 11px;
+  padding: 3px 9px;
 }
 
 .student-unit-card .btn {
-  align-self: stretch;
-  width: 100%;
-  justify-content: center;
-  min-height: 40px;
+  margin-top: auto;
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+@media (max-width: 559px) {
+  .student-unit-card { padding: 14px; }
+  .student-unit-card .btn { width: 100%; justify-content: center; }
 }
 
 /* ---------------- Finanzas mejoradas ---------------- */
