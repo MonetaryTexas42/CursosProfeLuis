@@ -314,9 +314,26 @@ function setAccent(color) {
 
 /* ---------------- Pintado global ---------------- */
 function paintStats() {
-  const xp = $("#stat-xp"), rc = $("#stat-racha");
-  if (xp) xp.textContent = "\u2699\u{FE0F} " + state.xp + " XP";
-  if (rc) rc.textContent = "\u{1F525} " + state.racha;
+  // El servidor es la fuente oficial de la gamificación (DB-03).
+  // Si aún no llega, se usa el estado local como respaldo temporal.
+  const srv = window.ECOEMS_SERVER_STATS || {};
+  const num = v => Number(v == null ? 0 : v) || 0;
+  const xp = $("#stat-xp"), rc = $("#stat-racha"), bs = $("#stat-best"),
+        un = $("#stat-units"), ac = $("#stat-accuracy"), wp = $("#stat-wpm");
+  if (xp) xp.textContent = "\u2699\u{FE0F} " + num(srv.xp_total ?? state.xp) + " XP";
+  if (rc) rc.textContent = "\u{1F525} " + num(srv.current_streak ?? state.racha);
+  if (bs) bs.textContent = "\u{1F3C6} " + num(srv.best_streak ?? state.best);
+  if (un) un.textContent = "\u{1F4D6} " + num(srv.units_completed);
+  if (ac) {
+    const v = srv.accuracy;
+    ac.hidden = v == null;
+    if (v != null) ac.textContent = "\u{1F3AF} " + Math.round(num(v)) + "%";
+  }
+  if (wp) {
+    const v = srv.reading_wpm;
+    wp.hidden = v == null;
+    if (v != null) wp.textContent = "\u{1F4DA} " + Math.round(num(v)) + " ppm";
+  }
   paintProgress();
 }
 function paintProgress() {

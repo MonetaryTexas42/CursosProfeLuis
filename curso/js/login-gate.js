@@ -180,8 +180,9 @@
       app.src = "js/app.js?v=4";
       app.onload = function () {
         if (typeof init === "function") init();
-        // La XP del servidor es la oficial: cargarla apenas arranca el reproductor.
+        // Las estadísticas del servidor son las oficiales: cargarlas al arrancar.
         syncNow();
+        loadServerStats(supabase);
         // Ahora sí existe saveState: lo envolvemos para sincronizar tras cada guardado.
         var originalSaveState = window.saveState;
         if (typeof originalSaveState === "function") {
@@ -194,6 +195,26 @@
       document.body.appendChild(app);
     };
     document.body.appendChild(sistema);
+  }
+
+  function loadServerStats(supabase) {
+    supabase
+      .from("student_stats")
+      .select("xp_total,current_streak,best_streak,units_completed,units_mastered,accuracy,reading_wpm,reading_comprehension")
+      .maybeSingle()
+      .then(function (res) {
+        if (res.error || !res.data) return;
+        window.ECOEMS_SERVER_STATS = Object.assign(
+          {}, window.ECOEMS_SERVER_STATS, res.data
+        );
+        if (typeof state === "object" && state !== null) {
+          state.xp = Number(res.data.xp_total) || 0;
+          state.racha = Number(res.data.current_streak) || 0;
+          state.best = Number(res.data.best_streak) || 0;
+        }
+        if (typeof paintStats === "function") paintStats();
+      })
+      .catch(function () { /* el sync periódico reintentará */ });
   }
 
   function setupProgressSync(supabase, sessionToken) {
@@ -219,14 +240,24 @@
         .rpc("app_sync_player_state", { p_payload: payload })
         .then(function (res) {
           syncing = false;
-          // DB-03: el servidor ignora la XP del cliente y devuelve la oficial.
-          // La reflejamos en el marcador para que coincida con el panel.
-          var serverXp = res && res.data && res.data.xp;
-          if (typeof serverXp === "number" && typeof state === "object" && state !== null) {
-            state.xp = serverXp;
-            if (typeof paintStats === "function") paintStats();
-            if (typeof saveState === "function") saveState();
+          var d = res && res.data;
+          if (!d) return;
+          // DB-03: el servidor ignora los números del cliente. Lo que devuelve
+          // es la fuente oficial y se refleja en todos los marcadores.
+          window.ECOEMS_SERVER_STATS = Object.assign(
+            {}, window.ECOEMS_SERVER_STATS, {
+              xp_total: d.xp,
+              current_streak: d.streak,
+              units_completed: d.units_completed,
+              source: d.source || "server"
+            }
+          );
+          if (typeof state === "object" && state !== null) {
+            state.xp = Number(d.xp) || 0;
+            state.racha = Number(d.streak) || 0;
           }
+          if (typeof paintStats === "function") paintStats();
+          if (typeof saveState === "function") saveState();
         })
         .catch(function () { syncing = false; });
     }
