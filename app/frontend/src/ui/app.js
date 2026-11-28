@@ -1361,7 +1361,7 @@ async function fetchAdminDashboard() {
       .select('id,student_id,subject_id,status,score,correct_answers,answered_questions,total_questions,duration_ms,started_at,finished_at')
       .order('started_at', { ascending: false })
       .limit(300),
-    supabase.from('group_exam_config').select('group_id,exam_enabled'),
+    supabase.from('group_exam_config').select('group_id,exam_enabled,max_attempts'),
     supabase.from('academic_years').select('id,name').eq('is_active', true).maybeSingle()
   ]);
 
@@ -1451,6 +1451,9 @@ async function fetchAdminDashboard() {
       exam_enabled: Boolean(
         (groupExamConfigRes.data || []).find((config) => config.group_id === group.id)?.exam_enabled
       ),
+      max_attempts: Math.max(0, Number(
+        (groupExamConfigRes.data || []).find((config) => config.group_id === group.id)?.max_attempts
+      ) || 0),
       teacher_name: teacherNames.get(group.teacher_id) || 'Sin profesor'
     })),
     profiles,
@@ -1616,7 +1619,7 @@ async function fetchTeacherDashboard(teacherId) {
           .limit(300)
       : Promise.resolve({ data: [], error: null }),
     groupIds.length
-      ? supabase.from('group_exam_config').select('group_id,exam_enabled').in('group_id', groupIds)
+      ? supabase.from('group_exam_config').select('group_id,exam_enabled,max_attempts').in('group_id', groupIds)
       : Promise.resolve({ data: [], error: null }),
     supabase.from('academic_years').select('id,name').eq('is_active', true).maybeSingle()
   ]);
@@ -1719,6 +1722,9 @@ async function fetchTeacherDashboard(teacherId) {
       exam_enabled: Boolean(
         (groupExamConfigRes.data || []).find((config) => config.group_id === group.id)?.exam_enabled
       ),
+      max_attempts: Math.max(0, Number(
+        (groupExamConfigRes.data || []).find((config) => config.group_id === group.id)?.max_attempts
+      ) || 0),
       students: students
         .filter((student) => student.group_id === group.id)
         .map((student) => ({
@@ -3244,6 +3250,9 @@ function staffGroupsTabMarkup(data) {
   const globalExamEnabled = Boolean(
     (data.settings || []).find((setting) => setting.key === 'final_exam_spanish_enabled')?.value
   );
+  const globalMaxAttempts = Math.max(0, Number(
+    (data.settings || []).find((setting) => setting.key === 'final_exam_spanish_max_attempts')?.value
+  ) || 0);
   const teachers = (data.profiles || []).filter((profile) => profile.role === 'teacher');
 
   return `
@@ -3255,7 +3264,7 @@ function staffGroupsTabMarkup(data) {
         <h2>Grupos y horarios</h2>
       </div>
       <span class="pill ${globalExamEnabled ? 'success' : ''}">
-        Examen global: ${globalExamEnabled ? 'activo' : 'inactivo'}
+        Examen global: ${globalExamEnabled ? 'activo' : 'inactivo'} · Intentos: ${globalMaxAttempts || '∞'}
       </span>
     </div>
 
@@ -3340,6 +3349,11 @@ function staffGroupsTabMarkup(data) {
             <button class="btn ${group.exam_enabled ? 'ghost' : 'primary'}" data-toggle-group-exam="${escapeHtml(group.id)}" data-enabled="${group.exam_enabled ? '1' : '0'}">
               ${group.exam_enabled ? 'Desactivar para este grupo' : 'Activar para este grupo'}
             </button>
+            <label class="field">
+              <span>Intentos para este grupo (0 = ilimitado)</span>
+              <input type="number" min="0" max="999" step="1" data-group-attempts-value="${escapeHtml(group.id)}" value="${Number(group.max_attempts) || 0}">
+            </label>
+            <button class="btn ghost" data-save-group-attempts="${escapeHtml(group.id)}">Guardar intentos</button>
           </div>
         </div>
 
@@ -8034,6 +8048,10 @@ function renderDashboard() {
     button.addEventListener('click', () => toggleGroupExam(button));
   });
 
+  appRoot.querySelectorAll('[data-save-group-attempts]').forEach((button) => {
+    button.addEventListener('click', () => saveGroupAttempts(button));
+  });
+
   appRoot.querySelectorAll('[data-invite-student-form]').forEach((form) => {
     form.addEventListener('submit', (event) => {
       const select = form.querySelector('[data-invite-groups]');
@@ -8339,6 +8357,40 @@ async function toggleGroupExam(button) {
     setError(error?.message || 'No se pudo actualizar el examen del grupo.');
     button.disabled = false;
     button.textContent = enabled ? 'Activar para este grupo' : 'Desactivar para este grupo';
+  }
+}
+
+async function saveGroupAttempts(button) {
+  const groupId = button.dataset.saveGroupAttempts;
+  const input = appRoot.querySelector(`[data-group-attempts-value="${groupId}"]`);
+  if (!groupId || !input || button.disabled) return;
+
+  const maxAttempts = Number(input.value);
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 0 || maxAttempts > 999) {
+    setError('Los intentos deben ser un número entero entre 0 (ilimitado) y 999.');
+    return;
+  }
+
+  state.error = '';
+  state.notice = '';
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+
+  try {
+    const { error } = await supabase.rpc('app_set_group_exam_attempts', {
+      p_group_id: groupId,
+      p_max_attempts: maxAttempts
+    });
+    if (error) throw error;
+
+    setNotice(maxAttempts
+      ? `Intentos del grupo guardados: ${maxAttempts}.`
+      : 'Intentos del grupo guardados: ilimitados.');
+    await loadDashboard(state.profile);
+  } catch (error) {
+    setError(error?.message || 'No se pudieron guardar los intentos del grupo.');
+    button.disabled = false;
+    button.textContent = 'Guardar intentos';
   }
 }
 

@@ -40,7 +40,11 @@ function formatDate(value) {
 
 // La ausencia de la migración 0041 no debe romper el panel del alumno.
 export async function fetchExamSummary() {
-  if (!supabase) return { available: false, enabled: false, last: null, status: null };
+  const empty = {
+    available: false, enabled: false, last: null, sessions: [], best: null,
+    status: null, maxAttempts: 0, attemptsUsed: 0, attemptsRemaining: null
+  };
+  if (!supabase) return empty;
   try {
     const [statusRes, sessionsRes] = await Promise.all([
       supabase.rpc('app_effective_final_exam_status'),
@@ -48,7 +52,7 @@ export async function fetchExamSummary() {
         .from('final_exam_sessions')
         .select('id,started_at,finished_at,status,score,correct_answers,total_questions')
         .order('started_at', { ascending: false })
-        .limit(1)
+        .limit(200)
     ]);
     // Entornos todavía sin la migración 0044 conservan el flag global.
     if (statusRes.error) {
@@ -57,14 +61,38 @@ export async function fetchExamSummary() {
       statusRes.data = legacyRes.data;
     }
     if (sessionsRes.error) throw sessionsRes.error;
+
+    const status = statusRes.data || {};
+    const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
+    const completed = sessions.filter((session) => session?.status === 'completed');
+    // El mejor intento es el de mayor puntaje; si hay empate, el más reciente.
+    const best = completed
+      .filter((session) => session.score != null)
+      .reduce((top, session) => (
+        !top || Number(session.score) > Number(top.score) ? session : top
+      ), null);
+
+    const maxAttempts = Math.max(0, Number(status.maxAttempts ?? 0) || 0);
+    const attemptsUsed = Number.isFinite(Number(status.attemptsUsed))
+      ? Number(status.attemptsUsed)
+      : completed.length;
+    const attemptsRemaining = status.attemptsRemaining == null
+      ? (maxAttempts > 0 ? Math.max(maxAttempts - attemptsUsed, 0) : null)
+      : Math.max(0, Number(status.attemptsRemaining) || 0);
+
     return {
       available: true,
-      status: statusRes.data,
-      enabled: Boolean(statusRes.data?.enabled),
-      last: sessionsRes.data?.[0] || null
+      status,
+      enabled: Boolean(status.enabled),
+      last: sessions[0] || null,
+      sessions,
+      best,
+      maxAttempts,
+      attemptsUsed,
+      attemptsRemaining
     };
   } catch {
-    return { available: false, enabled: false, last: null, status: null };
+    return empty;
   }
 }
 
@@ -73,15 +101,28 @@ export function examDashboardCard(summary) {
 
   const enabled = Boolean(summary.enabled);
   const last = summary.last;
+  const best = summary.best;
   const completed = last?.status === 'completed';
+  const maxAttempts = Number(summary.maxAttempts) || 0;
+  const attemptsUsed = Number(summary.attemptsUsed) || 0;
+  const exhausted = maxAttempts > 0 && Number(summary.attemptsRemaining) <= 0;
   const badge = enabled
-    ? '<span class="pill success">Activo</span>'
+    ? `<span class="pill success">Activo</span>${maxAttempts > 0 ? `<span class="pill">${attemptsUsed}/${maxAttempts} intentos</span>` : ''}`
     : '<span class="pill pill-amber">Aún no activado</span>';
-  const result = completed
-    ? `<p class="exam-last-result">Último resultado: <strong>${Number(last.score).toFixed(2)}%</strong> · ${last.correct_answers}/${last.total_questions} aciertos <small>${esc(formatDate(last.finished_at))}</small></p>`
-    : last?.status === 'in_progress'
-      ? '<p class="exam-last-result">Tienes un examen en curso.</p>'
-      : '';
+
+  const result = [
+    completed
+      ? `<p class="exam-last-result">Último resultado: <strong>${Number(last.score).toFixed(2)}%</strong> · ${last.correct_answers}/${last.total_questions} aciertos <small>${esc(formatDate(last.finished_at))}</small></p>`
+      : last?.status === 'in_progress'
+        ? '<p class="exam-last-result">Tienes un examen en curso.</p>'
+        : '',
+    best
+      ? `<p class="exam-last-result">Mejor resultado: <strong>${Number(best.score).toFixed(2)}%</strong> · ${best.correct_answers}/${best.total_questions} aciertos <small>${esc(formatDate(best.finished_at))}</small></p>`
+      : '',
+    maxAttempts > 0
+      ? `<p class="exam-last-result">Intentos usados: <strong>${attemptsUsed} de ${maxAttempts}</strong>${exhausted ? ' · Ya no puedes iniciar otro examen.' : ''}</p>`
+      : ''
+  ].filter(Boolean).join('');
 
   return `
     <article class="card wide exam-card">
@@ -97,7 +138,7 @@ export function examDashboardCard(summary) {
         : 'El examen se abrirá cuando se active oficialmente. Mientras tanto, ya puedes estudiar con la guía.'}</p>
       ${result}
       <div class="row exam-card-actions">
-        ${enabled ? '<button class="btn primary" data-open-final-exam>Contestar examen →</button>' : ''}
+        ${enabled && !exhausted ? '<button class="btn primary" data-open-final-exam>Contestar examen →</button>' : ''}
         <a class="btn ghost" href="${EXAM_GUIDE_URL}" target="_blank" rel="noopener">📖 Guía de examen (imprimir)</a>
       </div>
     </article>
@@ -114,6 +155,7 @@ export function openFinalExam(root, { onClose, preview = false } = {}) {
     view: 'intro',
     error: '',
     status: null,
+    summary: null,
     sessionId: null,
     sections: [],
     questions: [],
@@ -131,6 +173,7 @@ async function refreshStatus() {
   if (!exam || exam.preview) return;
   const summary = await fetchExamSummary();
   if (!exam || exam.view !== 'intro') return;
+  exam.summary = summary;
   exam.status = summary.status;
   if (!summary.enabled) exam.error = 'El examen todavía no está activo. Puedes seguir estudiando con la guía.';
   render();
@@ -176,10 +219,16 @@ function render() {
 
 function introMarkup() {
   const status = exam.status;
+  const summary = exam.summary || {};
   const enabled = Boolean(status?.enabled);
   const sections = status?.sections ?? 13;
   const questions = status?.questions ?? 136;
   const preview = exam.preview;
+  const maxAttempts = Number(summary.maxAttempts ?? status?.maxAttempts ?? 0) || 0;
+  const attemptsUsed = Number(summary.attemptsUsed ?? status?.attemptsUsed ?? 0) || 0;
+  const exhausted = !preview && maxAttempts > 0
+    && Number(summary.attemptsRemaining ?? status?.attemptsRemaining ?? 0) <= 0;
+  const best = summary.best;
 
   return `
     <article class="card wide exam-intro">
@@ -193,6 +242,9 @@ function introMarkup() {
         <div><strong>${questions}</strong><small>preguntas del banco</small></div>
         <div><strong>${preview ? '✓' : '∞'}</strong><small>${preview ? 'clave visible al terminar' : 'tiempo libre por respuesta'}</small></div>
       </div>
+      ${preview || maxAttempts <= 0 ? '' : `
+        <p class="muted"><small>Intentos: <strong>${attemptsUsed} de ${maxAttempts}</strong>${best ? ` · Mejor resultado: <strong>${Number(best.score).toFixed(2)}%</strong>` : ''}${exhausted ? ' · Ya completaste todos tus intentos.' : ''}</small></p>
+      `}
       ${preview ? `
         <ul class="exam-rules">
           <li>Ves las mismas preguntas y el mismo orden aleatorio por sección que usa el alumno.</li>
@@ -208,9 +260,11 @@ function introMarkup() {
         </ul>
       `}
       <div class="row exam-intro-actions">
-        ${preview || enabled
-          ? `<button class="btn primary" data-exam-action="start">${preview ? 'Ver el examen →' : 'Comenzar examen →'}</button>`
-          : '<button class="btn primary" disabled>Examen pendiente de activación</button>'}
+        ${exhausted
+          ? '<button class="btn primary" disabled>Ya usaste todos tus intentos</button>'
+          : preview || enabled
+            ? `<button class="btn primary" data-exam-action="start">${preview ? 'Ver el examen →' : 'Comenzar examen →'}</button>`
+            : '<button class="btn primary" disabled>Examen pendiente de activación</button>'}
         <a class="btn ghost" href="${EXAM_GUIDE_URL}" target="_blank" rel="noopener">📖 Estudiar con la guía</a>
       </div>
       ${preview || enabled ? '' : '<p class="muted"><small>Cuando se active, regresa aquí y podrás contestarlo en la plataforma. La guía ya está lista para estudiar en casa.</small></p>'}
