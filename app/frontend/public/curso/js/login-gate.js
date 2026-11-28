@@ -180,6 +180,8 @@
       app.src = "js/app.js?v=4";
       app.onload = function () {
         if (typeof init === "function") init();
+        // La XP del servidor es la oficial: cargarla apenas arranca el reproductor.
+        syncNow();
         // Ahora sí existe saveState: lo envolvemos para sincronizar tras cada guardado.
         var originalSaveState = window.saveState;
         if (typeof originalSaveState === "function") {
@@ -215,7 +217,17 @@
 
       supabase
         .rpc("app_sync_player_state", { p_payload: payload })
-        .then(function () { syncing = false; })
+        .then(function (res) {
+          syncing = false;
+          // DB-03: el servidor ignora la XP del cliente y devuelve la oficial.
+          // La reflejamos en el marcador para que coincida con el panel.
+          var serverXp = res && res.data && res.data.xp;
+          if (typeof serverXp === "number" && typeof state === "object" && state !== null) {
+            state.xp = serverXp;
+            if (typeof paintStats === "function") paintStats();
+            if (typeof saveState === "function") saveState();
+          }
+        })
         .catch(function () { syncing = false; });
     }
 
