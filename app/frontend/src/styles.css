@@ -3959,6 +3959,13 @@ body.unit-assign-open {
   white-space: nowrap;
 }
 
+.hero-chip-xp {
+  border-color: color-mix(in srgb, var(--amber, #f59e0b) 45%, var(--line));
+  background: color-mix(in srgb, var(--amber, #f59e0b) 14%, var(--panel));
+  color: var(--amber, #f59e0b);
+  font-weight: 850;
+}
+
 .student-hero-actions {
   grid-area: actions;
   display: flex;

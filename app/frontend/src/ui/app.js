@@ -1760,7 +1760,7 @@ async function fetchStudentDashboard(studentId) {
     return { kind: 'student', student: null, group: null, units: [], activeAssignments: 0 };
   }
 
-  const [groupRes, assignmentsRes, profileRes] = await Promise.all([
+  const [groupRes, assignmentsRes, profileRes, statsRes] = await Promise.all([
     supabase
       .from('groups')
       .select('name,level,schedule')
@@ -1777,12 +1777,18 @@ async function fetchStudentDashboard(studentId) {
       .from('student_guidance')
       .select('*')
       .eq('student_id', studentRes.data.id)
+      .maybeSingle(),
+    supabase
+      .from('student_stats')
+      .select('xp_total,current_streak,best_streak,units_completed,last_activity_date')
+      .eq('student_id', studentRes.data.id)
       .maybeSingle()
   ]);
 
   assertNoError(groupRes.error);
   assertNoError(assignmentsRes.error);
   assertNoError(profileRes.error);
+  assertNoError(statsRes.error);
 
   const allAssignments = assignmentsRes.data || [];
   const assignmentIds = allAssignments.map((assignment) => assignment.id);
@@ -1873,6 +1879,7 @@ async function fetchStudentDashboard(studentId) {
     student: studentRes.data,
     group: groupRes.data,
     profile: profileRes.data || {},
+    stats: statsRes.data || {},
     units,
     activeAssignments: units.length,
     exam
@@ -4632,6 +4639,10 @@ function studentDashboardMarkup(data) {
   const initial = fullName.trim().slice(0, 1).toUpperCase();
   const profile = data.profile || {};
   const testsDone = Number(Boolean(profile.personality?.completed_at)) + Number(Boolean(profile.aptitude?.completed_at));
+  const stats = data.stats || {};
+  const xpTotal = Number(stats.xp_total) || 0;
+  const currentStreak = Number(stats.current_streak) || 0;
+  const unitsCompleted = Number(stats.units_completed) || 0;
 
   return `
     <section class="student-hero">
@@ -4640,7 +4651,10 @@ function studentDashboardMarkup(data) {
         <h1>Tu camino al bachillerato</h1>
         <p class="muted">${escapeHtml(data.group ? [data.group.level, data.group.schedule].filter(Boolean).join(' · ') || 'Grupo sin horario' : 'Tu grupo aún no está asignado.')}</p>
         <div class="student-hero-chips">
-          <span class="hero-chip">📚 ${countLabel(data.activeAssignments, 'unidad activa', 'unidades activas')}</span>
+          <span class="hero-chip hero-chip-xp">⚡ ${xpTotal} XP</span>
+          <span class="hero-chip">🔥 ${currentStreak} ${currentStreak === 1 ? 'día de racha' : 'días de racha'}</span>
+          <span class="hero-chip">📚 ${unitsCompleted} ${unitsCompleted === 1 ? 'unidad terminada' : 'unidades terminadas'}</span>
+          <span class="hero-chip">📖 ${countLabel(data.activeAssignments, 'unidad activa', 'unidades activas')}</span>
           <span class="hero-chip">🧭 ${testsDone} de 2 tests completados</span>
           <span class="hero-chip">🎓 ${escapeHtml(data.student.student_code)}</span>
         </div>
